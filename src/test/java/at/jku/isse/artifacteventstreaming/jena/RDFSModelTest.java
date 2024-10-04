@@ -27,17 +27,20 @@ import org.junit.jupiter.api.Test;
 public class RDFSModelTest {
 
 	public static String NS = "http://at.jku.isse.jena#";
-	
+		
 	@Test
 	void testRDFSbasedModel() {
 		Model model = ModelFactory.createDefaultModel();
+		model.setNsPrefix("owl", OWL.NS);
 		InfModel infmodel = ModelFactory.createRDFSModel(model);
+		
 		//model.register()		
+		Resource owlNS = model.createResource("owl:Class");
 		
 		Resource artType = model.createResource(NS+"artifact");
-		artType.addProperty(RDF.type, OWL.NS+"Class");
+		artType.addProperty(RDF.type, owlNS);
 		Resource otherType = model.createResource(NS+"other");
-		otherType.addProperty(RDF.type, OWL.NS+"Class");
+		otherType.addProperty(RDF.type, owlNS);
 		
 		Property successorProp = model.createProperty(NS, "successor");
 		model.add(successorProp, RDFS.range, artType);
@@ -73,9 +76,9 @@ public class RDFSModelTest {
 		
 		// and print graph:
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
-		printValidation(infmodel);
+		Utils.printValidation(infmodel);
 		
-		printStatements(infmodel, other1, RDF.type, null);
+		Utils.printStatements(infmodel, other1, RDF.type, null);
 		
 		System.out.println("---------------------------");
 		
@@ -86,7 +89,7 @@ public class RDFSModelTest {
 		art1.addProperty(successorProp, art4);
 		// and print graph:
 		RDFDataMgr.write(System.out, model, Lang.RDFXML) ;
-		printValidation(infmodel);
+		Utils.printValidation(infmodel);
 		
 		OntModel ont = OntModelFactory.createModel(OntSpecification.OWL2_DL_MEM);
 		ont.add(model);				
@@ -99,33 +102,10 @@ public class RDFSModelTest {
 		
 		RDFDataMgr.write(System.out, ont, Lang.TURTLE) ;
 		
-		printIterator(ontOther.listProperties());
+		Utils.printStream(ontOther.declaredProperties());
 		//printIterator(ontOther.listProperties(successorProp));
 		
 	}
 	
-	public static void printIterator(StmtIterator iter) {
-		while (iter.hasNext()) {
-			System.out.println(iter.next());
-		}
-	}
 	
-	public static void printStatements(Model model, Resource resource, Property property, RDFNode value) {
-		StmtIterator iter = model.listStatements(resource, property, value);
-		printIterator(iter);
-	}
-	
-	
-	public static void printValidation(InfModel infmodel) {
-		
-		ValidityReport validity = infmodel.validate();
-		if (validity.isValid()) {
-		    System.out.println("OK");
-		} else {
-		    System.out.println("Conflicts");
-		    for (Iterator i = validity.getReports(); i.hasNext(); ) {
-		        System.out.println(" - " + i.next());
-		    }
-		}
-	}
 }

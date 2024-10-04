@@ -41,6 +41,7 @@ class OntologyModelTest {
 		
 		//art1.addProperty(successorProp, art2);
 		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
+		Utils.printStream(artifact.declaredProperties());
 	}
 
 }
