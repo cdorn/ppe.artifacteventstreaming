@@ -10,6 +10,8 @@ import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.rdf.model.Property;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +22,7 @@ class OntologyModelTest {
 	@Test
 	void test() {
 		OntModel m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM );
-		OntClass artifact = m.createOntClass(NS);
+		OntClass artifact = m.createOntClass(NS+"artifact");		
 		OntObjectProperty successorProp = m.createObjectProperty(NS+"successor");
 		successorProp.addDomain(artifact);
 		successorProp.addRange(artifact);
@@ -38,7 +40,7 @@ class OntologyModelTest {
 		art2.addProperty(keyProp, "TESTKEY-2");
 		
 		//art1.addProperty(successorProp, art2);
-		
+		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
 	}
 
 }
