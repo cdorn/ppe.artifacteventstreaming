@@ -1,8 +1,12 @@
 package at.jku.isse.artifacteventstreaming.jena;
 
 
+import java.util.AbstractMap;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.jena.graph.FrontsNode;
 import org.apache.jena.ontapi.model.OntClass;
@@ -11,16 +15,16 @@ import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntObjectProperty.Named;
+import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.XSD;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 
-public class MapResource {
-
-	
+public class MapResource implements Map<String, RDFNode> {	
 	
 	public static String MAP_NS = "http://at.jku.isse.map#";	
 	public static final String ENTRY_TYPE = MAP_NS+"EntryType";
@@ -48,14 +52,14 @@ public class MapResource {
 		init();
 	}
 
-	public static MapResource asResource(OntIndividual mapOwner, OntObjectProperty.Named mapEntryProperty) throws ResourceMismatchException {
+	public static MapResource asMapResource(OntIndividual mapOwner, OntObjectProperty.Named mapEntryProperty) throws ResourceMismatchException {
 		OntClass mapType = getMapEntryClass(mapOwner.getModel());
 		if (mapEntryProperty.ranges(true).anyMatch(rangeClass -> rangeClass.equals(mapType) || rangeClass.hasSuperClass(mapType, false))) {
 			MapResource map = new MapResource(mapOwner, mapEntryProperty);
 			return map;
 		}
 		else
-			throw new ResourceMismatchException("Provided property does not have a map entry resource in range.");		
+			throw new ResourceMismatchException(String.format("Provided property %s is not in range of %s", mapEntryProperty.getURI(), ENTRY_TYPE));		
 	}
 
 	public static OntClass getMapEntryClass(OntModel m) {
@@ -82,11 +86,8 @@ public class MapResource {
 		return objectValueProp;
 	}
 	
-	private void init() {
-		
-		var iter = mapOwner.listProperties(mapEntryProperty);
-		
-		
+	private void init() {		
+		var iter = mapOwner.listProperties(mapEntryProperty);				
 		while(iter.hasNext()) {
 			var stmt = iter.next();
 			var entry = stmt.getObject().asResource();
@@ -94,7 +95,7 @@ public class MapResource {
 			var keyStmt = entry.getProperty(keyProp);
 			if (keyStmt != null) {
 				String key = keyStmt.getString();
-				// access value (this is an untyped map, so literals and resource can be mixed!)
+				// now access value (this is an untyped map, so literals and resource can be mixed!)
 				var litStmt = entry.getProperty(litValueProp);
 				if (litStmt != null) {
 					map.put(key, litStmt);
@@ -104,43 +105,118 @@ public class MapResource {
 						map.put(key, refStmt);
 					}
 				}
-			}									
+			} else {
+				// not an entry object
+			}
 		}
 	}
 	
-	public Object get(String key) {
+	private RDFNode getValueFromStatement(Statement stmt) {
+		if (stmt.getPredicate().equals(litValueProp)) {
+			var value = stmt.getLiteral();
+			return value;
+		} else if (stmt.getPredicate().equals(objectValueProp)) {
+			var node = stmt.getObject(); // we return the rdf node
+			return node;
+		}
+		return null; // should not happen, as we checked before when inserting
+	}
+	
+	public RDFNode get(Object key) {
 		Statement stmt = map.get(key);
 		if (stmt != null) {
-			if (stmt.getPredicate().equals(litValueProp)) {
-				Object value = stmt.getLiteral().getValue();
-				return value;
-			} else if (stmt.getPredicate().equals(objectValueProp)) {
-				var node = stmt.getObject(); // we return the rdf node
-				return node;
-			}
-			return null; // should not happen, as we checked before when inserting
+			return getValueFromStatement(stmt);
 		} else
 			return null;
 	}
 	
-	public void put(String key, RDFNode node) {
+	public RDFNode remove(Object key) {
+		RDFNode oldValue = get(key);
 		Statement prevStmt = map.remove(key);
-		if (prevStmt != null) {									
+		if (prevStmt != null) {					
+			// remove properties of entry
+			prevStmt.getSubject().removeProperties();
+			// remove the whole anonymous entry, not to have it dangling in the model
+			mapOwner.remove(mapEntryProperty, prevStmt.getSubject());			
+			return oldValue;
+		} else
+			return null;
+	}
+	
+	public RDFNode put(String key, RDFNode node) {
+		Statement prevStmt = map.remove(key);
+		if (prevStmt != null) {												
 			var newStmt = prevStmt.changeObject(node);
 			map.put(key,  newStmt);
+			return getValueFromStatement(prevStmt);
 		} else {
 			OntIndividual entry = getMapEntryClass(model).createIndividual();
 			entry.addLiteral(keyProp, key);
 			Statement newStmt = null;
 			if (node.isLiteral()) {
-				entry.addLiteral(litValueProp, node);
+				entry.addProperty(litValueProp, node);
 				newStmt = entry.listProperties(litValueProp).next();
 			} else {
 				entry.addProperty(objectValueProp, node);
 				newStmt = entry.listProperties(objectValueProp).next();
 			}			
 			map.put(key,  newStmt);
+			mapOwner.addProperty(mapEntryProperty, entry);
+			return null;
 		}
+	}
+
+	@Override
+	public int size() {
+		return map.size();
+	}
+
+	@Override
+	public boolean isEmpty() {
+		return map.isEmpty();
+	}
+
+	@Override
+	public boolean containsKey(Object key) {
+		return map.containsKey(key);
+	}
+
+	@Override
+	public boolean containsValue(Object value) {
+		return map.values().stream()
+				.map(stmt -> getValueFromStatement(stmt))
+				.anyMatch(entryValue -> entryValue.equals(value));
+	}
+
+	@Override
+	public void putAll(Map<? extends String, ? extends RDFNode> m) {
+		m.entrySet().forEach(entry -> put(entry.getKey(), entry.getValue()));
+	}
+
+	@Override
+	public void clear() {
+		map.values().stream().forEach(stmt -> stmt.getSubject().removeProperties());
+		mapOwner.removeAll(mapEntryProperty);		
+		map.clear();
+	}
+
+	@Override
+	public Set<String> keySet() {
+		return map.keySet();
+	}
+
+	@Override
+	public Collection<RDFNode> values() {
+		return map.values().stream()
+			.map(stmt -> getValueFromStatement(stmt))
+			.collect(Collectors.toList());
+	}
+
+	@Override
+	public Set<Entry<String, RDFNode>> entrySet() {
+		return map.entrySet().stream()
+			.map(entry -> new AbstractMap.SimpleEntry<String, RDFNode>(entry.getKey(), getValueFromStatement(entry.getValue())))
+			.collect(Collectors.toSet());		
 	}
 	
 	
