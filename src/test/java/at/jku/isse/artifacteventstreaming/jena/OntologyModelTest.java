@@ -54,8 +54,8 @@ class OntologyModelTest {
 		OntDataProperty keyProp = m.createDataProperty(NS+"artKey");
 		keyProp.addDomain(artifactType);
 		keyProp.addRange(m.getDatatype(XSD.xstring));
-	//	DataMaxCardinality maxOneKey = m.createDataMaxCardinality(keyProp, 1, OntDataRange);
-		artifactType.addSuperClass(maxOneKey);
+		//DataMaxCardinality maxOneKey = m.createDataMaxCardinality(keyProp, 1, OntDataRange.);
+		//TODO continue here: artifactType.addSuperClass(maxOneKey);
 			
 		// lets create some instances:
 
