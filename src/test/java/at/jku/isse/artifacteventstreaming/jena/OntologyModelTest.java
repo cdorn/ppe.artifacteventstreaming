@@ -29,6 +29,8 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.Test;
 
+import at.jku.isse.passiveprocessengine.rdf.trialcode.ChangeListener;
+
 class OntologyModelTest {
 
 	public static String NS = "http://at.jku.isse.jena#";

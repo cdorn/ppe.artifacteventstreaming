@@ -1,0 +1,19 @@
+package at.jku.isse.artifacteventstreaming.api;
+
+import java.util.List;
+
+public interface StateKeeper {
+
+	public void finishedMerge(Commit commit);
+	
+	public void beforeServices(Commit commit);
+	
+	public void afterServices(Commit commit);
+	
+	public boolean hasSeenCommit(Commit commit);
+	
+	public List<Commit> getHistory();
+	
+	public Commit getLastCommit();
+	
+}

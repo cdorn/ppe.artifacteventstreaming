@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.jena;
+package at.jku.isse.passiveprocessengine.rdf.trialcode;
 
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.rdf.listeners.StatementListener;

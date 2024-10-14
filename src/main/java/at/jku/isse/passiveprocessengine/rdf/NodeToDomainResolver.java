@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rdf;
+package at.jku.isse.passiveprocessengine.rdf;
 
 import org.apache.jena.rdf.model.RDFNode;
 

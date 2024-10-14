@@ -25,6 +25,9 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.Test;
 
+import at.jku.isse.passiveprocessengine.rdf.trialcode.ImmediateChangeApplyer;
+import at.jku.isse.passiveprocessengine.rdf.trialcode.TransactionalChangeApplyer;
+
 class ModelStreamingTest {
 
 	public static String NS = "http://at.jku.isse.jena#";

@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.jena;
+package at.jku.isse.passiveprocessengine.rdf;
 
 public class ResourceMismatchException extends Exception {
 

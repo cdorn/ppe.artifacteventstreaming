@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.jena;
+package at.jku.isse.passiveprocessengine.rdf;
 
 
 import java.util.AbstractMap;
