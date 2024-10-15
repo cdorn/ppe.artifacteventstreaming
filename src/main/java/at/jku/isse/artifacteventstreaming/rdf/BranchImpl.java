@@ -276,6 +276,7 @@ public class BranchImpl extends StatementListener implements Branch, Runnable {
 			log.warn(String.format("Failed to persist post-service commit %s with exception %s",commit.getCommitId(), e.getMessage()));
 			//TODO: SHOULD WE: rethrow e to signal that we cannot continue here as we would loose persisted commit history.
 			//throw e; // if so, then we need to abort transaction before rethrowing
+			dataset.abort();
 		} finally {
 			dataset.end();
 		}

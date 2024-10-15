@@ -17,7 +17,7 @@ public class EHCacheFactory {
 		cacheManager.init();
 	}
 	
-	public Cache<String, String> getCache(URI branchURI) {
+	public Cache<String, String> getCache() {
 		Cache<String, String> cache = cacheManager.createCache("branchStateKeeper", 
 			    CacheConfigurationBuilder.newCacheConfigurationBuilder(String.class, String.class, ResourcePoolsBuilder.heap(10)));
 		return cache;

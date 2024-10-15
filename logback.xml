@@ -1,0 +1,17 @@
+<configuration>
+    <!-- Define a Console appender -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Override logging level for specific classes or packages (DEBUG) -->
+    <logger name="at.jku.isse" level="DEBUG"/>
+
+    
+	<!-- Define the default log level for everything else (INFO) -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

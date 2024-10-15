@@ -20,8 +20,8 @@ public class CompleteCommitMerger implements CommitHandler {
 	public void handleCommit(Commit commit) {
 		log.debug(String.format("About to apply commit %s to branch %s", commit.getCommitId(), branch.getBranchId()));
 		if (!commit.getAddedStatements().isEmpty() || !commit.getRemovedStatements().isEmpty()) {
-			branch.getModel().add(commit.getAddedStatements());
-			branch.getModel().remove(commit.getRemovedStatements());
+			branch.getModel().remove(commit.getRemovedStatements()); //first removal, then adding
+			branch.getModel().add(commit.getAddedStatements());			
 		}
 		log.debug(String.format("Applied commit %s to branch %s", commit.getCommitId(), branch.getBranchId()));
 	}

@@ -23,7 +23,7 @@ import at.jku.isse.artifacteventstreaming.rdf.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.rdf.CompleteCommitMerger;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SimpleService;
 
-class TestInMemoryBranchServices {
+class TestEventPersisting {
 
 	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/repo1");
 		

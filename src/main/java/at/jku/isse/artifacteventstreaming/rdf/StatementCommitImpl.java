@@ -7,6 +7,9 @@ import java.util.UUID;
 
 import org.apache.jena.rdf.model.Statement;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import lombok.Getter;
 import lombok.Setter;
@@ -24,6 +27,7 @@ public class StatementCommitImpl implements Commit {
 	@Getter
 	private final String originatingBranchId;
 	
+	
 	public StatementCommitImpl(String branchId, String commitMsg, String precedingCommitId) {
 		this.commitMessage = commitMsg;
 		this.originatingBranchId = branchId;
@@ -31,13 +35,23 @@ public class StatementCommitImpl implements Commit {
 		this.precedingCommitId = precedingCommitId;
 	}
 	
-	public StatementCommitImpl(String branchId, String commitMsg, String precedingCommitId, List<Statement> addedStatements, List<Statement> removedStatements) {
+	public StatementCommitImpl(@JsonProperty("originatingBranchId") String branchId
+			, @JsonProperty("commitMessage") String commitMsg
+			, @JsonProperty("precedingCommitId") String precedingCommitId
+			, @JsonProperty("addedStatements") List<Statement> addedStatements
+			, @JsonProperty("removedStatements") List<Statement> removedStatements) {
 		this(branchId, commitMsg, precedingCommitId);
 		this.addedStatements.addAll(addedStatements);
 		this.removedStatements.addAll(removedStatements);
 	}
 	
-	protected StatementCommitImpl(String branchId, String mergedCommitId, String commitMsg, String precedingCommitId, List<Statement> addedStatements, List<Statement> removedStatements) {
+
+	protected StatementCommitImpl( String branchId
+			,  String mergedCommitId
+			, String commitMsg
+			, String precedingCommitId
+			, List<Statement> addedStatements
+			, List<Statement> removedStatements) {
 		this.commitMessage = commitMsg;
 		this.originatingBranchId = branchId;
 		this.commitId = mergedCommitId;
