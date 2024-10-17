@@ -59,8 +59,8 @@ public class StatementCommitImpl implements Commit {
 		this.originatingBranchId = branchId;
 		this.commitId = mergedCommitId;
 		this.precedingCommitId = precedingCommitId;
-		addedStatements.addAll(addedStatements);
-		removedStatements.addAll(removedStatements);
+		this.addedStatements.addAll(addedStatements);
+		this.removedStatements.addAll(removedStatements);
 	}
 	
 	private String generateUUID() {
@@ -125,7 +125,12 @@ public class StatementCommitImpl implements Commit {
 					addedStatements.remove(stmt);					
 				}
 			}
-		}
-		
+		}	
+	}
+	
+	@Override
+	public String toString() {
+		return "Commit [msg=" + commitMessage + ", id=" + commitId
+				+ ", branch=" + originatingBranchId + "]";
 	}
 }

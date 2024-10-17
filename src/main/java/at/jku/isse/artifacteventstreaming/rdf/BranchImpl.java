@@ -1,5 +1,6 @@
 package at.jku.isse.artifacteventstreaming.rdf;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -30,11 +31,11 @@ public class BranchImpl  implements Branch, Runnable {
 	private final StateKeeper stateKeeper;
 	
 	@Getter private final BlockingQueue<Commit> inQueue;
-	private final List<CommitHandler> handlers = new LinkedList<>();
+	private final List<CommitHandler> handlers = Collections.synchronizedList(new LinkedList<>());
 	private final ExecutorService executor = Executors.newFixedThreadPool(1);
 	
 	private StatementAggregator stmtAggregator = new StatementAggregator();
-	private final List<BranchInternalCommitHandler> services = new LinkedList<>();
+	private final List<BranchInternalCommitHandler> services = Collections.synchronizedList(new LinkedList<>());
 	@Getter private final BlockingQueue<Commit> outQueue;
 	
 	public BranchImpl(@NonNull Dataset dataset
@@ -90,6 +91,10 @@ public class BranchImpl  implements Branch, Runnable {
 		return branchResource.getProperty(AES.partOfRepository).getResource().getURI(); 
 	}
 	
+    @Override
+	public String toString() {
+		return "Branch[" + branchResource.getLabel() + "]";
+	}
 	
 	// incoming commit handling -------------------------------------------------------------------------
 	
@@ -116,7 +121,9 @@ public class BranchImpl  implements Branch, Runnable {
 		handlers.remove(handler);
 	}
 
-    @Getter
+
+
+	@Getter
     private boolean isShutdown = false;
 	
 	public void run() {
@@ -138,7 +145,7 @@ public class BranchImpl  implements Branch, Runnable {
         }
 	}
 	
-	protected void forwardCommit(Commit commit) {
+	private void forwardCommit(Commit commit) {
 		if (dataset.isInTransaction())
 			dataset.abort();
 		dataset.begin(ReadWrite.WRITE);
@@ -200,69 +207,13 @@ public class BranchImpl  implements Branch, Runnable {
 		log.debug(String.format("Created commit %s in branch %s", commit.getCommitId(), branchResource.getURI()));
 		// clear the changes
 		if (services.size() > 0 && !commit.isEmpty()) {
-			try { // first persist initial commit
-				stateKeeper.beforeServices(commit);
-				dataset.commit(); // together with commit/events persistence, here persists state of model
-			} catch(Exception e) {
-				log.info(String.format("Failed to persist pre-service commit %s %s with exception %s", commit.getCommitMessage(),commit.getCommitId(), e.getMessage()));
-			} finally {
-				dataset.end();
-			}
-			dataset.begin();
-			// we now have the local changes persisted and have a restart point established
-			// next we iterated through services
-			int baseAdds = commit.getAdditionCount();
-			int baseRemoves = commit.getRemovalCount();
-			int addsCount = baseAdds;
-			int removesCount = baseRemoves;
-			int newAdds = 0;
-			int newRemoves = 0;
-			int rounds = 0;
-			// store for each service the last seen offset
-			Map<BranchInternalCommitHandler, Integer> offsetAdds = initServiceOffsets();
-			Map<BranchInternalCommitHandler, Integer> offsetRemoves = initServiceOffsets();
-			Integer perIterationAdds = 0;
-			Integer perIterationsRemovals = 0;
-			do {
-				perIterationAdds = 0;
-				perIterationsRemovals = 0;
-				for (BranchInternalCommitHandler service : services) {
-					service.handleCommitFromOffset(commit, offsetAdds.get(service), offsetRemoves.get(service));
-					// any changes by a service are now in the statement lists
-					
-					// provide changes immediately to next service:					
-					commit.appendAddedStatements(stmtAggregator.retrieveAddedStatements());									
-					newAdds = commit.getAdditionCount() - addsCount;
-					addsCount = commit.getAdditionCount();
-					perIterationAdds += newAdds;
-										
-					commit.appendRemovedStatement(stmtAggregator.retrieveRemovedStatements());					
-					newRemoves = commit.getRemovalCount() - removesCount;
-					removesCount = commit.getRemovalCount();
-					perIterationsRemovals += newRemoves;
-					
-					// store these changes as seen by this service (and also consider those produced by this service)
-					offsetAdds.put(service, commit.getAdditionCount());
-					offsetRemoves.put(service,  commit.getRemovalCount());
-					
-				}
-				rounds++;
-				//continue while new changes happen and max 10 rounds to avoid infinite loops
-			} while ((perIterationAdds > 0 || perIterationsRemovals > 0) && rounds < 10);
-			
-			if ((perIterationAdds > 0 || perIterationsRemovals > 0) && rounds >= 10) {
-				log.warn(String.format("Service loop for commit '%s' reached maximum iteration count of 10 while still new statements available", commit.getCommitMessage()));
-			}
-			commit.removeEffectlessStatements(baseAdds, baseRemoves);
-			if (commit.isEmpty()) {
-				log.info(String.format("Commit %s of branch %s has no changes after local service processing", commit.getCommitId(), this.branchResource.getURI()));
-			}
-		}
-		 
+			executeServiceLoop(commit);
+		}		 
 		// persist augmented commit and  mark preliminary commit as processed
 		try {
 			stateKeeper.afterServices(commit);
 			dataset.commit(); // together with commit persistence
+			log.debug(String.format("Branch %s now has size %s statements", branchResource.getLabel(), model.size()));
 		} catch (Exception e) {
 			log.warn(String.format("Failed to persist post-service commit %s %s with exception %s", commit.getCommitMessage(), commit.getCommitId(), e.getMessage()));
 			//TODO: SHOULD WE: rethrow e to signal that we cannot continue here as we would loose persisted commit history.
@@ -272,6 +223,66 @@ public class BranchImpl  implements Branch, Runnable {
 			dataset.end();
 		}
 		dataset.begin(); // prepare for next round of transactions
+	}
+	
+	private void executeServiceLoop(StatementCommitImpl commit) {
+		try { // first persist initial commit
+			stateKeeper.beforeServices(commit);
+			dataset.commit(); // together with commit/events persistence, here persists state of model
+		} catch(Exception e) {
+			log.info(String.format("Failed to persist pre-service commit %s %s with exception %s", commit.getCommitMessage(),commit.getCommitId(), e.getMessage()));
+		} finally {
+			dataset.end();
+		}
+		dataset.begin();
+		// we now have the local changes persisted and have a restart point established
+		// next we iterated through services
+		int baseAdds = commit.getAdditionCount();
+		int baseRemoves = commit.getRemovalCount();
+		int addsCount = baseAdds;
+		int removesCount = baseRemoves;
+		int newAdds = 0;
+		int newRemoves = 0;
+		int rounds = 0;
+		// store for each service the last seen offset
+		Map<BranchInternalCommitHandler, Integer> offsetAdds = initServiceOffsets();
+		Map<BranchInternalCommitHandler, Integer> offsetRemoves = initServiceOffsets();
+		Integer perIterationAdds = 0;
+		Integer perIterationsRemovals = 0;
+		do {
+			perIterationAdds = 0;
+			perIterationsRemovals = 0;
+			for (BranchInternalCommitHandler service : services) {
+				service.handleCommitFromOffset(commit, offsetAdds.get(service), offsetRemoves.get(service));
+				// any changes by a service are now in the statement lists
+				
+				// provide changes immediately to next service:					
+				commit.appendAddedStatements(stmtAggregator.retrieveAddedStatements());									
+				newAdds = commit.getAdditionCount() - addsCount;
+				addsCount = commit.getAdditionCount();
+				perIterationAdds += newAdds;
+									
+				commit.appendRemovedStatement(stmtAggregator.retrieveRemovedStatements());					
+				newRemoves = commit.getRemovalCount() - removesCount;
+				removesCount = commit.getRemovalCount();
+				perIterationsRemovals += newRemoves;
+				
+				// store these changes as seen by this service (and also consider those produced by this service)
+				offsetAdds.put(service, commit.getAdditionCount());
+				offsetRemoves.put(service,  commit.getRemovalCount());
+				
+			}
+			rounds++;
+			//continue while new changes happen and max 10 rounds to avoid infinite loops
+		} while ((perIterationAdds > 0 || perIterationsRemovals > 0) && rounds < 10);
+		
+		if ((perIterationAdds > 0 || perIterationsRemovals > 0) && rounds >= 10) {
+			log.warn(String.format("Service loop for commit '%s' reached maximum iteration count of 10 while still new statements available", commit.getCommitMessage()));
+		}
+		commit.removeEffectlessStatements(baseAdds, baseRemoves);
+		if (commit.isEmpty()) {
+			log.info(String.format("Commit %s of branch %s has no changes after local service processing", commit.getCommitId(), this.branchResource.getURI()));
+		}
 	}
 	
 	private Map<BranchInternalCommitHandler, Integer> initServiceOffsets() {

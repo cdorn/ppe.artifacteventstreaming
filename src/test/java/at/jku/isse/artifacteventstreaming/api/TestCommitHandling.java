@@ -77,7 +77,7 @@ class TestCommitHandling {
 				.addBranchInternalCommitHandler(new SimpleService("Service2", true))
 				.build();
 		Dataset dataset = branch.getDataset();
-		CommitHandler merger = new CompleteCommitMerger(branch, dataset);
+		CommitHandler merger = new CompleteCommitMerger(branch);
 		branch.appendIncomingCommitHandler(merger);
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
@@ -96,7 +96,7 @@ class TestCommitHandling {
 				.addBranchInternalCommitHandler(new SimpleService("Service2", true))
 				.build();
 		Dataset dataset = branch.getDataset();
-		CommitHandler merger = new CompleteCommitMerger(branch, dataset);
+		CommitHandler merger = new CompleteCommitMerger(branch);
 		branch.appendIncomingCommitHandler(merger);
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
@@ -107,8 +107,10 @@ class TestCommitHandling {
 			dataset.abort();
 		dataset.begin(ReadWrite.WRITE);
 		merger.handleCommit(commit);
+		// we need to mimick transaction management 
 		dataset.commit();
 		dataset.end();
+		dataset.begin();
 		branch.commitMergeOf(commit);
 		assertEquals(2, branch.getOutQueue().size());
 	}
