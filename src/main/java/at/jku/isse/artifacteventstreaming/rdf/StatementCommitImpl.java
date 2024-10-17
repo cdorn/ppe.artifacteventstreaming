@@ -16,7 +16,7 @@ import com.github.andrewoma.dexx.collection.Sets;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import lombok.Getter;
 
-@JsonIgnoreProperties(value = { "additionCount", "removalCount" })
+@JsonIgnoreProperties(value = { "additionCount", "removalCount", "empty" })
 public class StatementCommitImpl implements Commit {
 
 	private final Set<Statement> addedStatements = new LinkedHashSet<>();
