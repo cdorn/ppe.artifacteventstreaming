@@ -1,6 +1,5 @@
 package at.jku.isse.artifacteventstreaming.rdf;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -8,15 +7,10 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.rdf.listeners.StatementListener;
-import org.apache.jena.rdf.model.Statement;
-
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
@@ -28,7 +22,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class BranchImpl extends StatementListener implements Branch, Runnable {
+public class BranchImpl  implements Branch, Runnable {
 
 	private final Dataset dataset;
 	private final OntModel model;
@@ -39,8 +33,7 @@ public class BranchImpl extends StatementListener implements Branch, Runnable {
 	private final List<CommitHandler> handlers = new LinkedList<>();
 	private final ExecutorService executor = Executors.newFixedThreadPool(1);
 	
-	private final List<Statement> addedStatements = new LinkedList<>();
-	private final List<Statement> removedStatements = new LinkedList<>();
+	private StatementAggregator stmtAggregator = new StatementAggregator();
 	private final List<BranchInternalCommitHandler> services = new LinkedList<>();
 	@Getter private final BlockingQueue<Commit> outQueue;
 	
@@ -58,7 +51,7 @@ public class BranchImpl extends StatementListener implements Branch, Runnable {
 		this.stateKeeper = stateKeeper;
 		this.inQueue = inQueue;
 		this.outQueue = outQueue;
-		
+		model.register(stmtAggregator);
 		// create thread for incoming commits to be merged
 		executor.execute(this);
 	}
@@ -71,12 +64,6 @@ public class BranchImpl extends StatementListener implements Branch, Runnable {
 	@Override
 	public Dataset getDataset() {
 		return dataset;
-	}
-
-	@Override
-	public List<String> getCommitHistoryIds() {
-		// TODO Auto-generated method stub
-		return Collections.emptyList();
 	}
 
 	@Override
@@ -135,7 +122,7 @@ public class BranchImpl extends StatementListener implements Branch, Runnable {
 	public void run() {
 		try {
             while (true) {
-            	//FIXME: only do this if no service is active
+            	//FIXME: only do this if no service is active, and no changes have happened: how to ensure this?
             	Commit commit = inQueue.take();
                 if (commit == PoisonPillCommit.POISONPILL) { // shutdown signal
                 	log.info(String.format("Received shutdown command for branch %s", this.getBranchId()));
@@ -180,26 +167,16 @@ public class BranchImpl extends StatementListener implements Branch, Runnable {
 		services.remove(service);
 	}
 	
-	@Override
-	public void addedStatement(Statement s) {		
-		addedStatements.add(s);
-	}
-
-	@Override
-	public void removedStatement(Statement s) {
-		removedStatements.add(s);
-	}
-	
 	/**
-	 * assumes now other tread is making changes to the model while services are processing
+	 * assumes no other tread is making changes to the model while services are processing
 	 */
 	@Override
 	public Commit commitChanges(String commitMsg) {
-		if (addedStatements.isEmpty() && removedStatements.isEmpty()) {
+		if (!stmtAggregator.hasAdditions() && !stmtAggregator.hasRemovals()) {
 			log.debug("Commit not created as no changes occurred since last commit: "+getLastCommitId());
 			return null;
 		} else {
-			var commit = new StatementCommitImpl( branchResource.getURI() , commitMsg, getLastCommitId(), addedStatements, removedStatements);
+			var commit = new StatementCommitImpl( branchResource.getURI() , commitMsg, getLastCommitId(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());
 			handleCommitInternally(commit);
 			outQueue.add(commit); 
 			return commit;
@@ -209,29 +186,35 @@ public class BranchImpl extends StatementListener implements Branch, Runnable {
 	@Override
 	public Commit commitMergeOf(Commit mergedCommit) {
 		//we always create a local commit upon a merge to signal that we received and processed that commit
-		var commit = new StatementCommitImpl( branchResource.getURI() , mergedCommit.getCommitId(), mergedCommit.getCommitMessage(), getLastCommitId(), addedStatements, removedStatements);
+		var commit = new StatementCommitImpl( branchResource.getURI() , mergedCommit.getCommitId(), mergedCommit.getCommitMessage(), getLastCommitId(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());
+		if (commit.isEmpty()) {
+			log.info(String.format("MergeCommit %s merged into branch %s has no changes after incoming processing",commit.getCommitId(), this.branchResource.getURI()));
+		}
 		handleCommitInternally(commit);
 		outQueue.add(commit); 
 		return commit;
 		
 	}
 	
-	private void handleCommitInternally(Commit commit) {
+	private void handleCommitInternally(StatementCommitImpl commit) {
 		log.debug(String.format("Created commit %s in branch %s", commit.getCommitId(), branchResource.getURI()));
-		if (services.size() > 0) {
+		// clear the changes
+		if (services.size() > 0 && !commit.isEmpty()) {
 			try { // first persist initial commit
 				stateKeeper.beforeServices(commit);
 				dataset.commit(); // together with commit/events persistence, here persists state of model
 			} catch(Exception e) {
-				log.info(String.format("Failed to persist pre-service commit %s with exception %s",commit.getCommitId(), e.getMessage()));
+				log.info(String.format("Failed to persist pre-service commit %s %s with exception %s", commit.getCommitMessage(),commit.getCommitId(), e.getMessage()));
 			} finally {
 				dataset.end();
 			}
 			dataset.begin();
 			// we now have the local changes persisted and have a restart point established
 			// next we iterated through services
-			int addsCount = addedStatements.size();
-			int removesCount = removedStatements.size();
+			int baseAdds = commit.getAdditionCount();
+			int baseRemoves = commit.getRemovalCount();
+			int addsCount = baseAdds;
+			int removesCount = baseRemoves;
 			int newAdds = 0;
 			int newRemoves = 0;
 			int rounds = 0;
@@ -246,34 +229,42 @@ public class BranchImpl extends StatementListener implements Branch, Runnable {
 				for (BranchInternalCommitHandler service : services) {
 					service.handleCommitFromOffset(commit, offsetAdds.get(service), offsetRemoves.get(service));
 					// any changes by a service are now in the statement lists
-					// store these changes as seen by this service
-					offsetAdds.put(service, addedStatements.size());
-					offsetRemoves.put(service,  removedStatements.size());
 					
-					// provide changes immediately to next service:
-					newAdds = addedStatements.size() - addsCount;
-					commit.appendAddedStatements(addedStatements.subList(addsCount, addsCount+newAdds));
-					addsCount = addedStatements.size();
+					// provide changes immediately to next service:					
+					commit.appendAddedStatements(stmtAggregator.retrieveAddedStatements());									
+					newAdds = commit.getAdditionCount() - addsCount;
+					addsCount = commit.getAdditionCount();
 					perIterationAdds += newAdds;
-					
-					newRemoves = removedStatements.size() - removesCount;
-					commit.appendRemovedStatement(removedStatements.subList(removesCount, removesCount+newRemoves));
-					removesCount = removedStatements.size();
+										
+					commit.appendRemovedStatement(stmtAggregator.retrieveRemovedStatements());					
+					newRemoves = commit.getRemovalCount() - removesCount;
+					removesCount = commit.getRemovalCount();
 					perIterationsRemovals += newRemoves;
+					
+					// store these changes as seen by this service (and also consider those produced by this service)
+					offsetAdds.put(service, commit.getAdditionCount());
+					offsetRemoves.put(service,  commit.getRemovalCount());
+					
 				}
 				rounds++;
 				//continue while new changes happen and max 10 rounds to avoid infinite loops
 			} while ((perIterationAdds > 0 || perIterationsRemovals > 0) && rounds < 10);
+			
+			if ((perIterationAdds > 0 || perIterationsRemovals > 0) && rounds >= 10) {
+				log.warn(String.format("Service loop for commit '%s' reached maximum iteration count of 10 while still new statements available", commit.getCommitMessage()));
+			}
+			commit.removeEffectlessStatements(baseAdds, baseRemoves);
+			if (commit.isEmpty()) {
+				log.info(String.format("Commit %s of branch %s has no changes after local service processing", commit.getCommitId(), this.branchResource.getURI()));
+			}
 		}
-		// now clear the changes
-		addedStatements.clear();
-		removedStatements.clear(); 
+		 
 		// persist augmented commit and  mark preliminary commit as processed
 		try {
 			stateKeeper.afterServices(commit);
 			dataset.commit(); // together with commit persistence
 		} catch (Exception e) {
-			log.warn(String.format("Failed to persist post-service commit %s with exception %s",commit.getCommitId(), e.getMessage()));
+			log.warn(String.format("Failed to persist post-service commit %s %s with exception %s", commit.getCommitMessage(), commit.getCommitId(), e.getMessage()));
 			//TODO: SHOULD WE: rethrow e to signal that we cannot continue here as we would loose persisted commit history.
 			//throw e; // if so, then we need to abort transaction before rethrowing
 			dataset.abort();
@@ -294,9 +285,9 @@ public class BranchImpl extends StatementListener implements Branch, Runnable {
 		dataset.abort();
 		dataset.end();
 		
-		addedStatements.clear();
-		removedStatements.clear();
-		//TODO: check if that really undoes the changes on the OntModel!!
+		stmtAggregator.retrieveAddedStatements();
+		stmtAggregator.retrieveRemovedStatements();
+
 		dataset.begin();
 	}
 

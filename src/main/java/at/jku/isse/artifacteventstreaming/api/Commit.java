@@ -1,6 +1,7 @@
 package at.jku.isse.artifacteventstreaming.api;
 
 import java.util.List;
+import java.util.Set;
 
 import org.apache.jena.rdf.model.Statement;
 
@@ -14,12 +15,18 @@ public interface Commit {
 
 	String getOriginatingBranchId();
 
-	void appendAddedStatements(List<Statement> stmts);
+	void appendAddedStatements(Set<Statement> stmts);
 
-	void appendRemovedStatement(List<Statement> stmts);
+	void appendRemovedStatement(Set<Statement> stmts);
 
 	List<Statement> getAddedStatements();
 
 	List<Statement> getRemovedStatements();
+	
+	int getAdditionCount();
+	
+	int getRemovalCount();
+
+	boolean isEmpty();
 
 }

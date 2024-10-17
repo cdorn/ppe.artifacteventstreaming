@@ -2,6 +2,7 @@ package at.jku.isse.artifacteventstreaming.rdf;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.jena.rdf.model.Statement;
 
@@ -36,12 +37,12 @@ public class PoisonPillCommit implements Commit {
 	}
 
 	@Override
-	public void appendAddedStatements(List<Statement> stmts) {
+	public void appendAddedStatements(Set<Statement> stmts) {
 		//no op
 	}
 
 	@Override
-	public void appendRemovedStatement(List<Statement> stmts) {
+	public void appendRemovedStatement(Set<Statement> stmts) {
 		// no op
 	}
 
@@ -53,6 +54,21 @@ public class PoisonPillCommit implements Commit {
 	@Override
 	public List<Statement> getRemovedStatements() {
 		return Collections.emptyList();
+	}
+
+	@Override
+	public int getAdditionCount() {
+		return 0;
+	}
+
+	@Override
+	public int getRemovalCount() {
+		return 0;
+	}
+
+	@Override
+	public boolean isEmpty() {		
+		return true;
 	}
 
 }

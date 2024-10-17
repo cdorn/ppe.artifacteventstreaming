@@ -1,6 +1,6 @@
 package at.jku.isse.passiveprocessengine.rdf.trialcode;
 
-import java.util.List;
+import java.util.Set;
 
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.rdf.listeners.StatementListener;
@@ -19,13 +19,13 @@ public class TransactionalChangeApplyer extends StatementListener {
 	@Override
 	public void addedStatement(Statement s) {
 		System.out.println("ADDED TO TRANSACTION"+s.toString());
-		transactionScope.appendAddedStatements(List.of(s));
+		transactionScope.appendAddedStatements(Set.of(s));
 	}
 
 	@Override
 	public void removedStatement(Statement s) {
 		System.out.println("REMOVED TRANSACTION"+s.toString());
-		transactionScope.appendRemovedStatement(List.of(s));
+		transactionScope.appendRemovedStatement(Set.of(s));
 	}
 
 	

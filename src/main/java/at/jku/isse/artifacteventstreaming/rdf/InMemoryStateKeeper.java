@@ -6,10 +6,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import at.jku.isse.artifacteventstreaming.api.Branch;
+import org.apache.jena.ontapi.model.OntModel;
+
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.StateKeeper;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -55,6 +55,11 @@ public class InMemoryStateKeeper implements StateKeeper {
 	@Override
 	public Commit getLastCommit() {
 		return lastCommit;
+	}
+
+	@Override
+	public void loadState(OntModel model)  {
+		//noop as no state to load for in memory statekeeper
 	}
 
 }

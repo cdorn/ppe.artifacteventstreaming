@@ -2,9 +2,7 @@ package at.jku.isse.artifacteventstreaming.api;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 
 import org.apache.jena.query.Dataset;
 import org.apache.jena.tdb2.TDB2Factory;
@@ -23,7 +21,7 @@ class TestPersistentBranchCreation {
 	}
 	
 	@Test
-	void testCreateBranch() throws URISyntaxException, IOException {
+	void testCreateBranch() throws Exception {
 		String directory = "repos/"+repoURI.getPath() ;
 		Dataset dataset = TDB2Factory.connectDataset(directory) ;
 		Branch branch = new BranchBuilder(repoURI)

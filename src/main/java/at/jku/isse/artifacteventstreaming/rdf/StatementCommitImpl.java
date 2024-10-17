@@ -1,23 +1,26 @@
 package at.jku.isse.artifacteventstreaming.rdf;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.apache.jena.rdf.model.Statement;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.github.andrewoma.dexx.collection.Sets;
 
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import lombok.Getter;
-import lombok.Setter;
 
+@JsonIgnoreProperties(value = { "additionCount", "removalCount" })
 public class StatementCommitImpl implements Commit {
 
-	private final List<Statement> addedStatements = new LinkedList<>();
-	private final List<Statement> removedStatements = new LinkedList<>();
+	private final Set<Statement> addedStatements = new LinkedHashSet<>();
+	private final Set<Statement> removedStatements = new LinkedHashSet<>();
 	@Getter
 	private final String commitMessage;
 	@Getter
@@ -38,8 +41,8 @@ public class StatementCommitImpl implements Commit {
 	public StatementCommitImpl(@JsonProperty("originatingBranchId") String branchId
 			, @JsonProperty("commitMessage") String commitMsg
 			, @JsonProperty("precedingCommitId") String precedingCommitId
-			, @JsonProperty("addedStatements") List<Statement> addedStatements
-			, @JsonProperty("removedStatements") List<Statement> removedStatements) {
+			, @JsonProperty("addedStatements") Set<Statement> addedStatements
+			, @JsonProperty("removedStatements") Set<Statement> removedStatements) {
 		this(branchId, commitMsg, precedingCommitId);
 		this.addedStatements.addAll(addedStatements);
 		this.removedStatements.addAll(removedStatements);
@@ -50,8 +53,8 @@ public class StatementCommitImpl implements Commit {
 			,  String mergedCommitId
 			, String commitMsg
 			, String precedingCommitId
-			, List<Statement> addedStatements
-			, List<Statement> removedStatements) {
+			, Set<Statement> addedStatements
+			, Set<Statement> removedStatements) {
 		this.commitMessage = commitMsg;
 		this.originatingBranchId = branchId;
 		this.commitId = mergedCommitId;
@@ -65,23 +68,64 @@ public class StatementCommitImpl implements Commit {
 	}
 	
 	@Override
-	public void appendAddedStatements(List<Statement> stmts) {
+	public void appendAddedStatements(Set<Statement> stmts) {
 		addedStatements.addAll(stmts);
 	}
 	
 	@Override
-	public void appendRemovedStatement(List<Statement> stmts) {
+	public void appendRemovedStatement(Set<Statement> stmts) {
 		removedStatements.addAll(stmts);
 	}
 	
 	@Override
 	public List<Statement> getAddedStatements() {
-		return new ArrayList<>(addedStatements);
+		return addedStatements.stream().collect(Collectors.toList());
 	}
 	
 	@Override
 	public List<Statement> getRemovedStatements() {
-		return new ArrayList<>(removedStatements);
+		return removedStatements.stream().collect(Collectors.toList());
+	}
+
+	@Override
+	public int getAdditionCount() {
+		return addedStatements.size();
+	}
+
+	@Override
+	public int getRemovalCount() {
+		return removedStatements.size();
 	}
 	
+	@Override
+	public boolean isEmpty() {
+		return addedStatements.isEmpty() && removedStatements.isEmpty();
+	}
+
+	public void removeEffectlessStatements(int addOffsetInclusive, int removeOffsetInclusive) {
+		// this is very impl specific how we use this, so not part of the general interface.
+		// addoff set defines which service-produced added statements might be undoing a pre-existing remove statement and vice versa, 
+		// we need not check any other statements before these offsets, as these are part of the preliminary pre-service commit and have been cleaned as the arrive
+		List<Statement> allAdded = addedStatements.stream().collect(Collectors.toList());		
+		if (addOffsetInclusive < allAdded.size()) {
+			for (int i = (allAdded.size()-1) ; i >= addOffsetInclusive ; i--) {
+				var stmt = allAdded.get(i);
+				if (removedStatements.contains(stmt)) {
+					addedStatements.remove(stmt);
+					removedStatements.remove(stmt);
+				}
+			}
+		}
+		List<Statement> allRemoved = removedStatements.stream().collect(Collectors.toList());
+		if (removeOffsetInclusive < allRemoved.size()) {
+			for (int i = (allRemoved.size()-1) ; i >= removeOffsetInclusive ; i--) {
+				var stmt = allRemoved.get(i);
+				if (addedStatements.contains(stmt)) {
+					removedStatements.remove(stmt);
+					addedStatements.remove(stmt);					
+				}
+			}
+		}
+		
+	}
 }

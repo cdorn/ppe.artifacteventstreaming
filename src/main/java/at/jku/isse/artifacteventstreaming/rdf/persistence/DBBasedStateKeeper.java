@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rdf;
+package at.jku.isse.artifacteventstreaming.rdf.persistence;
 
 import java.io.IOException;
 import java.net.URI;
@@ -30,9 +30,10 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.StateKeeper;
-import at.jku.isse.artifacteventstreaming.rdf.EventStoreFactory.EventMetaData;
+import at.jku.isse.artifacteventstreaming.rdf.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.rdf.events.StatementJsonDeserializer;
 import at.jku.isse.artifacteventstreaming.rdf.events.StatementJsonSerializer;
+import at.jku.isse.artifacteventstreaming.rdf.persistence.EventStoreFactory.EventMetaData;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -58,6 +59,7 @@ public class DBBasedStateKeeper implements StateKeeper {
 		StatementJsonSerializer.registerSerializationModule(jsonMapper);		
 	}
 	
+	@Override
 	public void loadState(OntModel model) throws StreamReadException, DatabindException, IOException {
 		StatementJsonDeserializer.registerDeserializationModule(jsonMapper, model);
 		// for now, we do a inefficient sequential load of all commits and keep them in memory
@@ -116,6 +118,7 @@ public class DBBasedStateKeeper implements StateKeeper {
 			EventMetaData metadata = new EventMetaData(commit.getCommitId());
 			byte[] metaByte = jsonMapper.writeValueAsBytes(metadata);
 			
+			//TODO: check for commit serialization size to avoid write failures if there are too many statements in a commit!
 			//store via event db
 			EventData eventData = EventData
 			        .builderAsBinary("CommitEventType", jsonMapper.writeValueAsBytes(commit)) // we cannot use commit UUID as its reused for each branch		

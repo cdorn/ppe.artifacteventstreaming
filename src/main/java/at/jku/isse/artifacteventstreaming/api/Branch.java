@@ -1,17 +1,24 @@
 package at.jku.isse.artifacteventstreaming.api;
 
-import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 
-import at.jku.isse.artifacteventstreaming.rdf.StatementCommitImpl;
 import lombok.NonNull;
 
 
 public interface Branch {
 
+	public OntModel getModel();
+	public Dataset getDataset();		
+	public String getBranchId();
+	public String getBranchName();
+	public String getRepositoryURI();
+	public Commit getLastCommit();
+	
+	public BlockingQueue<Commit> getInQueue();	
+	public BlockingQueue<Commit> getOutQueue();
 	
 	/**
 	 * @param commitMsg
@@ -49,14 +56,8 @@ public interface Branch {
 	 */
 	public void undoNoncommitedChanges();
 	
+		
 	
-	
-	public OntModel getModel();
-	public String getBranchId();
-	public String getBranchName();
-	public String getRepositoryURI();
-	public List<String> getCommitHistoryIds();
-	public Commit getLastCommit();
 	
 	/**
 	 * @param commit
@@ -97,10 +98,6 @@ public interface Branch {
 	public void removeCommitService(@NonNull BranchInternalCommitHandler service) ;
 
 	
-	public Dataset getDataset();
-	
-	public BlockingQueue<Commit> getInQueue();
-	
-	public BlockingQueue<Commit> getOutQueue();
+
 	
 }

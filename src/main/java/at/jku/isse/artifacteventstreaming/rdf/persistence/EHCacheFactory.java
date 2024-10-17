@@ -1,6 +1,5 @@
-package at.jku.isse.artifacteventstreaming.rdf;
+package at.jku.isse.artifacteventstreaming.rdf.persistence;
 
-import org.apache.jena.ext.xerces.util.URI;
 import org.ehcache.Cache;
 import org.ehcache.CacheManager;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
@@ -9,6 +8,7 @@ import org.ehcache.config.builders.ResourcePoolsBuilder;
 
 public class EHCacheFactory {
 
+	private static final String BRANCH_STATE_KEEPER = "branchStateKeeper";
 	private final CacheManager cacheManager;
 	
 	public EHCacheFactory() {
@@ -18,8 +18,11 @@ public class EHCacheFactory {
 	}
 	
 	public Cache<String, String> getCache() {
-		Cache<String, String> cache = cacheManager.createCache("branchStateKeeper", 
+		var cache = cacheManager.getCache(BRANCH_STATE_KEEPER, String.class, String.class);
+		if (cache == null) {
+			cache = cacheManager.createCache(BRANCH_STATE_KEEPER, 
 			    CacheConfigurationBuilder.newCacheConfigurationBuilder(String.class, String.class, ResourcePoolsBuilder.heap(10)));
+		}
 		return cache;
 	}
 	

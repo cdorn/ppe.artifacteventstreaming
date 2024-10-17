@@ -1,5 +1,6 @@
 package at.jku.isse.artifacteventstreaming.rdf;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.LinkedList;
 import java.util.List;
@@ -18,6 +19,9 @@ import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
+
+import com.fasterxml.jackson.core.exc.StreamReadException;
+import com.fasterxml.jackson.databind.DatabindException;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.Branch;
@@ -86,7 +90,7 @@ public class BranchBuilder {
 		return Objects.toString(repositoryURI)+"#"+branchName;
 	}
 	
-	public Branch build() {
+	public Branch build() throws Exception {
 		if (dataset == null) {
 			setDataset(DatasetFactory.createTxnMem());
 		}
@@ -103,10 +107,12 @@ public class BranchBuilder {
 		}
 		BlockingQueue<Commit> inQueue = new LinkedBlockingQueue<>();
 		BlockingQueue<Commit> outQueue = new LinkedBlockingQueue<>();
+		// we init the statekeeper before the branch to avoid triggering the services
+		stateKeeper.loadState(model);
+		
 		BranchImpl branch = new BranchImpl(dataset, model, branchResource, stateKeeper, inQueue, outQueue);
 		incomingCommitHandlers.stream().forEach(handler -> branch.appendIncomingCommitHandler(handler));
-		services.stream().forEach(service -> branch.appendCommitService(service));
-		model.register(branch);
+		services.stream().forEach(service -> branch.appendCommitService(service));		
 		dataset.commit();
 		dataset.end();
 		dataset.begin();
