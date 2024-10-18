@@ -1,7 +1,5 @@
 package at.jku.isse.artifacteventstreaming.api;
 
-import java.util.concurrent.BlockingQueue;
-
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 
@@ -17,8 +15,8 @@ public interface Branch {
 	public String getRepositoryURI();
 	public Commit getLastCommit();
 	
-	public BlockingQueue<Commit> getInQueue();	
-	public BlockingQueue<Commit> getOutQueue();
+	//public BlockingQueue<Commit> getInQueue();	
+	//public BlockingQueue<Commit> getOutQueue();
 	
 	/**
 	 * @param commitMsg
@@ -98,6 +96,7 @@ public interface Branch {
 	public void removeCommitService(@NonNull BranchInternalCommitHandler service) ;
 
 	
-
+	public void appendOutgoingCrossBranchCommitHandler(@NonNull CommitHandler crossBranchHandler);
 	
+	public void removeOutgoingCrossBranchCommitHandler(@NonNull CommitHandler crossBranchHandler);
 }

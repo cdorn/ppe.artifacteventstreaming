@@ -3,6 +3,7 @@ package at.jku.isse.artifacteventstreaming.rdf;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.Commit;
@@ -14,16 +15,17 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class CrossBranchStreamer implements Runnable {
 
-	private final Branch fromBranch;	
+	private final String branchId;
+	private final BlockingQueue<Commit> sourceQueue;	
 	private final Set<CommitHandler> outgoingCommitProcessors = new HashSet<>();
 	
 	@Override
 	public void run() {
 		try {
             while (true) {            	
-            	Commit commit = fromBranch.getOutQueue().take();            	            	
+            	Commit commit = sourceQueue.take();            	            	
                 if (commit == PoisonPillCommit.POISONPILL) { // shutdown signal
-                	log.info(String.format("Received shutdown command for branch %s", fromBranch.getBranchId()));
+                	log.info(String.format("Received shutdown command for branch %s", branchId));
                 	return;
                 } else {
                 	forwardCommit(commit);

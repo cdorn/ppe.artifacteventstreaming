@@ -46,31 +46,25 @@ class TestNonPersistedCrossBranchStreaming {
 		branch3.appendIncomingCommitHandler(new CompleteCommitMerger(branch3));
 
 
-		CrossBranchStreamer streamer = new CrossBranchStreamer(branch);
-		streamer.addOutgoingCommitHandler(new DefaultDirectBranchCommitStreamer(branch2));
-		streamer.addOutgoingCommitHandler(new DefaultDirectBranchCommitStreamer(branch3));
+		branch.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branch2));
+		branch.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branch3));
 		
 		for (int j = 0; j < commitRounds; j++) {
 			Resource testResource = model.createResource(repoURI1+"#art"+j);
 			for (int i = 0; i<changeCount ; i++) {
 				model.add(testResource, RDFS.label, model.createTypedLiteral(i));	
 			}				
-			Commit commit = branch.commitChanges("TestCommit"+j);
-			// here we wont blocking wait on queue but explicit call streamer
-			streamer.forwardCommit(commit);
+			Commit commit = branch.commitChanges("TestCommit"+j);			
 		}
 				
 		latch.await();
-		// the latch is reduced in the services which still might lead to some steps thereafter like outqueue adding not complete yet by the time we continue in this tread, hence the check for >=
-		assert(branch2.getOutQueue().size() >= (commitRounds-1));
-		assert(branch3.getOutQueue().size() >= (commitRounds-1));
 		
 		branch.getDataset().end();
 		OntModel model2 = branch2.getModel();
 		branch2.getDataset().end();
 		OntModel model3 = branch3.getModel();
 		branch3.getDataset().end();
-		//FIXME: why are models 2 and 3 sizes not updated, some content, while logging says statements have been added
+		//why are models 2 and 3 sizes not updated, some content, while logging says statements have been added
 		//hmm, apparently we need to have dataset.end()
 		System.out.println("Model 1 size: "+model.size());
 		System.out.println("Model 2 size: "+model2.size());

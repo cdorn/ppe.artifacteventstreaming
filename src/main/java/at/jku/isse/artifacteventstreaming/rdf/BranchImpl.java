@@ -37,13 +37,14 @@ public class BranchImpl  implements Branch, Runnable {
 	private StatementAggregator stmtAggregator = new StatementAggregator();
 	private final List<BranchInternalCommitHandler> services = Collections.synchronizedList(new LinkedList<>());
 	@Getter private final BlockingQueue<Commit> outQueue;
+	private final CrossBranchStreamer crossBranchStreamer;
 	
 	public BranchImpl(@NonNull Dataset dataset
 			, @NonNull OntModel model
 			, @NonNull OntIndividual branchResource
 			, @NonNull StateKeeper stateKeeper
 			, @NonNull BlockingQueue<Commit> inQueue
-			, @NonNull BlockingQueue<Commit> outQueue
+			, @NonNull BlockingQueue<Commit> outQueue			
 			) {
 		super();
 		this.dataset = dataset;
@@ -52,9 +53,11 @@ public class BranchImpl  implements Branch, Runnable {
 		this.stateKeeper = stateKeeper;
 		this.inQueue = inQueue;
 		this.outQueue = outQueue;
+		this.crossBranchStreamer = new CrossBranchStreamer(branchResource.getURI(), outQueue);
 		model.register(stmtAggregator);
 		// create thread for incoming commits to be merged
 		executor.execute(this);
+		executor.execute(crossBranchStreamer);
 	}
 	
 	@Override
@@ -120,8 +123,6 @@ public class BranchImpl  implements Branch, Runnable {
 	public void removeIncomingCommitHandler(@NonNull CommitHandler handler) {
 		handlers.remove(handler);
 	}
-
-
 
 	@Getter
     private boolean isShutdown = false;
@@ -300,6 +301,16 @@ public class BranchImpl  implements Branch, Runnable {
 		stmtAggregator.retrieveRemovedStatements();
 
 		dataset.begin();
+	}
+
+	@Override
+	public void appendOutgoingCrossBranchCommitHandler(@NonNull CommitHandler crossBranchHandler) {
+		crossBranchStreamer.addOutgoingCommitHandler(crossBranchHandler);
+	}
+
+	@Override
+	public void removeOutgoingCrossBranchCommitHandler(@NonNull CommitHandler crossBranchHandler) {		
+		crossBranchStreamer.removeOutgoingCommitHandler(crossBranchHandler);
 	}
 
 

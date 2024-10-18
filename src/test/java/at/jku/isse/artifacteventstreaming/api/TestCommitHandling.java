@@ -15,6 +15,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.rdf.BranchBuilder;
+import at.jku.isse.artifacteventstreaming.rdf.BranchImpl;
 import at.jku.isse.artifacteventstreaming.rdf.CompleteCommitMerger;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.AllUndoService;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SimpleService;
@@ -72,7 +73,7 @@ class TestCommitHandling {
 
 	@Test
 	void testLoopDetection() throws Exception {
-		Branch branch = new BranchBuilder(repoURI)
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI)
 				.addBranchInternalCommitHandler(new SimpleService("Service1", false))
 				.addBranchInternalCommitHandler(new SimpleService("Service2", true))
 				.build();
@@ -91,7 +92,7 @@ class TestCommitHandling {
 	
 	@Test
 	void testSameCommitHandling() throws Exception {
-		Branch branch = new BranchBuilder(repoURI)
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI)
 				.addBranchInternalCommitHandler(new SimpleService("Service1", false))
 				.addBranchInternalCommitHandler(new SimpleService("Service2", true))
 				.build();

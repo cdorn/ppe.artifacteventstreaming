@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rdf;
+package at.jku.isse.artifacteventstreaming.rdf.persistence;
 
 import java.util.HashSet;
 import java.util.LinkedHashSet;
