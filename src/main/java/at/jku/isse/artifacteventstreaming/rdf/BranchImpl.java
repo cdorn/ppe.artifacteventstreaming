@@ -32,7 +32,8 @@ public class BranchImpl  implements Branch, Runnable {
 	
 	@Getter private final BlockingQueue<Commit> inQueue;
 	private final List<CommitHandler> handlers = Collections.synchronizedList(new LinkedList<>());
-	private final ExecutorService executor = Executors.newFixedThreadPool(1);
+	private final ExecutorService inExecutor = Executors.newSingleThreadExecutor();
+	private final ExecutorService outExecutor = Executors.newSingleThreadExecutor();
 	
 	private StatementAggregator stmtAggregator = new StatementAggregator();
 	private final List<BranchInternalCommitHandler> services = Collections.synchronizedList(new LinkedList<>());
@@ -56,8 +57,8 @@ public class BranchImpl  implements Branch, Runnable {
 		this.crossBranchStreamer = new CrossBranchStreamer(branchResource.getURI(), outQueue);
 		model.register(stmtAggregator);
 		// create thread for incoming commits to be merged
-		executor.execute(this);
-		executor.execute(crossBranchStreamer);
+		inExecutor.execute(this);
+		outExecutor.execute(crossBranchStreamer);
 	}
 	
 	@Override
@@ -135,7 +136,7 @@ public class BranchImpl  implements Branch, Runnable {
                 if (commit == PoisonPillCommit.POISONPILL) { // shutdown signal
                 	log.info(String.format("Received shutdown command for branch %s", this.getBranchId()));
                 	isShutdown = true;
-                	executor.shutdown();
+                	inExecutor.shutdown();
                 	return;
                 } else {
                 	forwardCommit(commit);
