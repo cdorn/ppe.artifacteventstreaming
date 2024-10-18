@@ -18,6 +18,7 @@ import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.StateKeeper;
+import at.jku.isse.artifacteventstreaming.rdf.distribution.CrossBranchStreamer;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;

@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.Commit;
+import at.jku.isse.artifacteventstreaming.rdf.distribution.DefaultDirectBranchCommitStreamer;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
 
 class TestNonPersistedCrossBranchStreaming {
