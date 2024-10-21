@@ -4,11 +4,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.jena.ontapi.model.OntIndividual;
+import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDFS;
 
+import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.Commit;
+import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -16,8 +20,12 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AllUndoService implements BranchInternalCommitHandler {
 	
+	public static final String SERVICE_TYPE_URI = CommitHandler.serviceTypeBaseURI+AllUndoService.class.getSimpleName();
+	
+	
 	final String serviceName;
 	Set<Statement> seenStatements = new HashSet<>();
+	final OntModel model;
 	
 	@Override
 	public void handleCommit(Commit commit) {
@@ -58,6 +66,13 @@ public class AllUndoService implements BranchInternalCommitHandler {
 	@Override
 	public String toString() {
 		return "AllUndoService [serviceName=" + serviceName + "]";
+	}
+
+	@Override
+	public OntIndividual getConfigResource() {
+		OntIndividual config =  model.createIndividual(AES.getURI()+this.getClass().getSimpleName());
+		config.addProperty(AES.isConfigForServiceType, model.createResource(SERVICE_TYPE_URI));
+		return config;
 	}
 	
 	

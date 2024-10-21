@@ -1,8 +1,14 @@
 package at.jku.isse.artifacteventstreaming.rdf;
 
+import org.apache.jena.ontapi.model.OntIndividual;
+import org.apache.jena.ontapi.model.OntModel;
+
+import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.Branch;
+import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
+import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -22,4 +28,27 @@ public class CompleteCommitMerger implements CommitHandler {
 		}		
 	}
 
+	@Override
+	public OntIndividual getConfigResource() {
+		OntModel repoModel = branch.getBranchResource().getModel();
+		OntIndividual config = repoModel.createIndividual(branch.getBranchId()+"#"+this.getClass().getSimpleName());
+		config.addProperty(AES.isConfigForServiceType, repoModel.createResource(getServiceTypeURI()));
+		// no other config necessary
+		return config;
+	}
+
+	public static String getServiceTypeURI() {
+		return CommitHandler.serviceTypeBaseURI+CompleteCommitMerger.class.getSimpleName();
+	}
+	
+	public static ServiceFactory getServiceFactory() {
+		return new ServiceFactory() {
+			@Override
+			public CommitHandler getCommitHandlerInstanceFor(Branch branch, OntIndividual serviceConfigEntryPoint) {
+				// simple, as we dont have any config to do
+				return new CompleteCommitMerger(branch);
+			}
+		};
+	}
+	
 }

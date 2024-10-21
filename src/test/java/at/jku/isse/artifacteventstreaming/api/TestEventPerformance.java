@@ -3,7 +3,10 @@ package at.jku.isse.artifacteventstreaming.api;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.net.URI;
+
+import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeAll;
@@ -38,7 +41,7 @@ class TestEventPerformance {
 	@Test @Disabled
 	void test10KEvents10CommitPersistence() throws Exception {	
 		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, new EHCacheFactory().getCache(), client);
-		Branch branch = new BranchBuilder(repoURI)
+		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
 				.build();		
 		OntModel model = branch.getModel();
@@ -56,7 +59,7 @@ class TestEventPerformance {
 		long middle = System.currentTimeMillis();
 		
 		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, new EHCacheFactory().getCache(), new EventStoreFactory().getClient());
-		Branch branch2 = new BranchBuilder(repoURI)
+		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper2)				
 				.build();		
 		OntModel model2 = branch2.getModel();
@@ -83,7 +86,7 @@ class TestEventPerformance {
 	@Test @Disabled
 	void test1KCommitPersistence() throws Exception {	
 		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, new EHCacheFactory().getCache(), client);
-		Branch branch = new BranchBuilder(repoURI)
+		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
 				.build();				
 		OntModel model = branch.getModel();
@@ -99,7 +102,7 @@ class TestEventPerformance {
 		System.out.println("Now replaying after: "+(midway-start));
 		
 		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, new EHCacheFactory().getCache(), new EventStoreFactory().getClient());
-		Branch branch2 = new BranchBuilder(repoURI)
+		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper2)				
 				.build();		
 		OntModel model2 = branch2.getModel();

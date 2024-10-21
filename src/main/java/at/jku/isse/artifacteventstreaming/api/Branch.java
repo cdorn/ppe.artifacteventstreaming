@@ -1,5 +1,8 @@
 package at.jku.isse.artifacteventstreaming.api;
 
+import java.util.List;
+
+import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 
@@ -9,7 +12,8 @@ import lombok.NonNull;
 public interface Branch {
 
 	public OntModel getModel();
-	public Dataset getDataset();		
+	public Dataset getDataset();
+	public OntIndividual getBranchResource();
 	public String getBranchId();
 	public String getBranchName();
 	public String getRepositoryURI();
@@ -36,8 +40,9 @@ public interface Branch {
  *    7) it commits the changes to the backend model (internal transaction)
  *    8) it puts the augmented commit into the branch's outqueue.
  *    @return the newly created/augmented commit
+	 * @throws Exception 
 	 */
-	public Commit commitChanges(String commitMsg);
+	public Commit commitChanges(String commitMsg) throws Exception;
 	
 	/**
 	 * @param mergedCommit 
@@ -45,8 +50,9 @@ public interface Branch {
 	 * and before persisting splits the commit into base commit and local augmentation
 	 * originating branch becomes the local branch (as this is now in the history of the local branch)
 	 * @return the augmentation commit by any service additions, if no augmentation, returns merged commit
+	 * @throws Exception 
 	 */
-	public Commit commitMergeOf(Commit mergedCommit);
+	public Commit commitMergeOf(Commit mergedCommit) throws Exception;
 	
 	/**
 	 * drops all currently cached changes/statements
@@ -74,6 +80,8 @@ public interface Branch {
 	public void appendIncomingCommitHandler(CommitHandler handler);
 	
 	
+	public List<OntIndividual> getIncomingCommitHandlerConfig();
+	
 	/**
 	 * @param handler
 	 * removes the handler from the chain. When no handlers remain, any incoming commits are dropped/ignored.
@@ -94,9 +102,19 @@ public interface Branch {
 	 * removes the service from the chain. When no services remain, any commit is put directly into the out queue.
 	 */
 	public void removeCommitService(@NonNull BranchInternalCommitHandler service) ;
+	
+	public List<OntIndividual> getLocalCommitServiceConfig();
 
 	
 	public void appendOutgoingCrossBranchCommitHandler(@NonNull CommitHandler crossBranchHandler);
 	
 	public void removeOutgoingCrossBranchCommitHandler(@NonNull CommitHandler crossBranchHandler);
+	
+	public List<OntIndividual> getOutgoingCommitDistributerConfig();
+	
+	
+	/**
+	 * To signal that init of the branch is complete (incl state and/or history loading) and the commit handlers for in and out commits can start
+	 */
+	void startCommitHandlers();
 }

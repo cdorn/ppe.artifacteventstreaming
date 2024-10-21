@@ -1,10 +1,12 @@
 package at.jku.isse.artifacteventstreaming.rdf;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -12,6 +14,12 @@ import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.NodeIterator;
+import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.Seq;
+
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
@@ -57,6 +65,10 @@ public class BranchImpl  implements Branch, Runnable {
 		this.outQueue = outQueue;
 		this.crossBranchStreamer = new CrossBranchStreamer(branchResource.getURI(), outQueue);
 		model.register(stmtAggregator);
+	}
+	
+	@Override
+	public void startCommitHandlers() {
 		// create thread for incoming commits to be merged
 		inExecutor.execute(this);
 		outExecutor.execute(crossBranchStreamer);
@@ -71,6 +83,8 @@ public class BranchImpl  implements Branch, Runnable {
 	public Dataset getDataset() {
 		return dataset;
 	}
+	
+	
 
 	@Override
 	public Commit getLastCommit() {
@@ -92,6 +106,11 @@ public class BranchImpl  implements Branch, Runnable {
 	}
 
 	@Override
+	public OntIndividual getBranchResource() {
+		return branchResource;
+	}
+	
+	@Override
 	public String getRepositoryURI() {
 		return branchResource.getProperty(AES.partOfRepository).getResource().getURI(); 
 	}
@@ -99,6 +118,26 @@ public class BranchImpl  implements Branch, Runnable {
     @Override
 	public String toString() {
 		return "Branch[" + branchResource.getLabel() + "]";
+	}
+    
+	private Seq createOrGetListResource(Property refToList) {
+		Resource listResource = branchResource.getPropertyResourceValue(refToList);
+		Seq list;
+		if (listResource == null) {
+			list = branchResource.getModel().createSeq(branchResource.getURI()+"#"+refToList.getLocalName());
+		} else {
+			list = (Seq)listResource;
+		}
+		return list;
+	}
+	
+	private List<OntIndividual> fromSeqResourceToContent(Seq list) {
+		NodeIterator iter = list.iterator();
+		List<OntIndividual> elements = new ArrayList<>();
+		while(iter.hasNext()) {
+			elements.add(branchResource.getModel().getIndividual(iter.next().asResource().getURI()));
+		}
+		return elements;
 	}
 	
 	// incoming commit handling -------------------------------------------------------------------------
@@ -114,16 +153,31 @@ public class BranchImpl  implements Branch, Runnable {
 	}
 	
 	@Override
+	public List<OntIndividual> getIncomingCommitHandlerConfig() {
+		Seq list = createOrGetListResource(AES.incomingCommitMerger);
+		return fromSeqResourceToContent(list);
+	}
+	
+	@Override
 	public void appendIncomingCommitHandler(@NonNull CommitHandler handler) {
-		if (handlers.contains(handler)) {
+		Seq configs = this.createOrGetListResource(AES.incomingCommitMerger);
+		int pos = handlers.indexOf(handler);
+		if (pos >= 0) {
 			handlers.remove(handler);
+			configs.remove(pos);
 		}
 		handlers.add(handler);
+		configs.add(handler.getConfigResource());
 	}
 	
 	@Override
 	public void removeIncomingCommitHandler(@NonNull CommitHandler handler) {
-		handlers.remove(handler);
+		Seq configs = this.createOrGetListResource(AES.incomingCommitMerger);
+		int pos = handlers.indexOf(handler);
+		if (pos >= 0) {
+			handlers.remove(handler);
+			configs.remove(pos);
+		}
 	}
 
 	@Getter
@@ -133,6 +187,8 @@ public class BranchImpl  implements Branch, Runnable {
 		try {
             while (true) {
             	//FIXME: only do this if no service is active, and no changes have happened: how to ensure this?
+            	// --> stay within transaction, but lock before change? has problem that if there was another write, we need to end the transaction first, 
+            	// and create a new one which again might result in a change between service invokations and iterations
             	Commit commit = inQueue.take();
                 if (commit == PoisonPillCommit.POISONPILL) { // shutdown signal
                 	log.info(String.format("Received shutdown command for branch %s", this.getBranchId()));
@@ -157,8 +213,12 @@ public class BranchImpl  implements Branch, Runnable {
 //		dataset.end();
 		// now we signal the internal commit router that these changes were due to a commit merge 
 		// (as we want to maintain commit history)
-		this.commitMergeOf(commit);
-		stateKeeper.finishedMerge(commit);
+		try {
+			this.commitMergeOf(commit);
+			stateKeeper.finishedMerge(commit);
+		} catch (Exception e) {
+			log.warn(String.format("Merge of commit %s into %s failed with: %s", commit.getCommitId(), this.getBranchId() ,e.getMessage()));
+		}
 	}
 	
 	
@@ -166,22 +226,37 @@ public class BranchImpl  implements Branch, Runnable {
 	
 	@Override
 	public void appendCommitService(@NonNull BranchInternalCommitHandler service) {
-		if (services.contains(service)) {
+		Seq configs = this.createOrGetListResource(AES.localCommitService);
+		int pos = services.indexOf(service);
+		if (pos >= 0) {
 			services.remove(service);
+			configs.remove(pos);
 		}
 		services.add(service);
+		configs.add(service.getConfigResource());
 	}
 	
 	@Override
 	public void removeCommitService(@NonNull BranchInternalCommitHandler service) {
-		services.remove(service);
+		Seq configs = this.createOrGetListResource(AES.localCommitService);
+		int pos = services.indexOf(service);
+		if (pos >= 0) {
+			services.remove(service);
+			configs.remove(pos);
+		}
+	}
+	
+	@Override
+	public List<OntIndividual> getLocalCommitServiceConfig() {
+		Seq list = createOrGetListResource(AES.localCommitService);
+		return fromSeqResourceToContent(list);
 	}
 	
 	/**
 	 * assumes no other tread is making changes to the model while services are processing
 	 */
 	@Override
-	public Commit commitChanges(String commitMsg) {
+	public Commit commitChanges(String commitMsg) throws Exception {
 		if (!stmtAggregator.hasAdditions() && !stmtAggregator.hasRemovals()) {
 			log.debug("Commit not created as no changes occurred since last commit: "+getLastCommitId());
 			return null;
@@ -194,7 +269,7 @@ public class BranchImpl  implements Branch, Runnable {
 	}
 	
 	@Override
-	public Commit commitMergeOf(Commit mergedCommit) {
+	public Commit commitMergeOf(Commit mergedCommit) throws Exception {
 		//we always create a local commit upon a merge to signal that we received and processed that commit
 		var commit = new StatementCommitImpl( branchResource.getURI() , mergedCommit.getCommitId(), mergedCommit.getCommitMessage(), getLastCommitId(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());
 		if (commit.isEmpty()) {
@@ -206,7 +281,7 @@ public class BranchImpl  implements Branch, Runnable {
 		
 	}
 	
-	private void handleCommitInternally(StatementCommitImpl commit) {
+	private void handleCommitInternally(StatementCommitImpl commit) throws Exception {
 		log.debug(String.format("Created commit %s in branch %s", commit.getCommitId(), branchResource.getURI()));
 		// clear the changes
 		if (services.size() > 0 && !commit.isEmpty()) {
@@ -219,9 +294,9 @@ public class BranchImpl  implements Branch, Runnable {
 			log.debug(String.format("Branch %s now has size %s statements", branchResource.getLabel(), model.size()));
 		} catch (Exception e) {
 			log.warn(String.format("Failed to persist post-service commit %s %s with exception %s", commit.getCommitMessage(), commit.getCommitId(), e.getMessage()));
-			//TODO: SHOULD WE: rethrow e to signal that we cannot continue here as we would loose persisted commit history.
-			//throw e; // if so, then we need to abort transaction before rethrowing
+			//SHOULD WE: rethrow e to signal that we cannot continue here as we would loose persisted commit history.
 			dataset.abort();
+			throw e; // if so, then we need to abort transaction before rethrowing
 		} finally {
 			dataset.end();
 		}
@@ -308,14 +383,21 @@ public class BranchImpl  implements Branch, Runnable {
 	@Override
 	public void appendOutgoingCrossBranchCommitHandler(@NonNull CommitHandler crossBranchHandler) {
 		crossBranchStreamer.addOutgoingCommitHandler(crossBranchHandler);
+		Seq configs = this.createOrGetListResource(AES.outgoingCommitDistributer);
+		configs.add(crossBranchHandler.getConfigResource());
 	}
 
 	@Override
 	public void removeOutgoingCrossBranchCommitHandler(@NonNull CommitHandler crossBranchHandler) {		
 		crossBranchStreamer.removeOutgoingCommitHandler(crossBranchHandler);
+		//TODO: update config
 	}
 
-
+	@Override
+	public List<OntIndividual> getOutgoingCommitDistributerConfig() {
+		Seq list = createOrGetListResource(AES.outgoingCommitDistributer);
+		return fromSeqResourceToContent(list);
+	}
 
 
 }

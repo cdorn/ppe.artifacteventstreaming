@@ -1,6 +1,5 @@
 package at.jku.isse.artifacteventstreaming.rdf;
 
-import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -11,8 +10,6 @@ import org.apache.jena.rdf.model.Statement;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.github.andrewoma.dexx.collection.Sets;
-
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import lombok.Getter;
 
@@ -49,7 +46,7 @@ public class StatementCommitImpl implements Commit {
 	}
 	
 
-	protected StatementCommitImpl( String branchId
+	public StatementCommitImpl( String branchId
 			,  String mergedCommitId
 			, String commitMsg
 			, String precedingCommitId

@@ -23,4 +23,12 @@ public class AES {
     }
     
     public static final Property partOfRepository = property("partOfRepository");
+    public static final Property hasLastCommit = property("hasLastCommit");
+   
+    public static final Property incomingCommitMerger = property("hasIncomingCommitMerger");
+    public static final Property localCommitService = property("hasLocalCommitService");
+    public static final Property outgoingCommitDistributer = property("hasOutgoingCommitDistributer");
+    public static final Property destinationBranch = property("hasDestinationBranch");
+    
+    public static final Property isConfigForServiceType = property("isConfigForServiceType");
 }

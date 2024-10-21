@@ -1,10 +1,11 @@
 package at.jku.isse.artifacteventstreaming.rdf;
 
-import java.io.IOException;
 import java.net.URI;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -16,12 +17,8 @@ import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
-import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
-
-import com.fasterxml.jackson.core.exc.StreamReadException;
-import com.fasterxml.jackson.databind.DatabindException;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.Branch;
@@ -37,19 +34,32 @@ public class BranchBuilder {
 	private StateKeeper stateKeeper = new InMemoryStateKeeper();
 	private URI repositoryURI;
 	private String branchName = "main";
-	private Dataset dataset;
-	private OntModel model;
+	private Dataset branchDataset;
+	private final Dataset repoDataset;
+	private OntModel repoModel;
 	private List<CommitHandler> incomingCommitHandlers = new LinkedList<>();
 	private List<BranchInternalCommitHandler> services = new LinkedList<>();
+	private Set<CommitHandler> outgoingCommitDistributers = new HashSet<>();
 	
-	public BranchBuilder(@NonNull URI repositoryURI) {
+	public BranchBuilder(@NonNull URI repositoryURI, @NonNull Dataset repoDataset, @NonNull OntModel repoModel) {
 		this.repositoryURI = repositoryURI;
+		this.repoDataset = repoDataset;	
+		this.repoModel = repoModel;
+	}
+	
+	public BranchBuilder(@NonNull URI repositoryURI, @NonNull Dataset repoDataset) {
+		this.repositoryURI = repositoryURI;
+		this.repoDataset = repoDataset;	
+		this.repoModel = null;
 	}
 	
 	/**
 	 * if not used, by default the 'main' branch will be created.
 	 */
-	public BranchBuilder setBranch(@NonNull String branchName) {
+	public BranchBuilder setBranchLocalName(@NonNull String branchName) {
+		if (branchName.length() == 0) {
+			throw new RuntimeException("Branchname cannot be empty");
+		}
 		this.branchName = branchName;
 		return this;
 	}
@@ -66,8 +76,7 @@ public class BranchBuilder {
 	 * if not used, by default a in memory dataset will be created.
 	 */
 	public BranchBuilder setDataset(@NonNull Dataset dataset) {
-		this.dataset = dataset;
-		this.model = OntModelFactory.createModel(dataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		this.branchDataset = dataset;
 		return this;
 	}
 
@@ -87,37 +96,60 @@ public class BranchBuilder {
 		return this;
 	}
 	
+	public BranchBuilder addOutgoingCommitDistributer(CommitHandler distributer) {
+		this.outgoingCommitDistributers.add(distributer);
+		return this;
+	}
+	
+	
 	public static String generateBranchURI(URI repositoryURI, String branchName) {
 		return Objects.toString(repositoryURI)+"#"+branchName;
 	}
 	
+	public static String getBranchNameFromURI(@NonNull URI branchURI) {
+		int pos = branchURI.toString().lastIndexOf("#");
+		if (pos < 0) {
+			return null;
+		} else {
+			return branchURI.toString().substring(pos+1);
+		}
+	}
+	
 	public Branch build() throws Exception {
-		if (dataset == null) {
+		if (branchDataset == null) {
 			setDataset(DatasetFactory.createTxnMem());
 		}
-		dataset.begin(ReadWrite.WRITE);
 		String branchURI = generateBranchURI(repositoryURI, branchName);
+		OntIndividual branchResource = prepareBranch(branchURI);
+		BlockingQueue<Commit> inQueue = new LinkedBlockingQueue<>();
+		BlockingQueue<Commit> outQueue = new LinkedBlockingQueue<>();
+		// we init the statekeeper before the branch to avoid triggering the services --> not anymore with separate startHandlers method
+		// stateKeeper.loadState(model); only upon setting up all services, not the duty of the builder
+		
+		OntModel model = OntModelFactory.createModel(branchDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		BranchImpl branch = new BranchImpl(branchDataset, model, branchResource, stateKeeper, inQueue, outQueue);
+		addCommitHandlers(branch);
+
+		branchDataset.begin();
+		return branch;
+	}
+	
+	private OntIndividual prepareBranch(String branchURI) {
 		Resource branchRes = ResourceFactory.createResource(branchURI);
 		Resource repoRes = ResourceFactory.createResource(repositoryURI.toString());
 		OntIndividual branchResource = null;
-		if (model.contains(branchRes, AES.partOfRepository, repoRes)) {
-			branchResource = model.createIndividual(branchURI);
+		repoDataset.begin();
+		if (repoModel == null)
+			repoModel = OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		if (repoModel.contains(branchRes, AES.partOfRepository, repoRes)) {
+			branchResource = repoModel.createIndividual(branchURI);		
 		} else { // we assume, each branch has its own model, hence we create the core concepts here as well
-			addCoreConcepts(model);
-			branchResource = buildBranchResource(repositoryURI, model, branchName);
+			addCoreConcepts(repoModel);
+			branchResource = buildBranchResource(repositoryURI, repoModel, branchName);
 		}
-		BlockingQueue<Commit> inQueue = new LinkedBlockingQueue<>();
-		BlockingQueue<Commit> outQueue = new LinkedBlockingQueue<>();
-		// we init the statekeeper before the branch to avoid triggering the services
-		stateKeeper.loadState(model);
-		
-		BranchImpl branch = new BranchImpl(dataset, model, branchResource, stateKeeper, inQueue, outQueue);
-		incomingCommitHandlers.stream().forEach(handler -> branch.appendIncomingCommitHandler(handler));
-		services.stream().forEach(service -> branch.appendCommitService(service));		
-		dataset.commit();
-		dataset.end();
-		dataset.begin();
-		return branch;
+		repoDataset.commit();
+		repoDataset.end();
+		return branchResource;
 	}
 	
 	private static void addCoreConcepts(OntModel model) {
@@ -137,6 +169,14 @@ public class BranchBuilder {
 		branch.addLabel(branchName);
 		branch.addProperty(partOfRepo, repo);
 		return branch;
+	}
+	
+	
+	private void addCommitHandlers(Branch branch) {
+		incomingCommitHandlers.stream().forEach(handler -> branch.appendIncomingCommitHandler(handler));
+		services.stream().forEach(service -> branch.appendCommitService(service));		
+		outgoingCommitDistributers.stream().forEach(service -> branch.appendOutgoingCrossBranchCommitHandler(service));
+
 	}
 	
 	public static boolean doesDatasetContainBranch(Dataset dataset, URI repositoryURI, String branchName) {

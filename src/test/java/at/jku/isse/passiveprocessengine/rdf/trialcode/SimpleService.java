@@ -4,9 +4,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.jena.ontapi.model.OntIndividual;
+import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDFS;
 
+import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +22,7 @@ public class SimpleService implements BranchInternalCommitHandler {
 	final String serviceName;
 	final boolean doNegToPos;
 	Set<Statement> seenStatements = new HashSet<>();
+	final OntModel model;
 	
 	@Override
 	public void handleCommit(Commit commit) {
@@ -63,4 +67,8 @@ public class SimpleService implements BranchInternalCommitHandler {
 		} while (indexOfNewAddition < additions.size());
 	}
 
+	@Override
+	public OntIndividual getConfigResource() {
+		return model.createIndividual(AES.getURI()+this.getClass().getName());
+	}
 }

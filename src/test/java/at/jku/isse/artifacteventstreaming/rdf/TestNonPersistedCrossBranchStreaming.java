@@ -5,7 +5,9 @@ import static org.junit.Assert.assertEquals;
 import java.net.URI;
 import java.util.concurrent.CountDownLatch;
 
+import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
@@ -29,26 +31,27 @@ class TestNonPersistedCrossBranchStreaming {
 		int commitRounds = 1;
 		int changeCount = 10;
 		CountDownLatch latch = new CountDownLatch(commitRounds*2);
-		Branch branch = new BranchBuilder(repoURI1)				
-				.setBranch("branch1")
+		OntModel repoModel = OntModelFactory.createModel();
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI1, DatasetFactory.createTxnMem())	
+				.setBranchLocalName("branch1")
 				.build();		
 		OntModel model = branch.getModel();
 		
-		Branch branch2 = new BranchBuilder(repoURI2)
-				.setBranch("branch2")
-				.addBranchInternalCommitHandler(new SyncForTestingService("Branch2Signaller", latch))
+		Branch branch2 = new BranchBuilder(repoURI2, DatasetFactory.createTxnMem())
+				.setBranchLocalName("branch2")
+				.addBranchInternalCommitHandler(new SyncForTestingService("Branch2Signaller", latch, repoModel))
 				.build();		
 		branch2.appendIncomingCommitHandler(new CompleteCommitMerger(branch2));
 
-		Branch branch3 = new BranchBuilder(repoURI3)
-				.setBranch("branch3")
-				.addBranchInternalCommitHandler(new SyncForTestingService("Branch3Signaller", latch))
+		Branch branch3 = new BranchBuilder(repoURI3, DatasetFactory.createTxnMem())
+				.setBranchLocalName("branch3")
+				.addBranchInternalCommitHandler(new SyncForTestingService("Branch3Signaller", latch, repoModel))
 				.build();				
 		branch3.appendIncomingCommitHandler(new CompleteCommitMerger(branch3));
 
 
-		branch.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branch2));
-		branch.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branch3));
+		branch.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branch, branch2));
+		branch.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branch, branch3));
 		
 		for (int j = 0; j < commitRounds; j++) {
 			Resource testResource = model.createResource(repoURI1+"#art"+j);
