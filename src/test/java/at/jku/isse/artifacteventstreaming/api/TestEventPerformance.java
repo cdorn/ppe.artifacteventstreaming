@@ -26,11 +26,16 @@ class TestEventPerformance {
 	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/repo-performance");
 				
 	
+	private static RocksDBFactory cacheFactory;
 	private static EventStoreDBClient client = new EventStoreFactory().getClient();
+	private static BranchStateCache branchCache;
 			
 	@BeforeAll
 	static void removeStream() {
 		try {
+			cacheFactory = new RocksDBFactory("./branchStatusTestCache/");
+			cacheFactory.resetCache();
+			branchCache = cacheFactory.getCache();
 			client.getStreamMetadata(repoURI.toString()); //throws exception if doesn't exist, then we wont need to delete
 			client.deleteStream(repoURI.toString(), DeleteStreamOptions.get()).get();
 		}catch (Exception e) {
@@ -41,7 +46,7 @@ class TestEventPerformance {
 	
 	@Test @Disabled
 	void test10KEvents10CommitPersistence() throws Exception {	
-		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), client);
+		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, branchCache, client);
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
 				.build();		
@@ -59,7 +64,7 @@ class TestEventPerformance {
 		System.out.println("Model1 size:"+model.size());
 		long middle = System.currentTimeMillis();
 		
-		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), new EventStoreFactory().getClient());
+		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, branchCache, new EventStoreFactory().getClient());
 		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper2)				
 				.build();		
@@ -86,7 +91,7 @@ class TestEventPerformance {
 	
 	@Test @Disabled
 	void test1KCommitPersistence() throws Exception {	
-		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), client);
+		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, branchCache, client);
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
 				.build();				
@@ -102,7 +107,7 @@ class TestEventPerformance {
 		long midway = System.currentTimeMillis();
 		System.out.println("Now replaying after: "+(midway-start));
 		
-		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), new EventStoreFactory().getClient());
+		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, branchCache, new EventStoreFactory().getClient());
 		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper2)				
 				.build();		

@@ -125,12 +125,10 @@ public class BranchBuilder {
 		BlockingQueue<Commit> outQueue = new LinkedBlockingQueue<>();
 		// we init the statekeeper before the branch to avoid triggering the services --> not anymore with separate startHandlers method
 		// stateKeeper.loadState(model); only upon setting up all services, not the duty of the builder
-		
+		branchDataset.begin();
 		OntModel model = OntModelFactory.createModel(branchDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		BranchImpl branch = new BranchImpl(branchDataset, model, branchResource, stateKeeper, inQueue, outQueue);
 		addCommitHandlers(branch);
-
-		branchDataset.begin();
 		return branch;
 	}
 	

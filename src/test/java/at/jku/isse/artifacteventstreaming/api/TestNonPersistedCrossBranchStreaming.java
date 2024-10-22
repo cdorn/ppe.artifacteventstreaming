@@ -55,6 +55,10 @@ class TestNonPersistedCrossBranchStreaming {
 
 		branch.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branch, branch2));
 		branch.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branch, branch3));
+		branch.startCommitHandlers();
+		branch2.startCommitHandlers();
+		branch3.startCommitHandlers();
+		
 		
 		for (int j = 0; j < commitRounds; j++) {
 			Resource testResource = model.createResource(repoURI1+"#art"+j);

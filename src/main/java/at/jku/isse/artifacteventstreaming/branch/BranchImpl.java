@@ -291,7 +291,7 @@ public class BranchImpl  implements Branch, Runnable {
 		try {
 			stateKeeper.afterServices(commit);
 			dataset.commit(); // together with commit persistence
-			log.debug(String.format("Branch %s now has size %s statements", branchResource.getLabel(), model.size()));
+			log.debug(String.format("Branch %s contains now %s statements", branchResource.getLabel(), model.size()));
 		} catch (Exception e) {
 			log.warn(String.format("Failed to persist post-service commit %s %s with exception %s", commit.getCommitMessage(), commit.getCommitId(), e.getMessage()));
 			//SHOULD WE: rethrow e to signal that we cannot continue here as we would loose persisted commit history.
@@ -390,7 +390,7 @@ public class BranchImpl  implements Branch, Runnable {
 	@Override
 	public void removeOutgoingCrossBranchCommitHandler(@NonNull CommitHandler crossBranchHandler) {		
 		crossBranchStreamer.removeOutgoingCommitHandler(crossBranchHandler);
-		//TODO: update config
+		//TODO: update rdf persisted config in repoDataset/Model
 	}
 
 	@Override

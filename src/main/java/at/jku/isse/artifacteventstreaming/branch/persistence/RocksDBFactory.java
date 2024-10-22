@@ -12,7 +12,15 @@ public class RocksDBFactory {
 	private static final String BRANCH_STATE_KEEPER = "branchStateKeeper";
 	
 	private final Options options;
-	private final RocksDB db;
+	private RocksDB db;
+	private String path = "./branchStatusCache/";
+	
+	public RocksDBFactory(String path) throws RocksDBException {
+		this.path = path;
+		RocksDB.loadLibrary();
+		options = new Options().setCreateIfMissing(true) ;
+		db = RocksDB.open(options, getStoragePath())  ;
+	}
 	
 	public RocksDBFactory() throws RocksDBException {
 		RocksDB.loadLibrary();
@@ -22,11 +30,23 @@ public class RocksDBFactory {
 	}
 	
 	private String getStoragePath() {
-		return "./branchStatusCache/";
+		return path;
 	}
 
 	public BranchStateCache getCache() {
 		return new RocksDbCache(db);
+	}
+	
+	/**
+	 * deletes the persisted cache from disk and invalidates any prior cache instances
+	 * @throws RocksDBException 
+	 */
+	public void resetCache() throws RocksDBException {
+		if (db != null && !db.isClosed()) {
+			db.close();
+		}
+		RocksDB.destroyDB(getStoragePath(), options);
+		db = RocksDB.open(options, getStoragePath())  ;
 	}
 	
 	@RequiredArgsConstructor

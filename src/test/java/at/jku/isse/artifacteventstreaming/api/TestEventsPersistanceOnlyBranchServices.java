@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.net.URI;
 
+import org.apache.jena.atlas.logging.Log;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.DatasetFactory;
@@ -26,12 +27,16 @@ class TestEventsPersistanceOnlyBranchServices {
 
 	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/repo3");
 				
-	
+	private static RocksDBFactory cacheFactory;
 	private static EventStoreDBClient client = new EventStoreFactory().getClient();
+	private static BranchStateCache branchCache;
 			
 	@BeforeAll
 	static void removeStream() {
 		try {
+			cacheFactory = new RocksDBFactory("./branchStatusTestCache/");
+			cacheFactory.resetCache();
+			branchCache = cacheFactory.getCache();
 			client.getStreamMetadata(repoURI.toString()); //throws exception if doesn't exist, then we wont need to delete
 			client.deleteStream(repoURI.toString(), DeleteStreamOptions.get()).get();
 		}catch (Exception e) {
@@ -42,7 +47,7 @@ class TestEventsPersistanceOnlyBranchServices {
 	
 	@Test
 	void testSimpleCommitPersistence() throws Exception {	
-		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), client);
+		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, branchCache, client);
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
 				.build();		
@@ -60,7 +65,7 @@ class TestEventsPersistanceOnlyBranchServices {
 	
 	@Test
 	void testReadAndApplyCommits() throws Exception {
-		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), new EventStoreFactory().getClient());
+		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, branchCache, new EventStoreFactory().getClient());
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
 				.build();		
@@ -70,7 +75,7 @@ class TestEventsPersistanceOnlyBranchServices {
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("TestCommit");
 		
-		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), new EventStoreFactory().getClient());
+		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, branchCache, new EventStoreFactory().getClient());
 		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper2)				
 				.build();		
@@ -83,7 +88,7 @@ class TestEventsPersistanceOnlyBranchServices {
 	@Test
 	void testReplayViaEvents() throws Exception {	
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
-				.setStateKeeper(new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), new EventStoreFactory().getClient()))				
+				.setStateKeeper(new DBBasedStateKeeper(repoURI, branchCache, new EventStoreFactory().getClient()))				
 				.build();
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
@@ -99,17 +104,22 @@ class TestEventsPersistanceOnlyBranchServices {
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		assertEquals(1, commit.getAddedStatements().size());				
 		
-		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), new EventStoreFactory().getClient());
+		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, branchCache, new EventStoreFactory().getClient());
 		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper2)				
 				.build();		
 		OntModel model2 = branch2.getModel();
+		stateKeeper2.loadState(model2);
 		// now we do manual application of history onto model 
 		stateKeeper2.getHistory().stream().forEach(pastCommit -> {
+			System.out.println("Adding commit: "+pastCommit.getCommitMessage());
 			model2.add(pastCommit.getRemovedStatements());
 			model2.add(pastCommit.getAddedStatements());
 		});
-		
+		branch2.getDataset().commit();
+		branch2.getDataset().end();
+		System.out.println("Model2 contains now: "+model2.size());
+		RDFDataMgr.write(System.out, model2, Lang.TURTLE) ;
 		assert(model2.containsAll(model));
 		assert(model.containsAll(model2));
 		assert(stateKeeper2.getHistory().size() > 2);
