@@ -16,14 +16,14 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import at.jku.isse.artifacteventstreaming.rdf.BranchBuilder;
-import at.jku.isse.artifacteventstreaming.rdf.BranchImpl;
-import at.jku.isse.artifacteventstreaming.rdf.BranchRepository;
-import at.jku.isse.artifacteventstreaming.rdf.CompleteCommitMerger;
-import at.jku.isse.artifacteventstreaming.rdf.FilebasedDatasetRepository;
-import at.jku.isse.artifacteventstreaming.rdf.distribution.DefaultDirectBranchCommitStreamer;
-import at.jku.isse.artifacteventstreaming.rdf.persistence.InMemoryDatasetLoader;
-import at.jku.isse.artifacteventstreaming.rdf.persistence.InMemoryStateKeeper;
+import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
+import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
+import at.jku.isse.artifacteventstreaming.branch.BranchRepository;
+import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
+import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
+import at.jku.isse.artifacteventstreaming.branch.persistence.FilebasedDatasetRepository;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryDatasetLoader;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryStateKeeper;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SimpleService;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
 

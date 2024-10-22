@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rdf.distribution;
+package at.jku.isse.artifacteventstreaming.branch.outgoing;
 
 import java.net.URI;
 
@@ -12,8 +12,8 @@ import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
-import at.jku.isse.artifacteventstreaming.rdf.BranchRepository;
-import at.jku.isse.artifacteventstreaming.rdf.CompleteCommitMerger;
+import at.jku.isse.artifacteventstreaming.branch.BranchRepository;
+import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor

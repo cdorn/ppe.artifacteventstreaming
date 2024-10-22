@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rdf.persistence;
+package at.jku.isse.artifacteventstreaming.branch.persistence;
 
 import com.eventstore.dbclient.EventStoreDBClient;
 import com.eventstore.dbclient.EventStoreDBClientSettings;

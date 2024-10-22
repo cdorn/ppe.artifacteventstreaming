@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rdf.persistence;
+package at.jku.isse.artifacteventstreaming.branch.persistence;
 
 import java.io.IOException;
 import java.net.URI;
@@ -11,8 +11,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import org.apache.jena.ontapi.model.OntModel;
-import org.ehcache.Cache;
-import org.ehcache.spi.loaderwriter.CacheWritingException;
 
 import com.eventstore.dbclient.AppendToStreamOptions;
 import com.eventstore.dbclient.EventData;
@@ -28,12 +26,13 @@ import com.fasterxml.jackson.core.exc.StreamReadException;
 import com.fasterxml.jackson.databind.DatabindException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
+import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.StateKeeper;
-import at.jku.isse.artifacteventstreaming.rdf.StatementCommitImpl;
-import at.jku.isse.artifacteventstreaming.rdf.events.StatementJsonDeserializer;
-import at.jku.isse.artifacteventstreaming.rdf.events.StatementJsonSerializer;
-import at.jku.isse.artifacteventstreaming.rdf.persistence.EventStoreFactory.EventMetaData;
+import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
+import at.jku.isse.artifacteventstreaming.branch.events.StatementJsonDeserializer;
+import at.jku.isse.artifacteventstreaming.branch.events.StatementJsonSerializer;
+import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory.EventMetaData;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -48,11 +47,11 @@ public class DBBasedStateKeeper implements StateKeeper {
 	private final Set<String> seenCommitIds = new HashSet<>();
 	private Commit lastCommit = null;
 	private final String branchURI;
-	private final Cache<String, String> cache;
+	private final BranchStateCache cache;
 	private final EventStoreDBClient eventDBclient;
 	private final JsonMapper jsonMapper = new JsonMapper();
 	
-	public DBBasedStateKeeper(URI branchURI,  Cache<String, String> cache, EventStoreDBClient eventDBclient) {
+	public DBBasedStateKeeper(URI branchURI,  BranchStateCache cache, EventStoreDBClient eventDBclient) {
 		this.cache = cache;
 		this.branchURI = branchURI.toString();
 		this.eventDBclient = eventDBclient;
@@ -88,7 +87,7 @@ public class DBBasedStateKeeper implements StateKeeper {
 	}
 	
 	@Override
-	public void finishedMerge(Commit commit) {
+	public void finishedMerge(Commit commit) throws Exception {
 		cache.put(LAST_PROCESSED_INCOMING_COMMIT+branchURI, commit.getCommitId());
 		log.debug("Finished merge of" +commit.getCommitId());
 	}
@@ -99,7 +98,7 @@ public class DBBasedStateKeeper implements StateKeeper {
 		try {
 			cache.put(LAST_OPEN_PRELEMINARY_COMMIT_ID+branchURI, commit.getCommitId());
 			cache.put(LAST_OPEN_PRELEMINARY_COMMIT_CONTENT, jsonMapper.writeValueAsString(commit));
-		} catch (JsonProcessingException | CacheWritingException e) {
+		} catch (Exception e) {
 			log.warn(String.format("Error writing preliminary commit %s of branch %s to cache with error %s", commit.getCommitId(), branchURI, e.getMessage()));
 			throw e;
 		}

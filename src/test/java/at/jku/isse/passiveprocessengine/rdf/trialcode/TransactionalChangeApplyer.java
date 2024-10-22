@@ -7,7 +7,7 @@ import org.apache.jena.rdf.listeners.StatementListener;
 import org.apache.jena.rdf.model.Statement;
 
 import at.jku.isse.artifacteventstreaming.api.Commit;
-import at.jku.isse.artifacteventstreaming.rdf.StatementCommitImpl;
+import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor

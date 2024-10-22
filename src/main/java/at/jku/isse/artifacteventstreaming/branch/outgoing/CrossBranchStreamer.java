@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rdf.distribution;
+package at.jku.isse.artifacteventstreaming.branch.outgoing;
 
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -8,8 +8,8 @@ import java.util.concurrent.BlockingQueue;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
-import at.jku.isse.artifacteventstreaming.rdf.PoisonPillCommit;
-import at.jku.isse.artifacteventstreaming.rdf.StatementCommitImpl;
+import at.jku.isse.artifacteventstreaming.branch.PoisonPillCommit;
+import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 

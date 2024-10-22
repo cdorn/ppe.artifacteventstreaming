@@ -11,7 +11,7 @@ import org.apache.jena.tdb2.TDB2Factory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import at.jku.isse.artifacteventstreaming.rdf.BranchBuilder;
+import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 
 class TestPersistentBranchCreation {
 

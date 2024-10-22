@@ -15,10 +15,11 @@ import org.junit.jupiter.api.Test;
 
 import com.eventstore.dbclient.DeleteStreamOptions;
 import com.eventstore.dbclient.EventStoreDBClient;
-import at.jku.isse.artifacteventstreaming.rdf.BranchBuilder;
-import at.jku.isse.artifacteventstreaming.rdf.persistence.DBBasedStateKeeper;
-import at.jku.isse.artifacteventstreaming.rdf.persistence.EHCacheFactory;
-import at.jku.isse.artifacteventstreaming.rdf.persistence.EventStoreFactory;
+
+import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
+import at.jku.isse.artifacteventstreaming.branch.persistence.DBBasedStateKeeper;
+import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
+import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
 
 class TestEventPerformance {
 
@@ -40,7 +41,7 @@ class TestEventPerformance {
 	
 	@Test @Disabled
 	void test10KEvents10CommitPersistence() throws Exception {	
-		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, new EHCacheFactory().getCache(), client);
+		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), client);
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
 				.build();		
@@ -58,7 +59,7 @@ class TestEventPerformance {
 		System.out.println("Model1 size:"+model.size());
 		long middle = System.currentTimeMillis();
 		
-		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, new EHCacheFactory().getCache(), new EventStoreFactory().getClient());
+		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), new EventStoreFactory().getClient());
 		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper2)				
 				.build();		
@@ -85,7 +86,7 @@ class TestEventPerformance {
 	
 	@Test @Disabled
 	void test1KCommitPersistence() throws Exception {	
-		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, new EHCacheFactory().getCache(), client);
+		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), client);
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
 				.build();				
@@ -101,7 +102,7 @@ class TestEventPerformance {
 		long midway = System.currentTimeMillis();
 		System.out.println("Now replaying after: "+(midway-start));
 		
-		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, new EHCacheFactory().getCache(), new EventStoreFactory().getClient());
+		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), new EventStoreFactory().getClient());
 		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper2)				
 				.build();		

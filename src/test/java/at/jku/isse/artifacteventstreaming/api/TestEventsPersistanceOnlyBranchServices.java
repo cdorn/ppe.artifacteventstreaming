@@ -17,10 +17,10 @@ import org.junit.jupiter.api.Test;
 import com.eventstore.dbclient.DeleteStreamOptions;
 import com.eventstore.dbclient.EventStoreDBClient;
 
-import at.jku.isse.artifacteventstreaming.rdf.BranchBuilder;
-import at.jku.isse.artifacteventstreaming.rdf.persistence.DBBasedStateKeeper;
-import at.jku.isse.artifacteventstreaming.rdf.persistence.EHCacheFactory;
-import at.jku.isse.artifacteventstreaming.rdf.persistence.EventStoreFactory;
+import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
+import at.jku.isse.artifacteventstreaming.branch.persistence.DBBasedStateKeeper;
+import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
+import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
 
 class TestEventsPersistanceOnlyBranchServices {
 
@@ -42,7 +42,7 @@ class TestEventsPersistanceOnlyBranchServices {
 	
 	@Test
 	void testSimpleCommitPersistence() throws Exception {	
-		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, new EHCacheFactory().getCache(), client);
+		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), client);
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
 				.build();		
@@ -60,7 +60,7 @@ class TestEventsPersistanceOnlyBranchServices {
 	
 	@Test
 	void testReadAndApplyCommits() throws Exception {
-		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, new EHCacheFactory().getCache(), new EventStoreFactory().getClient());
+		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), new EventStoreFactory().getClient());
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
 				.build();		
@@ -70,7 +70,7 @@ class TestEventsPersistanceOnlyBranchServices {
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("TestCommit");
 		
-		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, new EHCacheFactory().getCache(), new EventStoreFactory().getClient());
+		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), new EventStoreFactory().getClient());
 		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper2)				
 				.build();		
@@ -83,7 +83,7 @@ class TestEventsPersistanceOnlyBranchServices {
 	@Test
 	void testReplayViaEvents() throws Exception {	
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
-				.setStateKeeper(new DBBasedStateKeeper(repoURI, new EHCacheFactory().getCache(), new EventStoreFactory().getClient()))				
+				.setStateKeeper(new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), new EventStoreFactory().getClient()))				
 				.build();
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
@@ -99,7 +99,7 @@ class TestEventsPersistanceOnlyBranchServices {
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		assertEquals(1, commit.getAddedStatements().size());				
 		
-		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, new EHCacheFactory().getCache(), new EventStoreFactory().getClient());
+		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, new RocksDBFactory().getCache(), new EventStoreFactory().getClient());
 		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper2)				
 				.build();		

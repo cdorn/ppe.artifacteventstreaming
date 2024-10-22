@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.DatabindException;
 
 public interface StateKeeper {
 
-	public void finishedMerge(Commit commit);
+	public void finishedMerge(Commit commit) throws Exception;
 	
 	public void beforeServices(Commit commit) throws Exception;
 	

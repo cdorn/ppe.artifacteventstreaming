@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rdf;
+package at.jku.isse.artifacteventstreaming.branch;
 
 import java.net.URI;
 import java.util.HashMap;

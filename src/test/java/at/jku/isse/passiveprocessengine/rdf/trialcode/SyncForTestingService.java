@@ -13,9 +13,9 @@ import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
-import at.jku.isse.artifacteventstreaming.rdf.BranchRepository;
-import at.jku.isse.artifacteventstreaming.rdf.distribution.DefaultDirectBranchCommitStreamer;
-import at.jku.isse.artifacteventstreaming.rdf.distribution.DefaultDirectBranchCommitStreamer.DefaultServiceFactory;
+import at.jku.isse.artifacteventstreaming.branch.BranchRepository;
+import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
+import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer.DefaultServiceFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 

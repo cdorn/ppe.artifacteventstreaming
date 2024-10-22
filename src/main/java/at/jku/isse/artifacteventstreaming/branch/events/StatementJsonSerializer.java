@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rdf.events;
+package at.jku.isse.artifacteventstreaming.branch.events;
 
 import java.io.IOException;
 

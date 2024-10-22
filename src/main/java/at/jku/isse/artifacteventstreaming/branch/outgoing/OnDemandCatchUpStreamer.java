@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rdf.distribution;
+package at.jku.isse.artifacteventstreaming.branch.outgoing;
 
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;

@@ -19,10 +19,10 @@ import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.Test;
 
-import at.jku.isse.artifacteventstreaming.rdf.BranchBuilder;
-import at.jku.isse.artifacteventstreaming.rdf.BranchImpl;
-import at.jku.isse.artifacteventstreaming.rdf.CompleteCommitMerger;
-import at.jku.isse.artifacteventstreaming.rdf.StatementCommitImpl;
+import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
+import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
+import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
+import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.AllUndoService;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.OutgoingCommitLatchCountdown;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SimpleService;

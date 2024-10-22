@@ -19,7 +19,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.rdf.BranchBuilder;
+import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import lombok.RequiredArgsConstructor;
 
 class MultipleWriterTest {

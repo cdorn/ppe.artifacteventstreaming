@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rdf;
+package at.jku.isse.artifacteventstreaming.branch;
 
 import java.net.URI;
 import java.util.HashSet;
@@ -26,7 +26,7 @@ import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.StateKeeper;
-import at.jku.isse.artifacteventstreaming.rdf.persistence.InMemoryStateKeeper;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryStateKeeper;
 import lombok.NonNull;
 
 public class BranchBuilder {
