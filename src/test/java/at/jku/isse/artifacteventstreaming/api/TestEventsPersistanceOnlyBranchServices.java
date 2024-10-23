@@ -52,7 +52,7 @@ class TestEventsPersistanceOnlyBranchServices {
 				.setStateKeeper(stateKeeper)				
 				.build();		
 		OntModel model = branch.getModel();
-		stateKeeper.loadState(model);
+		stateKeeper.loadState();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("TestCommit");
@@ -70,7 +70,7 @@ class TestEventsPersistanceOnlyBranchServices {
 				.setStateKeeper(stateKeeper)				
 				.build();		
 		OntModel model = branch.getModel();
-		stateKeeper.loadState(model);
+		stateKeeper.loadState();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("TestCommit");
@@ -80,7 +80,7 @@ class TestEventsPersistanceOnlyBranchServices {
 				.setStateKeeper(stateKeeper2)				
 				.build();		
 		OntModel model2 = branch2.getModel();
-		stateKeeper2.loadState(model2);
+		stateKeeper2.loadState();
 		assert(stateKeeper2.getHistory().size() > 0);
 	}
 	
@@ -109,7 +109,7 @@ class TestEventsPersistanceOnlyBranchServices {
 				.setStateKeeper(stateKeeper2)				
 				.build();		
 		OntModel model2 = branch2.getModel();
-		stateKeeper2.loadState(model2);
+		stateKeeper2.loadState();
 		// now we do manual application of history onto model 
 		stateKeeper2.getHistory().stream().forEach(pastCommit -> {
 			System.out.println("Adding commit: "+pastCommit.getCommitMessage());

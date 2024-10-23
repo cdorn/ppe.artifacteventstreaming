@@ -55,9 +55,9 @@ class TestNonPersistedCrossBranchStreaming {
 
 		branch.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branch, branch2));
 		branch.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branch, branch3));
-		branch.startCommitHandlers();
-		branch2.startCommitHandlers();
-		branch3.startCommitHandlers();
+		branch.startCommitHandlers(null);
+		branch2.startCommitHandlers(null);
+		branch3.startCommitHandlers(null);
 		
 		
 		for (int j = 0; j < commitRounds; j++) {

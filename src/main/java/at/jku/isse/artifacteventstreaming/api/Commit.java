@@ -29,4 +29,6 @@ public interface Commit {
 
 	boolean isEmpty();
 
+	void removeEffectlessStatements(int baseAdds, int baseRemoves);
+
 }

@@ -13,6 +13,7 @@ import org.apache.jena.rdf.model.Statement;
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
+import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.DatasetRepository;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
@@ -73,10 +74,10 @@ public class BranchRepository {
 						.setBranchLocalName(BranchBuilder.getBranchNameFromURI(branchURI))
 						.setStateKeeper(stateKeeper)
 						.build();
-				registerBranch(branch);
-				initializeBranch(branch);
-				stateKeeper.loadState(branch.getModel());
-				branch.startCommitHandlers();
+				Commit prelimUnfinishedCommit = stateKeeper.loadState();
+				registerBranch(branch); // now branch can be found and referenced by other branches
+				initializeBranch(branch); // reload incoming, local, outgoing commit handlers
+				branch.startCommitHandlers(prelimUnfinishedCommit);
 				return branch;
 			}
 		}
@@ -117,6 +118,7 @@ public class BranchRepository {
 					log.warn(String.format("Could not resolve Factory for %s while initializing branch %s", typeStmt.getResource().getURI(), branch.getBranchId()));
 				}
 			}
+			// we cant start the distributer as enqueuing relies on the destination branch's stateKeeper (which might not be ready yet) 
 		});
 
 		branch.getIncomingCommitHandlerConfig().stream().forEach(config -> {

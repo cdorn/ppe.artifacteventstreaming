@@ -3,6 +3,8 @@ package at.jku.isse.artifacteventstreaming.branch.events;
 import java.io.IOException;
 
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Statement;
 
 import com.fasterxml.jackson.databind.DeserializationContext;
@@ -20,11 +22,10 @@ public class StatementJsonDeserializer extends StdDeserializer<Statement> {
 	 */
 	private static final long serialVersionUID = 1L;
 
-	private final OntModel model;
+	private final Model model = ModelFactory.createDefaultModel();
 	
-	protected StatementJsonDeserializer(Class<Statement> t, OntModel model) {
-		super(t);		
-		this.model = model;
+	protected StatementJsonDeserializer(Class<Statement> t) {
+		super(t);			
 	}
 	
 	@Override
@@ -42,9 +43,9 @@ public class StatementJsonDeserializer extends StdDeserializer<Statement> {
 		}
 	}
 
-	public static void registerDeserializationModule(ObjectMapper mapper, OntModel model) {
+	public static void registerDeserializationModule(ObjectMapper mapper) {
 		SimpleModule module = new SimpleModule();
-		module.addDeserializer(Statement.class, new StatementJsonDeserializer(Statement.class, model));
+		module.addDeserializer(Statement.class, new StatementJsonDeserializer(Statement.class));
 		mapper.registerModule(module);
 	}
 

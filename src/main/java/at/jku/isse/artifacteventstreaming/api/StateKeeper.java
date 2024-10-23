@@ -1,27 +1,55 @@
 package at.jku.isse.artifacteventstreaming.api;
 
-import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.jena.ontapi.model.OntModel;
 
-import com.fasterxml.jackson.core.exc.StreamReadException;
-import com.fasterxml.jackson.databind.DatabindException;
-
+/**
+ * @author Christoph Mayr-Dorn
+ *
+ * Keeps track of state (which commits have been produced, seen, etc,) 
+ * but does not restart processing, --> done by branch impl
+ *
+ */
 public interface StateKeeper {
 
-	public void finishedMerge(Commit commit) throws Exception;
-	
-	public void beforeServices(Commit commit) throws Exception;
-	
-	public void afterServices(Commit commit) throws Exception;
+	/**
+	 * @return any preliminary commit that was persisted but not completely processed by any service
+	 * @throws Exception when loading the history from the event database failed
+	 */
+	public Commit loadState() throws Exception;
 	
 	public boolean hasSeenCommit(Commit commit);
 	
 	public List<Commit> getHistory();
 	
-	public Commit getLastCommit();
+	public Optional<Commit> getLastCommit();
+	
+	public void beforeServices(Commit commit) throws Exception;
+	
+	public void afterServices(Commit commit) throws Exception;
+	
+	public void beforeMerge(Commit commit) throws Exception;
+	
+	public List<Commit> getNonMergedCommits() throws Exception;
+	
+	public void finishedMerge(Commit commit) throws Exception;
+	
+	public Optional<String> getLastMergedCommitId();
 
-	void loadState(OntModel model) throws StreamReadException, DatabindException, IOException;
+	public void afterForwarded(Commit commit) throws Exception;
+	
+	public List<Commit> getNonForwardedCommits();
+	
+	public Optional<String> getLastForwardedCommitId();
+
+	public List<Commit> getCommitsForwardIncludingFrom(String string);
+
+	
+
+	
+	
+	
 	
 }

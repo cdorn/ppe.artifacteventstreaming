@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.api;
+package at.jku.isse.artifacteventstreaming.api.manualtests;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -16,6 +16,10 @@ import org.junit.jupiter.api.Test;
 import com.eventstore.dbclient.DeleteStreamOptions;
 import com.eventstore.dbclient.EventStoreDBClient;
 
+import at.jku.isse.artifacteventstreaming.api.Branch;
+import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
+import at.jku.isse.artifacteventstreaming.api.Commit;
+import at.jku.isse.artifacteventstreaming.api.StateKeeper;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.persistence.DBBasedStateKeeper;
 import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
@@ -51,7 +55,7 @@ class TestEventPerformance {
 				.setStateKeeper(stateKeeper)				
 				.build();		
 		OntModel model = branch.getModel();
-		stateKeeper.loadState(model);		
+		stateKeeper.loadState();		
 		
 		long start = System.currentTimeMillis();
 		for (int j = 0; j < 10; j++) {
@@ -70,7 +74,7 @@ class TestEventPerformance {
 				.build();		
 		OntModel model2 = branch2.getModel();
 		long initModel2Size = model2.size();
-		stateKeeper2.loadState(model2);
+		stateKeeper2.loadState();
 		System.out.println("Model2 size:"+model2.size());
 		assertTrue(model2.size() == initModel2Size);
 		
@@ -112,7 +116,7 @@ class TestEventPerformance {
 				.setStateKeeper(stateKeeper2)				
 				.build();		
 		OntModel model2 = branch2.getModel();
-		stateKeeper2.loadState(model2);
+		stateKeeper2.loadState();
 		// now we do manual application
 		stateKeeper2.getHistory().stream().forEach(pastCommit -> {
 			model2.add(pastCommit.getRemovedStatements());

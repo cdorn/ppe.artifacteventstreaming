@@ -50,7 +50,7 @@ class TestBranchRepository {
 				.setBranchLocalName("source")
 				.build();
 		repo.registerBranch(branchSource); // not really necessary here
-		branchSource.startCommitHandlers();
+		branchSource.startCommitHandlers(null);
 		BranchImpl branchDestination = (BranchImpl) new BranchBuilder(repoURI, repo.getRepositoryDataset())
 				.setBranchLocalName("destination")
 				.addBranchInternalCommitHandler(new SyncForTestingService("BranchDestinationSignaller", latch, repoModel))
@@ -58,7 +58,7 @@ class TestBranchRepository {
 		branchSource.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branchSource, branchDestination));
 		branchDestination.appendIncomingCommitHandler(new CompleteCommitMerger(branchDestination));
 		repo.registerBranch(branchDestination);
-		branchDestination.startCommitHandlers();
+		branchDestination.startCommitHandlers(null);
 		
 		
 		OntModel model = branchSource.getModel();

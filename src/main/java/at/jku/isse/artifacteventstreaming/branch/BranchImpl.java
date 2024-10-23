@@ -63,12 +63,22 @@ public class BranchImpl  implements Branch, Runnable {
 		this.stateKeeper = stateKeeper;
 		this.inQueue = inQueue;
 		this.outQueue = outQueue;
-		this.crossBranchStreamer = new CrossBranchStreamer(branchResource.getURI(), outQueue);
+		this.crossBranchStreamer = new CrossBranchStreamer(branchResource.getURI(), stateKeeper, outQueue);
 		model.register(stmtAggregator);
 	}
 	
 	@Override
-	public void startCommitHandlers() {
+	public void startCommitHandlers(Commit unfinishedPreliminaryCommit) throws Exception {
+		if (unfinishedPreliminaryCommit != null) {
+			// continue aborted processing: e.g., single internal commit not yet completely processed by services (can only be one)
+			this.handleCommitInternally(unfinishedPreliminaryCommit);
+		}
+		// re-forward all nonforwarded commits
+		crossBranchStreamer.recoverState();
+		// then recover all inqueued but not yet processed commits
+		for (Commit nonMergedCommit : stateKeeper.getNonMergedCommits()) {
+			this.enqueueIncomingCommit(nonMergedCommit);
+		}
 		// create thread for incoming commits to be merged
 		inExecutor.execute(this);
 		outExecutor.execute(crossBranchStreamer);
@@ -83,12 +93,10 @@ public class BranchImpl  implements Branch, Runnable {
 	public Dataset getDataset() {
 		return dataset;
 	}
-	
-	
 
 	@Override
 	public Commit getLastCommit() {
-		return stateKeeper.getLastCommit();
+		return stateKeeper.getLastCommit().orElse(null);
 	}
 	
 	private String getLastCommitId() {
@@ -143,9 +151,12 @@ public class BranchImpl  implements Branch, Runnable {
 	// incoming commit handling -------------------------------------------------------------------------
 	
 	@Override
-	public void enqueueIncomingCommit(Commit commit) {
+	public void enqueueIncomingCommit(Commit commit) throws Exception {
 		// if we have processed this commit before, then wont do it again to avoid loops
 		if (!stateKeeper.hasSeenCommit(commit)) {
+			//persist which commits we have received but not merged yet, 
+			stateKeeper.beforeMerge(commit);
+			// if this crashes before returning this call, then cross branch streamer has to assume failure and retry adding/enqueuing upon restart
 			inQueue.add(commit);
 		} else {
 			log.info(String.format("Ignoring incoming commit %s that has been seen by this branch before", commit.getCommitId()));
@@ -281,8 +292,8 @@ public class BranchImpl  implements Branch, Runnable {
 		
 	}
 	
-	private void handleCommitInternally(StatementCommitImpl commit) throws Exception {
-		log.debug(String.format("Created commit %s in branch %s", commit.getCommitId(), branchResource.getURI()));
+	private void handleCommitInternally(Commit commit) throws Exception {
+		log.debug(String.format("Handling commit %s in branch %s", commit.getCommitId(), branchResource.getURI()));
 		// clear the changes
 		if (services.size() > 0 && !commit.isEmpty()) {
 			executeServiceLoop(commit);
@@ -303,7 +314,7 @@ public class BranchImpl  implements Branch, Runnable {
 		dataset.begin(); // prepare for next round of transactions
 	}
 	
-	private void executeServiceLoop(StatementCommitImpl commit) {
+	private void executeServiceLoop(Commit commit) {
 		try { // first persist initial commit
 			stateKeeper.beforeServices(commit);
 			dataset.commit(); // together with commit/events persistence, here persists state of model

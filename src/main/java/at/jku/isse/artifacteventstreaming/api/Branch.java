@@ -68,8 +68,9 @@ public interface Branch {
 	 * routes the commit through any available filters and processors (statements within the commit are not changes, just the decision which ones are applied)
 	 * before applying the remaining statements onto this model within a transaction
 	 * whenever there is a filter a replacement commit is created, to document that not the original commit was applied
+	 * @throws Exception  when persisting in queue fails, then must assume commit has not been processed 
 	 */
-	public void enqueueIncomingCommit(Commit commit);
+	public void enqueueIncomingCommit(Commit commit) throws Exception;
 	
 
 	/**
@@ -114,7 +115,9 @@ public interface Branch {
 	
 	
 	/**
+	 * @param unfinishedPreliminaryCommit any leftover commit to be processed by services upon restart from before a crash, can be null
 	 * To signal that init of the branch is complete (incl state and/or history loading) and the commit handlers for in and out commits can start
+	 * @throws Exception when handling of preliminary commit or any other replaying to get up to date fails
 	 */
-	void startCommitHandlers();
+	void startCommitHandlers(Commit unfinishedPreliminaryCommit) throws Exception;
 }

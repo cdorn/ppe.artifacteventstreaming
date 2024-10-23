@@ -7,6 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.jena.ontapi.model.OntModel;
@@ -57,13 +58,14 @@ public class InMemoryStateKeeper implements StateKeeper {
 	}
 
 	@Override
-	public Commit getLastCommit() {
-		return lastCommit;
+	public Optional<Commit> getLastCommit() {
+		return Optional.ofNullable(lastCommit);
 	}
 
 	@Override
-	public void loadState(OntModel model)  {
+	public Commit loadState()  {
 		//noop as no state to load for in memory statekeeper
+		return null;
 	}
 
 	public static StateKeeperFactory getStateKeeperFactory() {
@@ -79,6 +81,48 @@ public class InMemoryStateKeeper implements StateKeeper {
 				return keepers.get(branchURI);
 			}
 		};
+	}
+
+	@Override
+	public void beforeMerge(Commit commit) throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public Optional<String> getLastMergedCommitId() {
+		// TODO Auto-generated method stub
+		return Optional.empty();
+	}
+
+	@Override
+	public void afterForwarded(Commit commit) throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public Optional<String> getLastForwardedCommitId() {
+		// TODO Auto-generated method stub
+		return Optional.empty();
+	}
+
+	@Override
+	public List<Commit> getCommitsForwardIncludingFrom(String string) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public List<Commit> getNonForwardedCommits() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public List<Commit> getNonMergedCommits() throws Exception {
+		// TODO Auto-generated method stub
+		return null;
 	}
 	
 }

@@ -71,4 +71,9 @@ public class PoisonPillCommit implements Commit {
 		return true;
 	}
 
+	@Override
+	public void removeEffectlessStatements(int baseAdds, int baseRemoves) {
+		//noop
+	}
+
 }

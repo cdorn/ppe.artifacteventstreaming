@@ -15,8 +15,10 @@ import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
 import at.jku.isse.artifacteventstreaming.branch.BranchRepository;
 import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
+@Slf4j
 public class DefaultDirectBranchCommitStreamer implements CommitHandler {
 
 	public static final String SERVICE_TYPE_URI = CommitHandler.serviceTypeBaseURI+DefaultDirectBranchCommitStreamer.class.getSimpleName();
@@ -26,7 +28,12 @@ public class DefaultDirectBranchCommitStreamer implements CommitHandler {
 	
 	@Override
 	public void handleCommit(Commit commit) {
-		destinationBranch.enqueueIncomingCommit(commit);
+		try {
+			destinationBranch.enqueueIncomingCommit(commit);
+		} catch (Exception e) {
+			log.warn(String.format("Error enqueuing commit %s  from branch %s to branch %s", commit.getCommitId(), sourceBranch.getBranchId(), destinationBranch.getBranchId()));
+			//TODO: retry later necessary
+		}
 	}
 
 	@Override

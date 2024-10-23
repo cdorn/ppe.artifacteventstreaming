@@ -8,8 +8,10 @@ import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
+@Slf4j
 public class OnDemandCatchUpStreamer implements CommitHandler {
 
 	private final Branch sourceBranch;
@@ -24,7 +26,12 @@ public class OnDemandCatchUpStreamer implements CommitHandler {
 	
 	@Override
 	public void handleCommit(Commit commit) {
-		destinationBranch.enqueueIncomingCommit(commit);
+		try {
+			destinationBranch.enqueueIncomingCommit(commit);
+		} catch (Exception e) {
+			log.warn(String.format("Error enqueuing commit %s  from branch %s to branch %s", commit.getCommitId(), sourceBranch.getBranchId(), destinationBranch.getBranchId()));
+			//TODO: retry later necessary
+		}
 	}
 	
 	@Override
