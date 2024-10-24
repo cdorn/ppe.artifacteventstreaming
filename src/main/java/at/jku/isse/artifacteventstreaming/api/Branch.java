@@ -18,6 +18,7 @@ public interface Branch {
 	public String getBranchName();
 	public String getRepositoryURI();
 	public Commit getLastCommit();
+	public BranchStateKeeper getStateKeeper();
 	
 	//public BlockingQueue<Commit> getInQueue();	
 	//public BlockingQueue<Commit> getOutQueue();
@@ -120,4 +121,5 @@ public interface Branch {
 	 * @throws Exception when handling of preliminary commit or any other replaying to get up to date fails
 	 */
 	void startCommitHandlers(Commit unfinishedPreliminaryCommit) throws Exception;
+	
 }

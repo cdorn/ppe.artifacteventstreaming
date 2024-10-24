@@ -18,7 +18,7 @@ import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.DatasetRepository;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactoryRegistry;
-import at.jku.isse.artifacteventstreaming.api.StateKeeper;
+import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.StateKeeperFactory;
 import lombok.extern.slf4j.Slf4j;
 
@@ -68,7 +68,7 @@ public class BranchRepository {
 				log.info("Could not find dataset for: "+branchURI.toString());
 				return null;
 			} else {
-				StateKeeper stateKeeper = stateKeeperFactory.getStateKeeperFor(branchURI);
+				BranchStateUpdater stateKeeper = stateKeeperFactory.createStateKeeperFor(branchURI);
 				branch = new BranchBuilder(repositoryURI, repoDataset)
 						.setDataset(datasetOpt.get())
 						.setBranchLocalName(BranchBuilder.getBranchNameFromURI(branchURI))

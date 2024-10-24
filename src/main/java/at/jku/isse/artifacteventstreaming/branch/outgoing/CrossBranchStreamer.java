@@ -10,7 +10,7 @@ import java.util.concurrent.BlockingQueue;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
-import at.jku.isse.artifacteventstreaming.api.StateKeeper;
+import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.branch.PoisonPillCommit;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 public class CrossBranchStreamer implements Runnable {
 
 	private final String branchId;
-	private final StateKeeper stateKeeper;
+	private final BranchStateUpdater stateKeeper;
 	private final BlockingQueue<Commit> sourceQueue;	
 	private final Set<CommitHandler> outgoingCommitProcessors = new HashSet<>();
 	
@@ -29,7 +29,8 @@ public class CrossBranchStreamer implements Runnable {
 	 * for any commits not forwarded yet, re-add them to the out queue
 	 */
 	public void recoverState() {
-		sourceQueue.addAll(stateKeeper.getNonForwardedCommits());
+		var nonForwarded = stateKeeper.getNonForwardedCommits();
+		sourceQueue.addAll(nonForwarded);
 	}
 	
 	@Override
@@ -56,12 +57,16 @@ public class CrossBranchStreamer implements Runnable {
 	}
 	
 	protected void forwardCommit(Commit commit) {
-		//FIXME: persist which commit have been handed over 
+		// persist which commit have been handed over 
 		// --> better: streamer need to keep track of which commits they have seen and thus were to continue, 
 		// notification here is only a mechanism to avoid for them to poll
 		outgoingCommitProcessors.stream().forEach(processor -> {                    	
     		// each processor has the duty to add the commit reliably then to their configured branch's inqueue
-    		processor.handleCommit(deepClone(commit));                            		
+    		try {
+				processor.handleCommit(deepClone(commit));
+			} catch (Exception e) {
+				log.info(String.format("Forwarding Commit %s from %s failed for processor %s due to %s", commit.getCommitId(), branchId, processor.toString(), e.getMessage()));
+			}                            		
     	});   
 	}
 	

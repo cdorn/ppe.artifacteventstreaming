@@ -19,9 +19,10 @@ import com.eventstore.dbclient.EventStoreDBClient;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
 import at.jku.isse.artifacteventstreaming.api.Commit;
-import at.jku.isse.artifacteventstreaming.api.StateKeeper;
+import at.jku.isse.artifacteventstreaming.api.PerBranchEventStore;
+import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
-import at.jku.isse.artifacteventstreaming.branch.persistence.DBBasedStateKeeper;
+import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
 
@@ -31,7 +32,7 @@ class TestEventPerformance {
 				
 	
 	private static RocksDBFactory cacheFactory;
-	private static EventStoreDBClient client = new EventStoreFactory().getClient();
+	private static EventStoreFactory factory = new EventStoreFactory();
 	private static BranchStateCache branchCache;
 			
 	@BeforeAll
@@ -40,8 +41,8 @@ class TestEventPerformance {
 			cacheFactory = new RocksDBFactory("./branchStatusTestCache/");
 			cacheFactory.resetCache();
 			branchCache = cacheFactory.getCache();
-			client.getStreamMetadata(repoURI.toString()); //throws exception if doesn't exist, then we wont need to delete
-			client.deleteStream(repoURI.toString(), DeleteStreamOptions.get()).get();
+			factory.getClient().getStreamMetadata(repoURI.toString()); //throws exception if doesn't exist, then we wont need to delete
+			factory.getClient().deleteStream(repoURI.toString(), DeleteStreamOptions.get()).get();
 		}catch (Exception e) {
 			// ignore
 		}		
@@ -50,7 +51,8 @@ class TestEventPerformance {
 	
 	@Test @Disabled
 	void test10KEvents10CommitPersistence() throws Exception {	
-		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, branchCache, client);
+		PerBranchEventStore client = factory.getEventStore(repoURI.toString());
+		BranchStateUpdater stateKeeper = new StateKeeperImpl(repoURI, branchCache, client);
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
 				.build();		
@@ -68,7 +70,7 @@ class TestEventPerformance {
 		System.out.println("Model1 size:"+model.size());
 		long middle = System.currentTimeMillis();
 		
-		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, branchCache, new EventStoreFactory().getClient());
+		BranchStateUpdater stateKeeper2 = new StateKeeperImpl(repoURI, branchCache, client);
 		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper2)				
 				.build();		
@@ -95,7 +97,8 @@ class TestEventPerformance {
 	
 	@Test @Disabled
 	void test1KCommitPersistence() throws Exception {	
-		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, branchCache, client);
+		PerBranchEventStore client = factory.getEventStore(repoURI.toString());
+		BranchStateUpdater stateKeeper = new StateKeeperImpl(repoURI, branchCache, client);
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
 				.build();				
@@ -111,7 +114,7 @@ class TestEventPerformance {
 		long midway = System.currentTimeMillis();
 		System.out.println("Now replaying after: "+(midway-start));
 		
-		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, branchCache, new EventStoreFactory().getClient());
+		BranchStateUpdater stateKeeper2 = new StateKeeperImpl(repoURI, branchCache, client);
 		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper2)				
 				.build();		

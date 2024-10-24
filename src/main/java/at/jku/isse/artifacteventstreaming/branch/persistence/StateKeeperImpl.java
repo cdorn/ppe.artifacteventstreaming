@@ -1,51 +1,34 @@
 package at.jku.isse.artifacteventstreaming.branch.persistence;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import org.apache.jena.ontapi.model.OntModel;
-
-import com.eventstore.dbclient.AppendToStreamOptions;
-import com.eventstore.dbclient.EventData;
-import com.eventstore.dbclient.EventStoreDBClient;
-import com.eventstore.dbclient.ExpectedRevision;
-import com.eventstore.dbclient.ReadResult;
-import com.eventstore.dbclient.ReadStreamOptions;
-import com.eventstore.dbclient.RecordedEvent;
-import com.eventstore.dbclient.ResolvedEvent;
-import com.eventstore.dbclient.StreamNotFoundException;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.exc.StreamReadException;
-import com.fasterxml.jackson.databind.DatabindException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
 import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitDeliveryEvent;
-import at.jku.isse.artifacteventstreaming.api.StateKeeper;
+import at.jku.isse.artifacteventstreaming.api.PerBranchEventStore;
+import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
-import at.jku.isse.artifacteventstreaming.branch.events.StatementJsonDeserializer;
-import at.jku.isse.artifacteventstreaming.branch.events.StatementJsonSerializer;
-import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory.EventMetaData;
+import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonDeserializer;
+import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonSerializer;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class DBBasedStateKeeper implements StateKeeper {
+public class StateKeeperImpl implements BranchStateUpdater {
 
-	private static final String INCOMING_COMMITS_STREAM_POSTFIX = "IncomingCommits";
+	
 	public static final String LAST_PROCESSED_INCOMING_COMMIT = "LAST_PROCESSED_INCOMING_COMMIT";
 	public static final String LAST_OPEN_PRELEMINARY_COMMIT_ID = "LAST_OPEN_PRELEMINARY_COMMIT_ID";
 	public static final String LAST_OPEN_PRELEMINARY_COMMIT_CONTENT = "LAST_OPEN_PRELEMINARY_COMMIT_CONTENT";
@@ -58,10 +41,10 @@ public class DBBasedStateKeeper implements StateKeeper {
 	private Commit lastCommit = null;
 	private final String branchURI;
 	private final BranchStateCache cache;
-	private final EventStoreDBClient eventDBclient;
+	private final PerBranchEventStore eventDBclient;
 	private final JsonMapper jsonMapper = new JsonMapper();
 
-	public DBBasedStateKeeper(URI branchURI,  BranchStateCache cache, EventStoreDBClient eventDBclient) {
+	public StateKeeperImpl(URI branchURI,  BranchStateCache cache, PerBranchEventStore eventDBclient) {
 		this.cache = cache;
 		this.branchURI = branchURI.toString();
 		this.eventDBclient = eventDBclient;
@@ -97,30 +80,13 @@ public class DBBasedStateKeeper implements StateKeeper {
 		return null;
 	}
 
-	private void loadHistory() throws StreamReadException, DatabindException, IOException {
-		
+	private void loadHistory() throws Exception {		
 		// for now, we do a inefficient sequential load of all commits and keep them in memory
-		ReadStreamOptions options = ReadStreamOptions.get()
-				.forwards()
-				.fromStart();
-		ReadResult result = null;
-		try {
-			result = eventDBclient.readStream(branchURI, options)
-					.get();
-		} catch (ExecutionException | InterruptedException e) {
-			Throwable innerException = e.getCause();
-			if (innerException instanceof StreamNotFoundException) {
-				return; //done
-			}
-		}
-		for (ResolvedEvent resolvedEvent : result.getEvents()) {
-			RecordedEvent recordedEvent = resolvedEvent.getOriginalEvent();
-			StatementCommitImpl commit = jsonMapper.readValue(recordedEvent.getEventData(), StatementCommitImpl.class);
-			if (commit != null) {
+		List<Commit> commits = eventDBclient.loadAllCommits();
+		for (Commit commit : commits) {
 				producedCommits.put(commit.getCommitId(), commit);
 				seenCommitIds.add(commit.getCommitId());
 				lastCommit = commit;
-			}
 		}		
 	}
 	
@@ -128,58 +94,13 @@ public class DBBasedStateKeeper implements StateKeeper {
 	public void beforeMerge(Commit commit) throws Exception {
 		// add to event db the info that we received this commit
 		CommitDeliveryEvent event = new CommitDeliveryEvent(commit.getCommitId(), commit, commit.getOriginatingBranchId(), this.branchURI);
-		EventData eventData = EventData
-				.builderAsBinary("CommitDeliveryType", jsonMapper.writeValueAsBytes(event)) 	
-				.build();
-
-		AppendToStreamOptions options = AppendToStreamOptions.get()
-				.expectedRevision(ExpectedRevision.any());
-
-		eventDBclient.appendToStream(branchURI+INCOMING_COMMITS_STREAM_POSTFIX, options, eventData) 
-		.get();
+		eventDBclient.appendCommitDelivery(event);
 	}
 	
 	@Override
 	public List<Commit> getNonMergedCommits() throws Exception {
 		String lastMergedCommitId = cache.get(LAST_PROCESSED_INCOMING_COMMIT+branchURI);
-		ReadStreamOptions options;
-		Boolean isReverse = false;
-		if (lastMergedCommitId == null) { // we read forward as we need to append all commits
-			options = ReadStreamOptions.get()
-					.forwards()
-					.fromStart();
-		} else { // we read backwards until we hit last merged commit or the beginning (should not happen)
-			options = ReadStreamOptions.get()
-					.backwards()
-					.fromEnd();
-			isReverse = true;
-		}
-		ReadResult result = null;
-		try {
-			result = eventDBclient.readStream(branchURI+INCOMING_COMMITS_STREAM_POSTFIX, options)
-					.get();
-		} catch (ExecutionException | InterruptedException e) {
-			Throwable innerException = e.getCause();
-			if (innerException instanceof StreamNotFoundException) {
-				return Collections.emptyList();
-			}
-		}
-		List<Commit> commits = new LinkedList<>();
-		for (ResolvedEvent resolvedEvent : result.getEvents()) {
-			RecordedEvent recordedEvent = resolvedEvent.getOriginalEvent();
-			CommitDeliveryEvent event = jsonMapper.readValue(recordedEvent.getEventData(), CommitDeliveryEvent.class);
-			if (event != null) {
-				if (event.getCommitId().equals(lastMergedCommitId)) {
-					break;
-				} else {
-					commits.add(event.getCommit());
-				}
-			}
-		}
-		if (isReverse) {
-			Collections.reverse(commits); // to the earliest commits are at the beginning
-		}
-		return commits;
+		return eventDBclient.loadAllIncomingCommitsForBranchFromCommitIdOnward(lastMergedCommitId);
 	}
 
 	@Override
@@ -193,7 +114,7 @@ public class DBBasedStateKeeper implements StateKeeper {
 
 		try {
 			cache.put(LAST_OPEN_PRELEMINARY_COMMIT_ID+branchURI, commit.getCommitId());
-			cache.put(LAST_OPEN_PRELEMINARY_COMMIT_CONTENT, jsonMapper.writeValueAsString(commit));
+			cache.put(LAST_OPEN_PRELEMINARY_COMMIT_CONTENT+branchURI, jsonMapper.writeValueAsString(commit));
 		} catch (Exception e) {
 			log.warn(String.format("Error writing preliminary commit %s of branch %s to cache with error %s", commit.getCommitId(), branchURI, e.getMessage()));
 			throw e;
@@ -207,21 +128,7 @@ public class DBBasedStateKeeper implements StateKeeper {
 	public void afterServices(Commit commit) throws Exception {
 		// first store the commit
 		try {
-			EventMetaData metadata = new EventMetaData(commit.getCommitId());
-			byte[] metaByte = jsonMapper.writeValueAsBytes(metadata);
-
-			//TODO: check for commit serialization size to avoid write failures if there are too many statements in a commit!
-			//store via event db
-			EventData eventData = EventData
-					.builderAsBinary("CommitEventType", jsonMapper.writeValueAsBytes(commit)) // we cannot use commit UUID as its reused for each branch		
-					.metadataAsBytes(metaByte)
-					.build();
-
-			AppendToStreamOptions options = AppendToStreamOptions.get()
-					.expectedRevision(ExpectedRevision.any());
-
-			eventDBclient.appendToStream(branchURI, options, eventData) 
-			.get();
+			eventDBclient.appendCommit(commit);
 		} catch (JsonProcessingException | InterruptedException | ExecutionException e) {
 			log.warn(String.format("Error writing commit %s event to branch %s with error %s", commit.getCommitId(), branchURI, e.getMessage()));
 			throw e;
@@ -236,8 +143,6 @@ public class DBBasedStateKeeper implements StateKeeper {
 		lastCommit = commit;
 		log.debug("Post Services: "+commit.getCommitId());
 	}
-
-	// below need to be done via EventDB
 
 	@Override
 	public boolean hasSeenCommit(Commit commit) {
@@ -278,19 +183,23 @@ public class DBBasedStateKeeper implements StateKeeper {
 		Optional<Commit> lastCommit = getLastCommit();
 		Optional<String> lastForwardedCommitId = getLastForwardedCommitId();
 		if (lastCommit.isPresent()) {
-			List<Commit> commitToRequeue;
+			List<Commit> commitsToRequeue;
 			if (lastForwardedCommitId.isPresent()) {
 				if (lastForwardedCommitId.get().equals(lastCommit.get().getCommitId())) {
 					// all up to date, hence noop
 					return Collections.emptyList();
 				} else {
-				commitToRequeue = getCommitsForwardIncludingFrom(lastForwardedCommitId.get());
+					commitsToRequeue = getCommitsForwardIncludingFrom(lastForwardedCommitId.get());
+					if (commitsToRequeue.size() > 0) {
+						// remove the one already forwarded
+						commitsToRequeue.remove(0);
+					}
 				}
 			} else {
 				// we apparently never forwarded any commit, hence add complete history
-				commitToRequeue = getHistory();
+				commitsToRequeue = getHistory();
 			}
-			return commitToRequeue;
+			return commitsToRequeue;
 		} // else no commit available to requeue/forward
 		return Collections.emptyList();
 	}

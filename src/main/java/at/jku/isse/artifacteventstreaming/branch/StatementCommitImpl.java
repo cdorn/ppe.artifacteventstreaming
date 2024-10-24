@@ -2,6 +2,7 @@ package at.jku.isse.artifacteventstreaming.branch;
 
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -130,4 +131,25 @@ public class StatementCommitImpl implements Commit {
 		return "Commit [msg=" + commitMessage + ", id=" + commitId
 				+ ", branch=" + originatingBranchId + "]";
 	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(commitId, originatingBranchId);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		StatementCommitImpl other = (StatementCommitImpl) obj;
+		return Objects.equals(commitId, other.commitId)
+				&& Objects.equals(originatingBranchId, other.originatingBranchId);
+	}
+
+	
+	
 }

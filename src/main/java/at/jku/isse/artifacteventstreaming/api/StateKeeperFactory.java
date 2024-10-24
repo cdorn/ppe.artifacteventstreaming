@@ -4,5 +4,5 @@ import java.net.URI;
 
 public interface StateKeeperFactory {
 
-	public StateKeeper getStateKeeperFor(URI branchURI) ;
+	public BranchStateUpdater createStateKeeperFor(URI branchURI) ;
 }

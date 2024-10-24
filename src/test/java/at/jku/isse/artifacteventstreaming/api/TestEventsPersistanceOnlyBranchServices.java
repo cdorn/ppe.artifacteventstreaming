@@ -19,7 +19,7 @@ import com.eventstore.dbclient.DeleteStreamOptions;
 import com.eventstore.dbclient.EventStoreDBClient;
 
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
-import at.jku.isse.artifacteventstreaming.branch.persistence.DBBasedStateKeeper;
+import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
 
@@ -28,7 +28,7 @@ class TestEventsPersistanceOnlyBranchServices {
 	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/repo3");
 				
 	private static RocksDBFactory cacheFactory;
-	private static EventStoreDBClient client = new EventStoreFactory().getClient();
+	private static EventStoreFactory factory = new EventStoreFactory();
 	private static BranchStateCache branchCache;
 			
 	@BeforeAll
@@ -37,8 +37,8 @@ class TestEventsPersistanceOnlyBranchServices {
 			cacheFactory = new RocksDBFactory("./branchStatusTestCache/");
 			cacheFactory.resetCache();
 			branchCache = cacheFactory.getCache();
-			client.getStreamMetadata(repoURI.toString()); //throws exception if doesn't exist, then we wont need to delete
-			client.deleteStream(repoURI.toString(), DeleteStreamOptions.get()).get();
+			factory.getClient().getStreamMetadata(repoURI.toString()); //throws exception if doesn't exist, then we wont need to delete
+			factory.getClient().deleteStream(repoURI.toString(), DeleteStreamOptions.get()).get();
 		}catch (Exception e) {
 			// ignore
 		}		
@@ -47,7 +47,7 @@ class TestEventsPersistanceOnlyBranchServices {
 	
 	@Test
 	void testSimpleCommitPersistence() throws Exception {	
-		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, branchCache, client);
+		BranchStateUpdater stateKeeper = new StateKeeperImpl(repoURI, branchCache, factory.getEventStore(repoURI.toString()));
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
 				.build();		
@@ -65,7 +65,7 @@ class TestEventsPersistanceOnlyBranchServices {
 	
 	@Test
 	void testReadAndApplyCommits() throws Exception {
-		StateKeeper stateKeeper = new DBBasedStateKeeper(repoURI, branchCache, new EventStoreFactory().getClient());
+		BranchStateUpdater stateKeeper = new StateKeeperImpl(repoURI, branchCache, factory.getEventStore(repoURI.toString()));
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
 				.build();		
@@ -75,7 +75,7 @@ class TestEventsPersistanceOnlyBranchServices {
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("TestCommit");
 		
-		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, branchCache, new EventStoreFactory().getClient());
+		BranchStateUpdater stateKeeper2 = new StateKeeperImpl(repoURI, branchCache, factory.getEventStore(repoURI.toString()));
 		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper2)				
 				.build();		
@@ -88,7 +88,7 @@ class TestEventsPersistanceOnlyBranchServices {
 	@Test
 	void testReplayViaEvents() throws Exception {	
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
-				.setStateKeeper(new DBBasedStateKeeper(repoURI, branchCache, new EventStoreFactory().getClient()))				
+				.setStateKeeper(new StateKeeperImpl(repoURI, branchCache, factory.getEventStore(repoURI.toString())))				
 				.build();
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
@@ -104,7 +104,7 @@ class TestEventsPersistanceOnlyBranchServices {
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		assertEquals(1, commit.getAddedStatements().size());				
 		
-		StateKeeper stateKeeper2 = new DBBasedStateKeeper(repoURI, branchCache, new EventStoreFactory().getClient());
+		BranchStateUpdater stateKeeper2 = new StateKeeperImpl(repoURI, branchCache, factory.getEventStore(repoURI.toString()));
 		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper2)				
 				.build();		

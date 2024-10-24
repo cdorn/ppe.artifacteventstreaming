@@ -20,6 +20,7 @@ import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
 
 class TestNonPersistedCrossBranchStreaming {
@@ -53,8 +54,8 @@ class TestNonPersistedCrossBranchStreaming {
 		branch3.appendIncomingCommitHandler(new CompleteCommitMerger(branch3));
 
 
-		branch.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branch, branch2));
-		branch.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branch, branch3));
+		branch.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branch, branch2, new InMemoryBranchStateCache()));
+		branch.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branch, branch3, new InMemoryBranchStateCache()));
 		branch.startCommitHandlers(null);
 		branch2.startCommitHandlers(null);
 		branch3.startCommitHandlers(null);

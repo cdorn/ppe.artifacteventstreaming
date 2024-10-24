@@ -8,7 +8,7 @@ import org.apache.jena.tdb2.TDB2Factory;
 
 import at.jku.isse.artifacteventstreaming.api.DatasetRepository;
 
-public class FilebasedDatasetRepository implements DatasetRepository {
+public class FilebasedDatasetLoader implements DatasetRepository {
 
 	@Override
 	public Optional<Dataset> loadDataset(URI uri) {

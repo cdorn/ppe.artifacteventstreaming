@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.branch.events;
+package at.jku.isse.artifacteventstreaming.branch.serialization;
 
 import java.io.IOException;
 

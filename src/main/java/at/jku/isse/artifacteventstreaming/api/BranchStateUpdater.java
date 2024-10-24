@@ -12,19 +12,13 @@ import org.apache.jena.ontapi.model.OntModel;
  * but does not restart processing, --> done by branch impl
  *
  */
-public interface StateKeeper {
+public interface BranchStateUpdater extends BranchStateKeeper {
 
 	/**
 	 * @return any preliminary commit that was persisted but not completely processed by any service
 	 * @throws Exception when loading the history from the event database failed
 	 */
 	public Commit loadState() throws Exception;
-	
-	public boolean hasSeenCommit(Commit commit);
-	
-	public List<Commit> getHistory();
-	
-	public Optional<Commit> getLastCommit();
 	
 	public void beforeServices(Commit commit) throws Exception;
 	
@@ -44,7 +38,7 @@ public interface StateKeeper {
 	
 	public Optional<String> getLastForwardedCommitId();
 
-	public List<Commit> getCommitsForwardIncludingFrom(String string);
+	
 
 	
 

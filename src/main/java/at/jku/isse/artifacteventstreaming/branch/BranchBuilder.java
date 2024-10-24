@@ -25,13 +25,16 @@ import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
-import at.jku.isse.artifacteventstreaming.api.StateKeeper;
-import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryStateKeeper;
+import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryEventStore;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryStateKeeperFactory;
+import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 import lombok.NonNull;
 
 public class BranchBuilder {
 
-	private StateKeeper stateKeeper = new InMemoryStateKeeper();
+	private BranchStateUpdater stateKeeper;
 	private URI repositoryURI;
 	private String branchName = "main";
 	private Dataset branchDataset;
@@ -67,7 +70,7 @@ public class BranchBuilder {
 	/**
 	 * if not used, by default a in memory statekeeper will be used.
 	 */
-	public BranchBuilder setStateKeeper(@NonNull StateKeeper stateKeeper) {
+	public BranchBuilder setStateKeeper(@NonNull BranchStateUpdater stateKeeper) {
 		this.stateKeeper = stateKeeper;
 		return this;
 	}
@@ -127,6 +130,9 @@ public class BranchBuilder {
 		// stateKeeper.loadState(model); only upon setting up all services, not the duty of the builder
 		branchDataset.begin();
 		OntModel model = OntModelFactory.createModel(branchDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		if (stateKeeper == null) {
+			stateKeeper = new StateKeeperImpl(URI.create(branchURI), new InMemoryBranchStateCache(), new InMemoryEventStore());
+		}
 		BranchImpl branch = new BranchImpl(branchDataset, model, branchResource, stateKeeper, inQueue, outQueue);
 		addCommitHandlers(branch);
 		return branch;

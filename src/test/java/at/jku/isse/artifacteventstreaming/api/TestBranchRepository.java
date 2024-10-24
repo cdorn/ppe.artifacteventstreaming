@@ -21,9 +21,11 @@ import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.branch.BranchRepository;
 import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
-import at.jku.isse.artifacteventstreaming.branch.persistence.FilebasedDatasetRepository;
+import at.jku.isse.artifacteventstreaming.branch.persistence.FilebasedDatasetLoader;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryDatasetLoader;
-import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryStateKeeper;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryEventStore;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryStateKeeperFactory;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SimpleService;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
 
@@ -41,11 +43,11 @@ class TestBranchRepository {
 		CountDownLatch latch = new CountDownLatch(1);
 		DatasetRepository dataLoader = new InMemoryDatasetLoader();
 		ServiceFactoryRegistry factoryRegistry = new ServiceFactoryRegistry(); // not used for the first repo
-		StateKeeperFactory stateFactory = InMemoryStateKeeper.getStateKeeperFactory();
+		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
 		
 		BranchRepository repo = new BranchRepository(repoURI, dataLoader, stateFactory , factoryRegistry);
 		OntModel repoModel = repo.getRepositoryModel();
-		factoryRegistry.register(DefaultDirectBranchCommitStreamer.SERVICE_TYPE_URI, new DefaultDirectBranchCommitStreamer.DefaultServiceFactory(repo));
+		factoryRegistry.register(DefaultDirectBranchCommitStreamer.SERVICE_TYPE_URI, new DefaultDirectBranchCommitStreamer.DefaultServiceFactory(repo, new InMemoryBranchStateCache()));
 		BranchImpl branchSource = (BranchImpl) new BranchBuilder(repoURI, repo.getRepositoryDataset())
 				.setBranchLocalName("source")
 				.build();
@@ -55,7 +57,7 @@ class TestBranchRepository {
 				.setBranchLocalName("destination")
 				.addBranchInternalCommitHandler(new SyncForTestingService("BranchDestinationSignaller", latch, repoModel))
 				.build();
-		branchSource.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branchSource, branchDestination));
+		branchSource.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branchSource, branchDestination, new InMemoryBranchStateCache()));
 		branchDestination.appendIncomingCommitHandler(new CompleteCommitMerger(branchDestination));
 		repo.registerBranch(branchDestination);
 		branchDestination.startCommitHandlers(null);
@@ -76,7 +78,7 @@ class TestBranchRepository {
 		ServiceFactoryRegistry factoryRegistry2 = new ServiceFactoryRegistry();
 		BranchRepository repo2 = new BranchRepository(repoURI, dataLoader, stateFactory, factoryRegistry2);
 		OntModel repoModel2 = repo2.getRepositoryModel();
-		factoryRegistry2.register(DefaultDirectBranchCommitStreamer.SERVICE_TYPE_URI, new DefaultDirectBranchCommitStreamer.DefaultServiceFactory(repo2));
+		factoryRegistry2.register(DefaultDirectBranchCommitStreamer.SERVICE_TYPE_URI, new DefaultDirectBranchCommitStreamer.DefaultServiceFactory(repo2, new InMemoryBranchStateCache()));
 		factoryRegistry2.register(CompleteCommitMerger.getServiceTypeURI(), CompleteCommitMerger.getServiceFactory());
 		factoryRegistry2.register(SyncForTestingService.SERVICE_TYPE_URI, SyncForTestingService.getServiceFactory("BranchCopySignaller", latch, repoModel2));
 		

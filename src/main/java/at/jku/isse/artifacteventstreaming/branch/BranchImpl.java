@@ -25,7 +25,7 @@ import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
-import at.jku.isse.artifacteventstreaming.api.StateKeeper;
+import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.CrossBranchStreamer;
 import lombok.Getter;
 import lombok.NonNull;
@@ -37,7 +37,7 @@ public class BranchImpl  implements Branch, Runnable {
 	private final Dataset dataset;
 	private final OntModel model;
 	private final OntIndividual branchResource;
-	private final StateKeeper stateKeeper;
+	@Getter private final BranchStateUpdater stateKeeper;
 	
 	@Getter private final BlockingQueue<Commit> inQueue;
 	private final List<CommitHandler> handlers = Collections.synchronizedList(new LinkedList<>());
@@ -52,7 +52,7 @@ public class BranchImpl  implements Branch, Runnable {
 	public BranchImpl(@NonNull Dataset dataset
 			, @NonNull OntModel model
 			, @NonNull OntIndividual branchResource
-			, @NonNull StateKeeper stateKeeper
+			, @NonNull BranchStateUpdater stateKeeper
 			, @NonNull BlockingQueue<Commit> inQueue
 			, @NonNull BlockingQueue<Commit> outQueue			
 			) {
@@ -153,7 +153,7 @@ public class BranchImpl  implements Branch, Runnable {
 	@Override
 	public void enqueueIncomingCommit(Commit commit) throws Exception {
 		// if we have processed this commit before, then wont do it again to avoid loops
-		if (!stateKeeper.hasSeenCommit(commit)) {
+		if (!stateKeeper.hasSeenCommit(commit) && !inQueue.contains(commit)) {
 			//persist which commits we have received but not merged yet, 
 			stateKeeper.beforeMerge(commit);
 			// if this crashes before returning this call, then cross branch streamer has to assume failure and retry adding/enqueuing upon restart
