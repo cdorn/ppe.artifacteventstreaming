@@ -10,10 +10,11 @@ import lombok.RequiredArgsConstructor;
 public class RocksDBFactory {
 
 	private static final String BRANCH_STATE_KEEPER = "branchStateKeeper";
+	public static final String DEFAULT_STORAGEPATH = "./branchStatusCache/";
 	
 	private final Options options;
 	private RocksDB db;
-	private String path = "./branchStatusCache/";
+	private final String path;
 	
 	public RocksDBFactory(String path) throws RocksDBException {
 		this.path = path;
@@ -23,10 +24,7 @@ public class RocksDBFactory {
 	}
 	
 	public RocksDBFactory() throws RocksDBException {
-		RocksDB.loadLibrary();
-		options = new Options().setCreateIfMissing(true) ;
-		db = RocksDB.open(options, getStoragePath())  ;
-
+		this(DEFAULT_STORAGEPATH);
 	}
 	
 	private String getStoragePath() {
@@ -47,6 +45,12 @@ public class RocksDBFactory {
 		}
 		RocksDB.destroyDB(getStoragePath(), options);
 		db = RocksDB.open(options, getStoragePath())  ;
+	}
+	
+	public void closeCache() {
+		if (db != null && !db.isClosed()) {
+			db.close();
+		}
 	}
 	
 	@RequiredArgsConstructor

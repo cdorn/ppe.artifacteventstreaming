@@ -1,6 +1,8 @@
 package at.jku.isse.artifacteventstreaming.api;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.net.URI;
 import java.util.Collections;
@@ -8,6 +10,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.model.OntModel;
@@ -21,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
-import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryDatasetLoader;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryStateKeeperFactory;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.DelayingDirectBranchCommitStreamer;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.LongRunningNoOpLocalService;
@@ -178,13 +180,15 @@ class TestRecoverBranchState {
 				.build();		
 		stateKeeperNew.loadState();
 		
-		CountDownLatch latch = new CountDownLatch(1);
+		CountDownLatch latch = new CountDownLatch(2);
 		SyncForTestingService service1 = new SyncForTestingService("InNew", latch, OntModelFactory.createModel());
+		SyncForTestingService service2 = new SyncForTestingService("Out2New", latch, OntModelFactory.createModel());
 		BranchStateUpdater stateKeeperNew2 = stateFactory.createStateKeeperFor(branchURI2);
 		Branch branchNew2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeperNew2)	
 				.setBranchLocalName("dest")
 				.addIncomingCommitHandler(service1)
+				.addOutgoingCommitDistributer(service2)
 				.build();		
 		stateKeeperNew2.loadState();	
 		DelayingDirectBranchCommitStreamer streamer2 = new DelayingDirectBranchCommitStreamer(branchNew, branchNew2, cache, 500, "New");
@@ -193,8 +197,10 @@ class TestRecoverBranchState {
 		branchNew.startCommitHandlers(null);
 		branchNew2.startCommitHandlers(null);
 		
-		latch.await();
+		boolean success = latch.await(5, TimeUnit.SECONDS);
+		assert(success);
 		assertEquals(1, service1.getReceivedCommits().size());
+		assertEquals(1, service2.getReceivedCommits().size());
 		assert(branchNew2.getLastCommit() != null); 
 		
 	}

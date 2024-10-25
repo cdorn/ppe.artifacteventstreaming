@@ -1,6 +1,7 @@
 package at.jku.isse.passiveprocessengine.rdf.trialcode;
 
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -10,14 +11,15 @@ import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDFS;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
-import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.Commit;
+import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
 @Slf4j
-public class SimpleService implements BranchInternalCommitHandler {
+public class SimpleService extends CommitLoggingService {
 	
 	final String serviceName;
 	final boolean doNegToPos;
@@ -31,6 +33,7 @@ public class SimpleService implements BranchInternalCommitHandler {
 
 	@Override
 	public void handleCommitFromOffset(Commit commit, int indexOfNewAddition, int indexOfNewRemoval) {
+		super.handleCommit(commit);
 		// here we just look at additions
 		log.debug(serviceName + ": called with offset "+indexOfNewAddition);
 		

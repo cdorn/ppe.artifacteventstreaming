@@ -1,6 +1,9 @@
 package at.jku.isse.artifacteventstreaming.api;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.util.HashSet;
@@ -11,7 +14,6 @@ import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
-import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
@@ -24,8 +26,10 @@ import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.AllUndoService;
+import at.jku.isse.passiveprocessengine.rdf.trialcode.LongRunningNoOpLocalService;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.OutgoingCommitLatchCountdown;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SimpleService;
+import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
 
 class TestCommitHandling {
 
@@ -83,21 +87,27 @@ class TestCommitHandling {
 	@Test
 	void testLoopDetection() throws Exception {
 		OntModel repoModel = OntModelFactory.createModel();
+		CountDownLatch latch = new CountDownLatch(1);;
+		var service = new SyncForTestingService("Out1", latch, repoModel);
 		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.addBranchInternalCommitHandler(new SimpleService("Service1", false, repoModel))
 				.addBranchInternalCommitHandler(new SimpleService("Service2", true, repoModel))
+				.addOutgoingCommitDistributer(service)
 				.build();
 		Dataset dataset = branch.getDataset();
 		CommitHandler merger = new CompleteCommitMerger(branch);
 		branch.appendIncomingCommitHandler(merger);
+		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("TestCommit");
 		assertEquals(1, branch.getOutQueue().size());
 		branch.enqueueIncomingCommit(commit);
+		boolean success = latch.await(5, TimeUnit.SECONDS);
+		assert(success);
 		assertEquals(0, branch.getInQueue().size());
-		assertEquals(1, branch.getOutQueue().size());
+		assertEquals(1, service.getReceivedCommits().size());
 	}
 	
 	@Test
@@ -112,6 +122,7 @@ class TestCommitHandling {
 		Dataset dataset = branch.getDataset();
 		CommitHandler merger = new CompleteCommitMerger(branch);
 		branch.appendIncomingCommitHandler(merger);
+		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
@@ -132,7 +143,7 @@ class TestCommitHandling {
 //		dataset.end();
 //		dataset.begin();
 //		branch.commitMergeOf(commit);
-		boolean success = latch.await(60, TimeUnit.SECONDS);
+		boolean success = latch.await(5, TimeUnit.SECONDS);
 		assert(success);
 		assertEquals(0, branch.getOutQueue().size()); // queue gets emptied right away
 	}
@@ -202,4 +213,5 @@ class TestCommitHandling {
 		assertEquals(modelSize, modelSizeAfter);
 		assertTrue(commit.isEmpty());
 	}
+
 }

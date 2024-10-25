@@ -2,15 +2,12 @@ package at.jku.isse.artifacteventstreaming.branch.outgoing;
 
 import java.util.HashSet;
 import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 
-import at.jku.isse.artifacteventstreaming.api.Branch;
+import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
-import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.branch.PoisonPillCommit;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import lombok.RequiredArgsConstructor;

@@ -3,8 +3,6 @@ package at.jku.isse.artifacteventstreaming.api;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.jena.ontapi.model.OntModel;
-
 /**
  * @author Christoph Mayr-Dorn
  *

@@ -9,15 +9,12 @@ import org.apache.jena.rdf.model.Resource;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
 import at.jku.isse.artifacteventstreaming.api.BranchStateKeeper;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
-import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.branch.BranchRepository;
-import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,7 +27,7 @@ public class DefaultDirectBranchCommitStreamer implements CommitHandler {
 	
 	private final Branch sourceBranch;
 	private final Branch destinationBranch;
-	private final BranchStateCache cache;
+	private final BranchStateCache cache;	
 	
 	// at this point, both branches have state loaded but not necessarily any serice, but this is enought to enqueue any commits that havent been delivered yet
 	public void init() throws Exception {

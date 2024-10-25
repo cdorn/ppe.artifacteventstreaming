@@ -13,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
 @Slf4j
-public class OutgoingCommitLatchCountdown implements CommitHandler {
+public class OutgoingCommitLatchCountdown extends CommitLoggingService {
 
 	private final OntModel model;
 	private final CountDownLatch latch;
@@ -26,6 +26,7 @@ public class OutgoingCommitLatchCountdown implements CommitHandler {
 
 	@Override
 	public void handleCommit(Commit commit) {
+		super.handleCommit(commit);
 		log.info("Counting down after receiving commit: "+commit.getCommitMessage());
 		latch.countDown();
 	}

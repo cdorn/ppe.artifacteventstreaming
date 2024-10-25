@@ -4,11 +4,11 @@ import java.io.IOException;
 
 import org.apache.jena.rdf.model.Statement;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
-import com.fasterxml.jackson.core.JsonGenerator;
 
 public class StatementJsonSerializer extends StdSerializer<Statement> {
 

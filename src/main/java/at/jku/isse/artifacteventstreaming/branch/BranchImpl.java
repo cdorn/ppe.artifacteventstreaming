@@ -6,26 +6,25 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.NodeIterator;
 import org.apache.jena.rdf.model.Property;
-import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Seq;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
+import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
-import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
+import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.CrossBranchStreamer;
 import lombok.Getter;
 import lombok.NonNull;
@@ -45,7 +44,7 @@ public class BranchImpl  implements Branch, Runnable {
 	private final ExecutorService outExecutor = Executors.newSingleThreadExecutor();
 	
 	private StatementAggregator stmtAggregator = new StatementAggregator();
-	private final List<BranchInternalCommitHandler> services = Collections.synchronizedList(new LinkedList<>());
+	private final List<IncrementalCommitHandler> services = Collections.synchronizedList(new LinkedList<>());
 	@Getter private final BlockingQueue<Commit> outQueue;
 	private final CrossBranchStreamer crossBranchStreamer;
 	
@@ -133,8 +132,10 @@ public class BranchImpl  implements Branch, Runnable {
 		Seq list;
 		if (listResource == null) {
 			list = branchResource.getModel().createSeq(branchResource.getURI()+"#"+refToList.getLocalName());
+			branchResource.addProperty(refToList, list);
 		} else {
-			list = (Seq)listResource;
+			list = branchResource.getModel().getSeq(listResource);
+			//list = (Seq)listResource;
 		}
 		return list;
 	}
@@ -216,8 +217,8 @@ public class BranchImpl  implements Branch, Runnable {
 	}
 	
 	private void forwardCommit(Commit commit) {
-		if (dataset.isInTransaction())
-			dataset.abort();
+	//	if (dataset.isInTransaction()) // this is too brittle, we need to ensure this is not happening by other means
+	//		dataset.abort();
 		dataset.begin(ReadWrite.WRITE);
 		handlers.stream().forEach(handler -> handler.handleCommit(commit));
 //		dataset.commit(); this is done by internal commit handler
@@ -236,7 +237,7 @@ public class BranchImpl  implements Branch, Runnable {
 	// local changes handling ---------------------------------------------------------------
 	
 	@Override
-	public void appendCommitService(@NonNull BranchInternalCommitHandler service) {
+	public void appendCommitService(@NonNull IncrementalCommitHandler service) {
 		Seq configs = this.createOrGetListResource(AES.localCommitService);
 		int pos = services.indexOf(service);
 		if (pos >= 0) {
@@ -248,7 +249,7 @@ public class BranchImpl  implements Branch, Runnable {
 	}
 	
 	@Override
-	public void removeCommitService(@NonNull BranchInternalCommitHandler service) {
+	public void removeCommitService(@NonNull IncrementalCommitHandler service) {
 		Seq configs = this.createOrGetListResource(AES.localCommitService);
 		int pos = services.indexOf(service);
 		if (pos >= 0) {
@@ -334,14 +335,14 @@ public class BranchImpl  implements Branch, Runnable {
 		int newRemoves = 0;
 		int rounds = 0;
 		// store for each service the last seen offset
-		Map<BranchInternalCommitHandler, Integer> offsetAdds = initServiceOffsets();
-		Map<BranchInternalCommitHandler, Integer> offsetRemoves = initServiceOffsets();
+		Map<IncrementalCommitHandler, Integer> offsetAdds = initServiceOffsets();
+		Map<IncrementalCommitHandler, Integer> offsetRemoves = initServiceOffsets();
 		Integer perIterationAdds = 0;
 		Integer perIterationsRemovals = 0;
 		do {
 			perIterationAdds = 0;
 			perIterationsRemovals = 0;
-			for (BranchInternalCommitHandler service : services) {
+			for (IncrementalCommitHandler service : services) {
 				service.handleCommitFromOffset(commit, offsetAdds.get(service), offsetRemoves.get(service));
 				// any changes by a service are now in the statement lists
 				
@@ -374,8 +375,8 @@ public class BranchImpl  implements Branch, Runnable {
 		}
 	}
 	
-	private Map<BranchInternalCommitHandler, Integer> initServiceOffsets() {
-		Map<BranchInternalCommitHandler, Integer> offsets = new HashMap<>();
+	private Map<IncrementalCommitHandler, Integer> initServiceOffsets() {
+		Map<IncrementalCommitHandler, Integer> offsets = new HashMap<>();
 		services.stream().forEach(service -> offsets.put(service, 0));
 		return offsets;
 	}

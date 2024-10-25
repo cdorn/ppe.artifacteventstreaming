@@ -17,18 +17,18 @@ import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
+import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
-import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
+import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryEventStore;
-import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryStateKeeperFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 import lombok.NonNull;
 
@@ -41,7 +41,7 @@ public class BranchBuilder {
 	private final Dataset repoDataset;
 	private OntModel repoModel;
 	private List<CommitHandler> incomingCommitHandlers = new LinkedList<>();
-	private List<BranchInternalCommitHandler> services = new LinkedList<>();
+	private List<IncrementalCommitHandler> services = new LinkedList<>();
 	private Set<CommitHandler> outgoingCommitDistributers = new HashSet<>();
 	
 	public BranchBuilder(@NonNull URI repositoryURI, @NonNull Dataset repoDataset, @NonNull OntModel repoModel) {
@@ -94,7 +94,7 @@ public class BranchBuilder {
 	/**
 	 * if not used, no services will be invoked for any commits.
 	 */
-	public BranchBuilder addBranchInternalCommitHandler(BranchInternalCommitHandler service) {
+	public BranchBuilder addBranchInternalCommitHandler(IncrementalCommitHandler service) {
 		this.services.add(service);
 		return this;
 	}
@@ -142,15 +142,15 @@ public class BranchBuilder {
 		Resource branchRes = ResourceFactory.createResource(branchURI);
 		Resource repoRes = ResourceFactory.createResource(repositoryURI.toString());
 		OntIndividual branchResource = null;
-		repoDataset.begin();
+		repoDataset.begin(ReadWrite.WRITE);
 		if (repoModel == null)
 			repoModel = OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		if (repoModel.contains(branchRes, AES.partOfRepository, repoRes)) {
 			branchResource = repoModel.createIndividual(branchURI);		
 		} else { // we assume, each branch has its own model, hence we create the core concepts here as well
 			addCoreConcepts(repoModel);
-			branchResource = buildBranchResource(repositoryURI, repoModel, branchName);
-		}
+			branchResource = buildBranchResource(repositoryURI, repoModel, branchName);			
+		}	
 		repoDataset.commit();
 		repoDataset.end();
 		return branchResource;

@@ -97,13 +97,13 @@ public interface Branch {
 	 * adds this service to the end of the chain of services that process local changes.
 	 * If this service is already in the list, then it moves that service to the current end of the chain
 	 */
-	public void appendCommitService(@NonNull BranchInternalCommitHandler service) ;
+	public void appendCommitService(@NonNull IncrementalCommitHandler service) ;
 	
 	/**
 	 * @param service
 	 * removes the service from the chain. When no services remain, any commit is put directly into the out queue.
 	 */
-	public void removeCommitService(@NonNull BranchInternalCommitHandler service) ;
+	public void removeCommitService(@NonNull IncrementalCommitHandler service) ;
 	
 	public List<OntIndividual> getLocalCommitServiceConfig();
 

@@ -1,30 +1,29 @@
 package at.jku.isse.artifacteventstreaming.api.manualtests;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 
-import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDFS;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import com.eventstore.dbclient.DeleteStreamOptions;
-import com.eventstore.dbclient.EventStoreDBClient;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
+import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.PerBranchEventStore;
-import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
-import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
-import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
+import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
+import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 
 class TestEventPerformance {
 
@@ -46,6 +45,11 @@ class TestEventPerformance {
 		}catch (Exception e) {
 			// ignore
 		}		
+	}
+	
+	@AfterAll
+	static void clearCache() {
+		cacheFactory.closeCache();
 	}
 	
 	

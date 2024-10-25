@@ -10,15 +10,16 @@ import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.rdf.model.Statement;
+
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
+import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.DatasetRepository;
+import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactoryRegistry;
-import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.StateKeeperFactory;
 import lombok.extern.slf4j.Slf4j;
 
@@ -90,9 +91,9 @@ public class BranchRepository {
 			if (typeStmt != null) {
 				Optional<ServiceFactory> factory = factoryRegistry.getFactory(typeStmt.getResource().getURI());
 				if (factory.isPresent()) {
-					BranchInternalCommitHandler service;
+					IncrementalCommitHandler service;
 					try {
-						service = (BranchInternalCommitHandler)factory.get().getCommitHandlerInstanceFor(branch, config);
+						service = (IncrementalCommitHandler)factory.get().getCommitHandlerInstanceFor(branch, config);
 						branch.appendCommitService(service); 
 					} catch (Exception e) {
 						log.warn(String.format("Error creating CommitHandler %s while initializing branch %s: %s", typeStmt.getResource().getURI(), branch.getBranchId(), e.getMessage()));

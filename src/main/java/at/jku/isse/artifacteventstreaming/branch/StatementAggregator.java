@@ -1,14 +1,12 @@
 package at.jku.isse.artifacteventstreaming.branch;
 
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.jena.rdf.listeners.StatementListener;
 import org.apache.jena.rdf.model.Statement;
 
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor

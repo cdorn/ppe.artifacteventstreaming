@@ -7,18 +7,17 @@ import java.util.Set;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.rdf.model.Statement;
-import org.apache.jena.vocabulary.RDFS;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
-import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
+import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
 @Slf4j
-public class AllUndoService implements BranchInternalCommitHandler {
+public class AllUndoService implements IncrementalCommitHandler {
 	
 	public static final String SERVICE_TYPE_URI = CommitHandler.serviceTypeBaseURI+AllUndoService.class.getSimpleName();
 	

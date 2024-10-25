@@ -1,16 +1,13 @@
 package at.jku.isse.passiveprocessengine.rdf.trialcode;
 
-import org.apache.jena.ontapi.OntModelFactory;
-import org.apache.jena.ontapi.model.OntIndividual;
-import org.apache.jena.ontapi.model.OntModel;
+import java.util.LinkedList;
+import java.util.List;
 
-import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.api.BranchInternalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
-import lombok.RequiredArgsConstructor;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -19,6 +16,7 @@ public class DelayingDirectBranchCommitStreamer extends DefaultDirectBranchCommi
 	private final int sleepInMillis;
 	private final String name;
 	private Thread currentThread;
+	@Getter final List<Commit> receivedCommits = new LinkedList<>();
 	
 	public DelayingDirectBranchCommitStreamer(Branch sourceBranch, Branch destinationBranch, BranchStateCache cache, int sleepInMillis, String name) {
 		super(sourceBranch, destinationBranch, cache);
@@ -28,6 +26,7 @@ public class DelayingDirectBranchCommitStreamer extends DefaultDirectBranchCommi
 
 	@Override
 	public void handleCommit(Commit commit) {
+		super.handleCommit(commit);
 		try {
 			log.debug(name+" Starting to 'work'");
 			currentThread = Thread.currentThread();

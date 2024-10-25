@@ -1,27 +1,25 @@
 package at.jku.isse.artifacteventstreaming.api;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.net.URI;
 
-import org.apache.jena.atlas.logging.Log;
-import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.vocabulary.RDFS;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.eventstore.dbclient.DeleteStreamOptions;
-import com.eventstore.dbclient.EventStoreDBClient;
 
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
-import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
-import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
+import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
+import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 
 class TestEventsPersistanceOnlyBranchServices {
 
@@ -40,8 +38,13 @@ class TestEventsPersistanceOnlyBranchServices {
 			factory.getClient().getStreamMetadata(repoURI.toString()); //throws exception if doesn't exist, then we wont need to delete
 			factory.getClient().deleteStream(repoURI.toString(), DeleteStreamOptions.get()).get();
 		}catch (Exception e) {
-			// ignore
+			e.printStackTrace();
 		}		
+	}
+	
+	@AfterAll
+	static void clearCache() {
+		cacheFactory.closeCache();
 	}
 	
 	
