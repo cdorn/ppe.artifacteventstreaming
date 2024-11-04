@@ -59,6 +59,10 @@ public class BranchRepository {
 		return repoModel;
 	}
 	
+	public BranchBuilder getInitializedBranchBuilder() {
+		return new BranchBuilder(repositoryURI, repoDataset, repoModel);
+	}
+	
 	public Branch getOrLoadBranch(URI branchURI) throws Exception {
 		Branch branch = branches.get(branchURI.toString());
 		if (branch != null) {
@@ -87,14 +91,14 @@ public class BranchRepository {
 	private void initializeBranch(Branch branch) {
 		// we inspect the branch resource for any configuration data
 		branch.getLocalCommitServiceConfig().stream().forEach(config -> {
-			Statement typeStmt = config.getProperty(AES.isConfigForServiceType);
+			Statement typeStmt = config.getProperty(AES.isConfigForHandlerType);
 			if (typeStmt != null) {
 				Optional<ServiceFactory> factory = factoryRegistry.getFactory(typeStmt.getResource().getURI());
 				if (factory.isPresent()) {
 					IncrementalCommitHandler service;
 					try {
 						service = (IncrementalCommitHandler)factory.get().getCommitHandlerInstanceFor(branch, config);
-						branch.appendCommitService(service); 
+						branch.appendBranchInternalCommitService(service); 
 					} catch (Exception e) {
 						log.warn(String.format("Error creating CommitHandler %s while initializing branch %s: %s", typeStmt.getResource().getURI(), branch.getBranchId(), e.getMessage()));
 					}
@@ -105,13 +109,13 @@ public class BranchRepository {
 		});
 
 		branch.getOutgoingCommitDistributerConfig().stream().forEach(config -> {
-			Statement typeStmt = config.getProperty(AES.isConfigForServiceType);
+			Statement typeStmt = config.getProperty(AES.isConfigForHandlerType);
 			if (typeStmt != null) {
 				Optional<ServiceFactory> factory = factoryRegistry.getFactory(typeStmt.getResource().getURI());
 				if (factory.isPresent()) {
 					try {
 						CommitHandler service = factory.get().getCommitHandlerInstanceFor(branch, config);
-						branch.appendOutgoingCrossBranchCommitHandler(service);
+						branch.appendOutgoingCommitDistributer(service);
 					} catch (Exception e) {
 						log.warn(String.format("Error creating CommitHandler %s while initializing branch %s: %s", typeStmt.getResource().getURI(), branch.getBranchId(), e.getMessage()));
 					}
@@ -123,13 +127,13 @@ public class BranchRepository {
 		});
 
 		branch.getIncomingCommitHandlerConfig().stream().forEach(config -> {
-			Statement typeStmt = config.getProperty(AES.isConfigForServiceType);
+			Statement typeStmt = config.getProperty(AES.isConfigForHandlerType);
 			if (typeStmt != null) {
 				Optional<ServiceFactory> factory = factoryRegistry.getFactory(typeStmt.getResource().getURI());
 				if (factory.isPresent()) {
 					try {
 						CommitHandler service = factory.get().getCommitHandlerInstanceFor(branch, config);
-						branch.appendIncomingCommitHandler(service); 
+						branch.appendIncomingCommitMerger(service); 
 					} catch (Exception e) {
 						log.warn(String.format("Error creating CommitHandler %s while initializing branch %s: %s", typeStmt.getResource().getURI(), branch.getBranchId(), e.getMessage()));
 					}

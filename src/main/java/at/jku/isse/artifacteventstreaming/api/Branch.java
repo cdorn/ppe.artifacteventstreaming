@@ -79,7 +79,7 @@ public interface Branch {
 	 * adds this to the end of the chain of handlers that process an incoming commit.
 	 * If this handler is already in the list, then it moves that handler to the current end of the chain
 	 */
-	public void appendIncomingCommitHandler(CommitHandler handler);
+	public void appendIncomingCommitMerger(CommitHandler handler);
 	
 	
 	public List<OntIndividual> getIncomingCommitHandlerConfig();
@@ -88,7 +88,7 @@ public interface Branch {
 	 * @param handler
 	 * removes the handler from the chain. When no handlers remain, any incoming commits are dropped/ignored.
 	 */
-	public void removeIncomingCommitHandler(CommitHandler handler);
+	public void removeIncomingCommitMerger(CommitHandler handler);
 	
 	
 	
@@ -97,20 +97,20 @@ public interface Branch {
 	 * adds this service to the end of the chain of services that process local changes.
 	 * If this service is already in the list, then it moves that service to the current end of the chain
 	 */
-	public void appendCommitService(@NonNull IncrementalCommitHandler service) ;
+	public void appendBranchInternalCommitService(@NonNull IncrementalCommitHandler service) ;
 	
 	/**
 	 * @param service
 	 * removes the service from the chain. When no services remain, any commit is put directly into the out queue.
 	 */
-	public void removeCommitService(@NonNull IncrementalCommitHandler service) ;
+	public void removeBranchInternalCommitService(@NonNull IncrementalCommitHandler service) ;
 	
 	public List<OntIndividual> getLocalCommitServiceConfig();
 
 	
-	public void appendOutgoingCrossBranchCommitHandler(@NonNull CommitHandler crossBranchHandler);
+	public void appendOutgoingCommitDistributer(@NonNull CommitHandler crossBranchHandler);
 	
-	public void removeOutgoingCrossBranchCommitHandler(@NonNull CommitHandler crossBranchHandler);
+	public void removeOutgoingCommitDistributer(@NonNull CommitHandler crossBranchHandler);
 	
 	public List<OntIndividual> getOutgoingCommitDistributerConfig();
 	

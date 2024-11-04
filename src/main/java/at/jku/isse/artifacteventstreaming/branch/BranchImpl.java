@@ -171,7 +171,7 @@ public class BranchImpl  implements Branch, Runnable {
 	}
 	
 	@Override
-	public void appendIncomingCommitHandler(@NonNull CommitHandler handler) {
+	public void appendIncomingCommitMerger(@NonNull CommitHandler handler) {
 		Seq configs = this.createOrGetListResource(AES.incomingCommitMerger);
 		int pos = handlers.indexOf(handler);
 		if (pos >= 0) {
@@ -183,12 +183,12 @@ public class BranchImpl  implements Branch, Runnable {
 	}
 	
 	@Override
-	public void removeIncomingCommitHandler(@NonNull CommitHandler handler) {
+	public void removeIncomingCommitMerger(@NonNull CommitHandler handler) {
 		Seq configs = this.createOrGetListResource(AES.incomingCommitMerger);
 		int pos = handlers.indexOf(handler);
 		if (pos >= 0) {
 			handlers.remove(handler);
-			configs.remove(pos);
+			configs.remove(pos+1); //RDF lists are 1-indexed!
 		}
 	}
 
@@ -237,7 +237,7 @@ public class BranchImpl  implements Branch, Runnable {
 	// local changes handling ---------------------------------------------------------------
 	
 	@Override
-	public void appendCommitService(@NonNull IncrementalCommitHandler service) {
+	public void appendBranchInternalCommitService(@NonNull IncrementalCommitHandler service) {
 		Seq configs = this.createOrGetListResource(AES.localCommitService);
 		int pos = services.indexOf(service);
 		if (pos >= 0) {
@@ -249,12 +249,12 @@ public class BranchImpl  implements Branch, Runnable {
 	}
 	
 	@Override
-	public void removeCommitService(@NonNull IncrementalCommitHandler service) {
+	public void removeBranchInternalCommitService(@NonNull IncrementalCommitHandler service) {
 		Seq configs = this.createOrGetListResource(AES.localCommitService);
 		int pos = services.indexOf(service);
 		if (pos >= 0) {
 			services.remove(service);
-			configs.remove(pos);
+			configs.remove(pos+1); // RDF lists are 1-indexed
 		}
 	}
 	
@@ -393,16 +393,20 @@ public class BranchImpl  implements Branch, Runnable {
 	}
 
 	@Override
-	public void appendOutgoingCrossBranchCommitHandler(@NonNull CommitHandler crossBranchHandler) {
+	public void appendOutgoingCommitDistributer(@NonNull CommitHandler crossBranchHandler) {
 		crossBranchStreamer.addOutgoingCommitHandler(crossBranchHandler);
 		Seq configs = this.createOrGetListResource(AES.outgoingCommitDistributer);
 		configs.add(crossBranchHandler.getConfigResource());
 	}
 
 	@Override
-	public void removeOutgoingCrossBranchCommitHandler(@NonNull CommitHandler crossBranchHandler) {		
+	public void removeOutgoingCommitDistributer(@NonNull CommitHandler crossBranchHandler) {		
 		crossBranchStreamer.removeOutgoingCommitHandler(crossBranchHandler);
-		//TODO: update rdf persisted config in repoDataset/Model
+		Seq configs = this.createOrGetListResource(AES.outgoingCommitDistributer);
+		int pos = configs.indexOf(crossBranchHandler.getConfigResource());
+		if (pos > 0) {
+			configs.remove(pos);
+		}
 	}
 
 	@Override

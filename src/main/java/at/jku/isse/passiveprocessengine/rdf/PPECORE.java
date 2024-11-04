@@ -31,4 +31,5 @@ public class PPECORE {
     }
     
     public static final Property fullyFetched = property(PPEInstance.IS_FULLYFETCHED);
+    public static final Property owner = property("modifiedBy");
 }

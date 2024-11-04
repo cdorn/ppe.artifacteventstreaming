@@ -48,10 +48,10 @@ class TestBranchRepository {
 		branchSource.startCommitHandlers(null);
 		BranchImpl branchDestination = (BranchImpl) new BranchBuilder(repoURI, repo.getRepositoryDataset())
 				.setBranchLocalName("destination")
-				.addBranchInternalCommitHandler(new SyncForTestingService("BranchDestinationSignaller", latch, repoModel))
+				.addBranchInternalCommitService(new SyncForTestingService("BranchDestinationSignaller", latch, repoModel))
 				.build();
-		branchSource.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branchSource, branchDestination, new InMemoryBranchStateCache()));
-		branchDestination.appendIncomingCommitHandler(new CompleteCommitMerger(branchDestination));
+		branchSource.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(branchSource, branchDestination, new InMemoryBranchStateCache()));
+		branchDestination.appendIncomingCommitMerger(new CompleteCommitMerger(branchDestination));
 		repo.registerBranch(branchDestination);
 		branchDestination.startCommitHandlers(null);
 		
@@ -72,8 +72,8 @@ class TestBranchRepository {
 		BranchRepository repo2 = new BranchRepository(repoURI, dataLoader, stateFactory, factoryRegistry2);
 		OntModel repoModel2 = repo2.getRepositoryModel();
 		factoryRegistry2.register(DefaultDirectBranchCommitStreamer.SERVICE_TYPE_URI, new DefaultDirectBranchCommitStreamer.DefaultServiceFactory(repo2, new InMemoryBranchStateCache()));
-		factoryRegistry2.register(CompleteCommitMerger.getServiceTypeURI(), CompleteCommitMerger.getServiceFactory());
-		factoryRegistry2.register(SyncForTestingService.SERVICE_TYPE_URI, SyncForTestingService.getServiceFactory("BranchCopySignaller", latch, repoModel2));
+		factoryRegistry2.register(CompleteCommitMerger.getWellknownServiceTypeURI(), CompleteCommitMerger.getServiceFactory());
+		factoryRegistry2.register(SyncForTestingService.getWellknownServiceTypeURI(), SyncForTestingService.getServiceFactory("BranchCopySignaller", latch, repoModel2));
 		
 		Branch sourceBranch2 = repo2.getOrLoadBranch(URI.create(repoURI+"#source"));
 		Branch destinationBranch2 = repo2.getOrLoadBranch(URI.create(repoURI+"#destination"));

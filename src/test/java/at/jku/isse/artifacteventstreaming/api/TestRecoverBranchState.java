@@ -36,12 +36,13 @@ class TestRecoverBranchState {
 	@Test
 	void testRecoverPrelimCommit() throws Exception {
 		// everything done inmemory!
+		OntModel branchModel = OntModelFactory.createModel();
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
 		URI branchURI = URI.create(BranchBuilder.generateBranchURI(repoURI, "main"));
 		BranchStateUpdater stateKeeper = stateFactory.createStateKeeperFor(branchURI);
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
-				.addBranchInternalCommitHandler(new LongRunningNoOpLocalService(2000))
+				.addBranchInternalCommitService(new LongRunningNoOpLocalService(branchModel, 2000))
 				.build();		
 		OntModel model = branch.getModel();
 		stateKeeper.loadState();
@@ -67,11 +68,12 @@ class TestRecoverBranchState {
 		CountDownLatch latch = new CountDownLatch(1);
 		// recreate branch, ensure that commit is created by checking that commit is created
 		// note that we are not testing recovery of service config, we set that manually here, just that the recovery mechanism works
+		OntModel branchModel2 = OntModelFactory.createModel();
 		BranchStateUpdater stateKeeper2 = stateFactory.createStateKeeperFor(branchURI);
 		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper2)				
-				.addBranchInternalCommitHandler(new LongRunningNoOpLocalService(2000))
-				.addOutgoingCommitDistributer(new SyncForTestingService("Out1", latch, OntModelFactory.createModel()))
+				.addBranchInternalCommitService(new LongRunningNoOpLocalService(branchModel2, 2000))
+				.addOutgoingCommitDistributer(new SyncForTestingService("Out1", latch, branchModel2))
 				.build();		
 		OntModel model2 = branch2.getModel();
 		Commit unfinishedCommit = stateKeeper2.loadState();
@@ -84,14 +86,15 @@ class TestRecoverBranchState {
 
 	@Test
 	void testNonDeliveredCommitToMerge() throws Exception {
+		OntModel branchModel = OntModelFactory.createModel();
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
 		URI branchURI = URI.create(BranchBuilder.generateBranchURI(repoURI, "main"));
 		BranchStateUpdater stateKeeper = stateFactory.createStateKeeperFor(branchURI);
 		CountDownLatch latch = new CountDownLatch(1);
-		SyncForTestingService service1 = new SyncForTestingService("Out1", latch, OntModelFactory.createModel());
+		SyncForTestingService service1 = new SyncForTestingService("Out1", latch, branchModel);
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
-				.addIncomingCommitHandler(new LongRunningNoOpLocalService(2000))
+				.addIncomingCommitMerger(new LongRunningNoOpLocalService(branchModel, 2000))
 				.addOutgoingCommitDistributer(service1)
 				.build();		
 		OntModel model = branch.getModel();
@@ -122,7 +125,7 @@ class TestRecoverBranchState {
 		BranchStateUpdater stateKeeper2 = stateFactory.createStateKeeperFor(branchURI);
 		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper2)		
-				.addIncomingCommitHandler(new LongRunningNoOpLocalService(500))		
+				.addIncomingCommitMerger(new LongRunningNoOpLocalService(branchModel, 500))		
 				.addOutgoingCommitDistributer(service2)
 				.build();		
 		OntModel model2 = branch2.getModel();
@@ -156,7 +159,7 @@ class TestRecoverBranchState {
 		BranchStateCache cache = new InMemoryBranchStateCache();
 		DelayingDirectBranchCommitStreamer streamer = new DelayingDirectBranchCommitStreamer(branch, branch2, cache, 2000, "Old");
 		streamer.init();
-		branch.appendOutgoingCrossBranchCommitHandler(streamer);
+		branch.appendOutgoingCommitDistributer(streamer);
 		branch.startCommitHandlers(null);
 		branch2.startCommitHandlers(null);
 		
@@ -187,13 +190,13 @@ class TestRecoverBranchState {
 		Branch branchNew2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeperNew2)	
 				.setBranchLocalName("dest")
-				.addIncomingCommitHandler(service1)
+				.addIncomingCommitMerger(service1)
 				.addOutgoingCommitDistributer(service2)
 				.build();		
 		stateKeeperNew2.loadState();	
 		DelayingDirectBranchCommitStreamer streamer2 = new DelayingDirectBranchCommitStreamer(branchNew, branchNew2, cache, 500, "New");
 		streamer2.init();
-		branchNew.appendOutgoingCrossBranchCommitHandler(streamer2);
+		branchNew.appendOutgoingCommitDistributer(streamer2);
 		branchNew.startCommitHandlers(null);
 		branchNew2.startCommitHandlers(null);
 		

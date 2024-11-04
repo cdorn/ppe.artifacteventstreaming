@@ -12,6 +12,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntClass;
+import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
@@ -50,6 +51,10 @@ public class BranchBuilder {
 		this.repoModel = repoModel;
 	}
 	
+	/**
+	 * @param repositoryURI the identifier of the repository we are building this branch in
+	 * @param repoDataset the dataset underlying this repository that contains all branches and their configuration within this repository, this is NOT where the branch content is stored
+	 */
 	public BranchBuilder(@NonNull URI repositoryURI, @NonNull Dataset repoDataset) {
 		this.repositoryURI = repositoryURI;
 		this.repoDataset = repoDataset;	
@@ -86,7 +91,7 @@ public class BranchBuilder {
 	/**
 	 * if not used, no commits will be merged into this branch
 	 */
-	public BranchBuilder addIncomingCommitHandler(CommitHandler handler) {
+	public BranchBuilder addIncomingCommitMerger(CommitHandler handler) {
 		this.incomingCommitHandlers.add(handler);
 		return this;
 	}
@@ -94,7 +99,7 @@ public class BranchBuilder {
 	/**
 	 * if not used, no services will be invoked for any commits.
 	 */
-	public BranchBuilder addBranchInternalCommitHandler(IncrementalCommitHandler service) {
+	public BranchBuilder addBranchInternalCommitService(IncrementalCommitHandler service) {
 		this.services.add(service);
 		return this;
 	}
@@ -163,6 +168,12 @@ public class BranchBuilder {
 		partOfRepo.addDomain(branchType);
 		partOfRepo.addRange(repoType);
 		partOfRepo.addLabel("part of repository");
+		
+		OntClass.Named handlerConfig = model.createOntClass(AES.commitHandlerConfigType);
+		OntDataProperty configForType = model.createDataProperty(AES.isConfigForHandlerType.getURI());
+		configForType.addDomain(handlerConfig);
+		configForType.addLabel("is configuration for handler of type");
+		configForType.addComment("Is used to enable lookup the right handler factory from which to re-create a handler with the configuration described in domain of this property. Config properties are specific for each handler type");
 	}
 	
 	private static OntIndividual buildBranchResource(URI repositoryURI, OntModel initializedModel, String branchName) {
@@ -177,9 +188,9 @@ public class BranchBuilder {
 	
 	
 	private void addCommitHandlers(Branch branch) {
-		incomingCommitHandlers.stream().forEach(handler -> branch.appendIncomingCommitHandler(handler));
-		services.stream().forEach(service -> branch.appendCommitService(service));		
-		outgoingCommitDistributers.stream().forEach(service -> branch.appendOutgoingCrossBranchCommitHandler(service));
+		incomingCommitHandlers.stream().forEach(handler -> branch.appendIncomingCommitMerger(handler));
+		services.stream().forEach(service -> branch.appendBranchInternalCommitService(service));		
+		outgoingCommitDistributers.stream().forEach(service -> branch.appendOutgoingCommitDistributer(service));
 
 	}
 	

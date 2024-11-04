@@ -1,30 +1,22 @@
 package at.jku.isse.passiveprocessengine.rdf;
 
-import java.util.Set;
-
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.vocabulary.RDF;
 
 import at.jku.isse.passiveprocessengine.core.PPEInstance;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
-import lombok.RequiredArgsConstructor;
+import lombok.Getter;
 
-@RequiredArgsConstructor
-public class RDFInstance implements PPEInstance {
+public class RDFInstance extends RDFElement implements PPEInstance {
 
-	private final OntIndividual instance;
-	private final NodeToDomainResolver resolver;
-	
-	
-	@Override
-	public String getId() {
-		return instance.getURI();
+	@Getter
+	protected final OntIndividual instance;
+
+	public RDFInstance(OntIndividual element, NodeToDomainResolver resolver) {
+		super(element, resolver);
+		this.instance = element;
 	}
-
-	@Override
-	public String getName() {
-		return instance.getLabel();
-	}
+	
 
 	@Override
 	public PPEInstanceType getInstanceType() {
@@ -36,56 +28,8 @@ public class RDFInstance implements PPEInstance {
 		return null;
 	}
 
-	@Override
-	public void markAsDeleted() {
-		instance.removeProperties();			
-	}
+	
 
-	@Override
-	public boolean isMarkedAsDeleted() {
-		//we dont mark anything deleted, we just delete (for now)
-		return false;
-	}
-
-	@Override
-	public boolean isOwner(String ownerId) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	@Override
-	public void addOwner(String ownerId) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public Set<String> getOwners() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public void setSingleProperty(String property, Object value) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public <T> T getTypedProperty(String property, Class<T> clazz) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public <T> T getTypedProperty(String property, Class<T> clazz, T defaultValue) {
-		T value = getTypedProperty(property, clazz);
-		if (value == null) {
-			return defaultValue;
-		} else {
-			return value;
-		}
-	}
 
 	@Override
 	public void setInstanceType(PPEInstanceType childType) {
@@ -93,16 +37,6 @@ public class RDFInstance implements PPEInstance {
 
 	}
 
-	@Override
-	public void put(String property, String key, Object value) {
-		// TODO Auto-generated method stub
 
-	}
-
-	@Override
-	public void add(String property, Object value) {
-		// TODO Auto-generated method stub
-
-	}
 
 }

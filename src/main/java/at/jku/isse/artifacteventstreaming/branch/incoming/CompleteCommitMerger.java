@@ -1,22 +1,32 @@
 package at.jku.isse.artifacteventstreaming.branch.incoming;
 
 import org.apache.jena.ontapi.model.OntIndividual;
-import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.RDFS;
 
-import at.jku.isse.artifacteventstreaming.api.AES;
+import at.jku.isse.artifacteventstreaming.api.AbstractHandlerBase;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@RequiredArgsConstructor
-public class CompleteCommitMerger implements CommitHandler {
 
-	private final Branch branch;
+public class CompleteCommitMerger extends AbstractHandlerBase {
+
+	private Branch branch;
 	
+	public CompleteCommitMerger(Branch branch) {
+		super("MergerFor"+branch.getBranchName(), branch.getBranchResource().getModel());
+		this.branch = branch;
+	}
+	
+	public CompleteCommitMerger(String name, Branch branch) {
+		super(name, branch.getBranchResource().getModel());
+		this.branch = branch;
+	}
+
 	@Override
 	public void handleCommit(Commit commit) {		
 		if (!commit.isEmpty()) {
@@ -27,16 +37,7 @@ public class CompleteCommitMerger implements CommitHandler {
 		}		
 	}
 
-	@Override
-	public OntIndividual getConfigResource() {
-		OntModel repoModel = branch.getBranchResource().getModel();
-		OntIndividual config = repoModel.createIndividual(branch.getBranchId()+"#"+this.getClass().getSimpleName());
-		config.addProperty(AES.isConfigForServiceType, repoModel.createResource(getServiceTypeURI()));
-		// no other config necessary
-		return config;
-	}
-
-	public static String getServiceTypeURI() {
+	public static String getWellknownServiceTypeURI() {
 		return CommitHandler.serviceTypeBaseURI+CompleteCommitMerger.class.getSimpleName();
 	}
 	
@@ -45,9 +46,21 @@ public class CompleteCommitMerger implements CommitHandler {
 			@Override
 			public CommitHandler getCommitHandlerInstanceFor(Branch branch, OntIndividual serviceConfigEntryPoint) {
 				// simple, as we dont have any config to do
-				return new CompleteCommitMerger(branch);
+				String name;
+				Resource labelRes = serviceConfigEntryPoint.getPropertyResourceValue(RDFS.label);
+				if (labelRes == null) {
+					name = "MergerFor"+branch.getBranchName();
+				} else {
+					name = labelRes.asLiteral().getString();
+				}
+				return new CompleteCommitMerger(name, branch);
 			}
 		};
+	}
+
+	@Override
+	protected String getServiceTypeURI() {
+		return getWellknownServiceTypeURI();
 	}
 	
 }

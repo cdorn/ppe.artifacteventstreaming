@@ -9,6 +9,7 @@ public class AES {
 	
 	public static final String branchType = uri+"Branch";
 	public static final String repositoryType = uri+"Repository";
+	public static final String commitHandlerConfigType = uri+"CommitHandlerConfig";
 	
 	public static String getURI() {
         return uri;
@@ -30,5 +31,5 @@ public class AES {
     public static final Property outgoingCommitDistributer = property("hasOutgoingCommitDistributer");
     public static final Property destinationBranch = property("hasDestinationBranch");
     
-    public static final Property isConfigForServiceType = property("isConfigForServiceType");
+    public static final Property isConfigForHandlerType = property("isConfigForHandlerType");
 }

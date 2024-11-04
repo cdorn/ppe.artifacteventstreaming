@@ -1,6 +1,6 @@
 package at.jku.isse.artifacteventstreaming.jena;
 
-import static at.jku.isse.passiveprocessengine.rdf.MapResource.MAP_NS;
+import static at.jku.isse.passiveprocessengine.rdf.MapResourceType.MAP_NS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -22,6 +22,7 @@ import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.Test;
 
 import at.jku.isse.passiveprocessengine.rdf.MapResource;
+import at.jku.isse.passiveprocessengine.rdf.MapResourceType;
 import at.jku.isse.passiveprocessengine.rdf.ResourceMismatchException;
 
 class ModelDuplicationTest {
@@ -34,8 +35,9 @@ class ModelDuplicationTest {
 		OntModel m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM );
 		m.setNsPrefix("isse", NS);
 		m.setNsPrefix("map", MAP_NS);
+		MapResourceType mapTypeDef = new MapResourceType(m);
 		OntClass artifactType = m.createOntClass(NS+"artifactType");		
-		OntClass mapType = MapResource.getMapEntryClass(m);
+		OntClass mapType = mapTypeDef.getMapEntryClass();
 		
 		OntObjectProperty.Named hasMapProp = m.createObjectProperty(NS+"hasMapEntry");
 		hasMapProp.addDomain(artifactType);
@@ -45,7 +47,7 @@ class ModelDuplicationTest {
 		// lets create some instances:
 		OntIndividual art1 = artifactType.createIndividual(NS+"art1");
 		OntIndividual art2 = artifactType.createIndividual(NS+"art2");
-		Map<String, RDFNode> map = MapResource.asMapResource(art1, hasMapProp);			
+		Map<String, RDFNode> map = MapResource.asMapResource(art1, hasMapProp, mapTypeDef);			
 		map.put("key2", art2);		
 		
 		//create a deep copy:
@@ -54,7 +56,8 @@ class ModelDuplicationTest {
 		OntObjectProperty.Named hasMapPropCopy = copy.getObjectProperty(NS+"hasMapEntry");
 		OntIndividual art1copy = copy.getIndividual(NS+"art1");		
 		OntIndividual art3copy = artifactTypeCopy.createIndividual(NS+"art3");
-		Map<String, RDFNode> mapCopy = MapResource.asMapResource(art1copy, hasMapPropCopy);			
+		MapResourceType mapTypeDef2 = new MapResourceType(copy);
+		Map<String, RDFNode> mapCopy = MapResource.asMapResource(art1copy, hasMapPropCopy, mapTypeDef2);			
 		assertEquals(map.size(), mapCopy.size());
 		
 		mapCopy.clear();		

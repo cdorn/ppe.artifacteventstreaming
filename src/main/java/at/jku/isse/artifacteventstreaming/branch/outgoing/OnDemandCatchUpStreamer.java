@@ -38,7 +38,7 @@ public class OnDemandCatchUpStreamer implements CommitHandler {
 	public OntIndividual getConfigResource() {
 		OntModel repoModel = sourceBranch.getBranchResource().getModel();
 		OntIndividual config = repoModel.createIndividual(sourceBranch.getBranchId()+"#"+this.getClass().getSimpleName());
-		config.addProperty(AES.isConfigForServiceType, repoModel.createResource(CommitHandler.serviceTypeBaseURI+this.getClass().getSimpleName()));
+		config.addProperty(AES.isConfigForHandlerType, repoModel.createResource(CommitHandler.serviceTypeBaseURI+this.getClass().getSimpleName()));
 		config.addProperty(AES.destinationBranch, destinationBranch.getBranchResource().getURI());
 		// no other config necessary
 		return config;

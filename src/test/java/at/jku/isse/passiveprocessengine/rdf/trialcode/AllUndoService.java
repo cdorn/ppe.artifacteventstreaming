@@ -70,7 +70,7 @@ public class AllUndoService implements IncrementalCommitHandler {
 	@Override
 	public OntIndividual getConfigResource() {
 		OntIndividual config =  model.createIndividual(AES.getURI()+this.getClass().getSimpleName());
-		config.addProperty(AES.isConfigForServiceType, model.createResource(SERVICE_TYPE_URI));
+		config.addProperty(AES.isConfigForHandlerType, model.createResource(SERVICE_TYPE_URI));
 		return config;
 	}
 	

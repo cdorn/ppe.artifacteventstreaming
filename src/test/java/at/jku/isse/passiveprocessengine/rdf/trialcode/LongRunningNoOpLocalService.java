@@ -1,21 +1,25 @@
 package at.jku.isse.passiveprocessengine.rdf.trialcode;
 
-import org.apache.jena.ontapi.OntModelFactory;
-import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 
-import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.Commit;
-import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
-import lombok.RequiredArgsConstructor;
+import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@RequiredArgsConstructor
 public class LongRunningNoOpLocalService extends CommitLoggingService {
 
+	public LongRunningNoOpLocalService(OntModel branchModel, int sleepInMillis) {
+		super(branchModel);
+		this.sleepInMillis = sleepInMillis;
+	}
+	
+	public LongRunningNoOpLocalService(String name, OntModel branchModel, int sleepInMillis) {
+		super(name, branchModel);
+		this.sleepInMillis = sleepInMillis;
+	}
+
 	private final int sleepInMillis;
-	private OntModel repoModel = OntModelFactory.createModel();
 	
 	@Override
 	public void handleCommit(Commit commit) {
@@ -32,13 +36,13 @@ public class LongRunningNoOpLocalService extends CommitLoggingService {
 	}
 
 	@Override
-	public OntIndividual getConfigResource() {
-		return repoModel.createIndividual(AES.getURI()+this.getClass().getName());
+	public void handleCommitFromOffset(Commit commit, int indexOfNewAddition, int indexOfNewRemoval) {
+		handleCommit(commit);
 	}
 
 	@Override
-	public void handleCommitFromOffset(Commit commit, int indexOfNewAddition, int indexOfNewRemoval) {
-		handleCommit(commit);
+	protected String getServiceTypeURI() {
+		return CommitHandler.serviceTypeBaseURI+this.getClass().getSimpleName();
 	}
 
 }

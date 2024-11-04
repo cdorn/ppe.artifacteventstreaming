@@ -1,6 +1,6 @@
 package at.jku.isse.artifacteventstreaming.jena;
 
-import static at.jku.isse.passiveprocessengine.rdf.MapResource.MAP_NS;
+import static at.jku.isse.passiveprocessengine.rdf.MapResourceType.MAP_NS;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Map;
@@ -22,6 +22,7 @@ import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.Test;
 
 import at.jku.isse.passiveprocessengine.rdf.MapResource;
+import at.jku.isse.passiveprocessengine.rdf.MapResourceType;
 import at.jku.isse.passiveprocessengine.rdf.ResourceMismatchException;
 
 class ResourceAsHashMapTest {
@@ -34,8 +35,9 @@ class ResourceAsHashMapTest {
 		OntModel m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM );
 		m.setNsPrefix("isse", NS);
 		m.setNsPrefix("map", MAP_NS);
+		MapResourceType mapTypeDef = new MapResourceType(m);
 		OntClass artifactType = m.createOntClass(NS+"artifactType");		
-		OntClass mapType = MapResource.getMapEntryClass(m);
+		OntClass mapType = mapTypeDef.getMapEntryClass();
 		
 		
 		
@@ -45,9 +47,9 @@ class ResourceAsHashMapTest {
 		hasMapProp.addLabel("has entry of key/value pair");
 		
 		
-		OntDataProperty keyProp = MapResource.getKeyProperty(m);
-		OntDataProperty literalValueProp = MapResource.getLiteralValueProperty(m);		
-		OntObjectProperty.Named objectValueProp = MapResource.getObjectValueProperty(m);
+		OntDataProperty keyProp = mapTypeDef.getKeyProperty();
+		OntDataProperty literalValueProp = mapTypeDef.getLiteralValueProperty();		
+		OntObjectProperty.Named objectValueProp = mapTypeDef.getObjectValueProperty();
 		
 		// lets create some instances:
 		OntIndividual art1 = artifactType.createIndividual(NS+"art1");
@@ -63,7 +65,7 @@ class ResourceAsHashMapTest {
 											.addLiteral(literalValueProp, "LiteralAndObjectsMixed"));
 		
 		// simple way to manipulate a map
-		Map<String, RDFNode> map = MapResource.asMapResource(art1, hasMapProp);			
+		Map<String, RDFNode> map = MapResource.asMapResource(art1, hasMapProp, mapTypeDef);			
 		map.put("SelfKey2", art2);
 		map.put("someother", m.createTypedLiteral("test2"));
 		map.put("SampleKeyRefToArt2", art3);
@@ -88,7 +90,7 @@ class ResourceAsHashMapTest {
 		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
 		assertEquals(map.size(), 0);
 		
-		Map<String, RDFNode> newMap = MapResource.asMapResource(art1, hasMapProp);
+		Map<String, RDFNode> newMap = MapResource.asMapResource(art1, hasMapProp, mapTypeDef);
 		assertEquals(newMap.size(), 0);
 	}
 

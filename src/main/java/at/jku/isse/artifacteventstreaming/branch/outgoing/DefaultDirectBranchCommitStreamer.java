@@ -8,6 +8,7 @@ import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.rdf.model.Resource;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
+import at.jku.isse.artifacteventstreaming.api.AbstractHandlerBase;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
 import at.jku.isse.artifacteventstreaming.api.BranchStateKeeper;
@@ -18,9 +19,8 @@ import at.jku.isse.artifacteventstreaming.branch.BranchRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@RequiredArgsConstructor
 @Slf4j
-public class DefaultDirectBranchCommitStreamer implements CommitHandler {
+public class DefaultDirectBranchCommitStreamer extends AbstractHandlerBase {
 
 	public static final String SERVICE_TYPE_URI = CommitHandler.serviceTypeBaseURI+DefaultDirectBranchCommitStreamer.class.getSimpleName();
 	public static final String CACHE_ENTRY_PREFIX = "LAST_FORWARDED_COMMIT";
@@ -28,6 +28,15 @@ public class DefaultDirectBranchCommitStreamer implements CommitHandler {
 	private final Branch sourceBranch;
 	private final Branch destinationBranch;
 	private final BranchStateCache cache;	
+	
+	public DefaultDirectBranchCommitStreamer(Branch sourceBranch,
+			Branch destinationBranch, BranchStateCache cache) {
+		super(DefaultDirectBranchCommitStreamer.class.getSimpleName()+sourceBranch.getBranchName()+destinationBranch.getBranchName(), sourceBranch.getBranchResource().getModel());
+		this.sourceBranch = sourceBranch;
+		this.destinationBranch = destinationBranch;
+		this.cache = cache;
+		config = getConfigResource();
+	}
 	
 	// at this point, both branches have state loaded but not necessarily any serice, but this is enought to enqueue any commits that havent been delivered yet
 	public void init() throws Exception {
@@ -68,12 +77,16 @@ public class DefaultDirectBranchCommitStreamer implements CommitHandler {
 
 	@Override
 	public OntIndividual getConfigResource() {
-		OntModel repoModel = sourceBranch.getBranchResource().getModel();
-		OntIndividual config = repoModel.createIndividual(sourceBranch.getBranchId()+"#"+this.getClass().getSimpleName());
-		config.addProperty(AES.isConfigForServiceType, repoModel.createResource(SERVICE_TYPE_URI));
-		config.addProperty(AES.destinationBranch, repoModel.getResource( destinationBranch.getBranchResource().getURI()));
-		// no other config necessary
+		if (config == null) {
+			config = super.getConfigResource();
+			config.addProperty(AES.destinationBranch, repoModel.getResource( destinationBranch.getBranchResource().getURI()));
+		}
 		return config;
+	}
+	
+	@Override
+	protected String getServiceTypeURI() {
+		return SERVICE_TYPE_URI;
 	}
 	
 	private String getCacheKey() {
@@ -107,4 +120,6 @@ public class DefaultDirectBranchCommitStreamer implements CommitHandler {
 		}
 		
 	}
+
+
 }

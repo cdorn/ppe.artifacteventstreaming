@@ -12,19 +12,23 @@ import org.apache.jena.vocabulary.RDFS;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.Commit;
+import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@RequiredArgsConstructor
 @Slf4j
 public class SimpleService extends CommitLoggingService {
 	
-	final String serviceName;
 	final boolean doNegToPos;
 	Set<Statement> seenStatements = new HashSet<>();
-	final OntModel model;
+	
+	public SimpleService(String serviceName, boolean doNegToPos, OntModel branchModel
+			) {
+		super(serviceName, branchModel);
+		this.doNegToPos = doNegToPos;
+	}
 	
 	@Override
 	public void handleCommit(Commit commit) {
@@ -71,7 +75,8 @@ public class SimpleService extends CommitLoggingService {
 	}
 
 	@Override
-	public OntIndividual getConfigResource() {
-		return model.createIndividual(AES.getURI()+this.getClass().getName());
+	protected String getServiceTypeURI() {
+		return CommitHandler.serviceTypeBaseURI+this.getClass().getSimpleName();
 	}
+
 }

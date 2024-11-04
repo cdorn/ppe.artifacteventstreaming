@@ -41,19 +41,19 @@ class TestNonPersistedCrossBranchStreaming {
 		
 		Branch branch2 = new BranchBuilder(repoURI2, DatasetFactory.createTxnMem())
 				.setBranchLocalName("branch2")
-				.addBranchInternalCommitHandler(new SyncForTestingService("Branch2Signaller", latch, repoModel))
+				.addBranchInternalCommitService(new SyncForTestingService("Branch2Signaller", latch, repoModel))
 				.build();		
-		branch2.appendIncomingCommitHandler(new CompleteCommitMerger(branch2));
+		branch2.appendIncomingCommitMerger(new CompleteCommitMerger(branch2));
 
 		Branch branch3 = new BranchBuilder(repoURI3, DatasetFactory.createTxnMem())
 				.setBranchLocalName("branch3")
-				.addBranchInternalCommitHandler(new SyncForTestingService("Branch3Signaller", latch, repoModel))
+				.addBranchInternalCommitService(new SyncForTestingService("Branch3Signaller", latch, repoModel))
 				.build();				
-		branch3.appendIncomingCommitHandler(new CompleteCommitMerger(branch3));
+		branch3.appendIncomingCommitMerger(new CompleteCommitMerger(branch3));
 
 
-		branch.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branch, branch2, new InMemoryBranchStateCache()));
-		branch.appendOutgoingCrossBranchCommitHandler(new DefaultDirectBranchCommitStreamer(branch, branch3, new InMemoryBranchStateCache()));
+		branch.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(branch, branch2, new InMemoryBranchStateCache()));
+		branch.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(branch, branch3, new InMemoryBranchStateCache()));
 		branch.startCommitHandlers(null);
 		branch2.startCommitHandlers(null);
 		branch3.startCommitHandlers(null);

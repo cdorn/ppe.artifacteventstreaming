@@ -20,65 +20,35 @@ import org.apache.jena.vocabulary.XSD;
 
 public class MapResource implements Map<String, RDFNode> {	
 	
-	public static String MAP_NS = "http://at.jku.isse.map#";	
-	public static final String ENTRY_TYPE = MAP_NS+"EntryType";
-	public static final String KEY_PROPERTY = MAP_NS+"key";
-	public static final String LITERAL_VALUE_PROPERTY = MAP_NS+"literalValue";
-	public static final String OBJECT_VALUE_PROPERTY = MAP_NS+"objectValue";
+
 	
 	private final OntIndividual mapOwner;
 	private final OntObjectProperty.Named mapEntryProperty;	
 	private final Map<String, Statement> map = new HashMap<>();
 	
 	private final OntModel model;
-	private final OntDataProperty keyProp;
-	private final OntDataProperty litValueProp;
-	private final OntObjectProperty.Named objectValueProp;
+	private final MapResourceType mapType;
 	
-	private MapResource(OntIndividual mapOwner, Named mapEntryProperty) {
+	private MapResource(OntIndividual mapOwner, Named mapEntryProperty, MapResourceType mapType) {
 		super();
+		this.mapType = mapType;
 		this.mapOwner = mapOwner;
 		this.mapEntryProperty = mapEntryProperty;
 		model = mapOwner.getModel();		
-		keyProp = getKeyProperty(model);
-		litValueProp = getLiteralValueProperty(model);
-		objectValueProp = getObjectValueProperty(model);
 		init();
 	}
 
-	public static MapResource asMapResource(OntIndividual mapOwner, OntObjectProperty.Named mapEntryProperty) throws ResourceMismatchException {
-		OntClass mapType = getMapEntryClass(mapOwner.getModel());
-		if (mapEntryProperty.ranges(true).anyMatch(rangeClass -> rangeClass.equals(mapType) || rangeClass.hasSuperClass(mapType, false))) {
-			MapResource map = new MapResource(mapOwner, mapEntryProperty);
+	public static MapResource asMapResource(OntIndividual mapOwner, OntObjectProperty.Named mapEntryProperty, MapResourceType mapType) throws ResourceMismatchException {
+		
+		if (mapType.isMapEntrySubclass(mapEntryProperty)) {
+			MapResource map = new MapResource(mapOwner, mapEntryProperty, mapType);
 			return map;
 		}
 		else
-			throw new ResourceMismatchException(String.format("Provided property %s is not in range of %s", mapEntryProperty.getURI(), ENTRY_TYPE));		
+			throw new ResourceMismatchException(String.format("Provided property %s is not in range of a %s", mapEntryProperty.getURI(), MapResourceType.ENTRY_TYPE_URI));		
 	}
 
-	public static OntClass getMapEntryClass(OntModel m) {
-		OntClass mapType = m.createOntClass(ENTRY_TYPE);
-		return mapType;
-	}
 	
-	public static OntDataProperty getKeyProperty(OntModel m) {
-		OntDataProperty keyProp = m.createDataProperty(KEY_PROPERTY);
-		keyProp.addDomain(getMapEntryClass(m));
-		keyProp.addRange(m.getDatatype(XSD.xstring));
-		return keyProp;
-	}
-	
-	public static OntDataProperty getLiteralValueProperty(OntModel m) {
-		OntDataProperty literalValueProp = m.createDataProperty(LITERAL_VALUE_PROPERTY);
-		literalValueProp.addDomain(getMapEntryClass(m));
-		return literalValueProp;
-	}
-	
-	public static OntObjectProperty.Named getObjectValueProperty(OntModel m) {		
-		OntObjectProperty.Named objectValueProp = m.createObjectProperty(OBJECT_VALUE_PROPERTY);
-		objectValueProp.addDomain(getMapEntryClass(m));
-		return objectValueProp;
-	}
 	
 	private void init() {		
 		var iter = mapOwner.listProperties(mapEntryProperty);				
@@ -86,15 +56,15 @@ public class MapResource implements Map<String, RDFNode> {
 			var stmt = iter.next();
 			var entry = stmt.getObject().asResource();
 			// access key
-			var keyStmt = entry.getProperty(keyProp);
+			var keyStmt = entry.getProperty(mapType.getKeyProperty());
 			if (keyStmt != null) {
 				String key = keyStmt.getString();
 				// now access value (this is an untyped map, so literals and resource can be mixed!)
-				var litStmt = entry.getProperty(litValueProp);
+				var litStmt = entry.getProperty(mapType.getLiteralValueProperty());
 				if (litStmt != null) {
 					map.put(key, litStmt);
 				} else {
-					var refStmt = entry.getProperty(objectValueProp);
+					var refStmt = entry.getProperty(mapType.getObjectValueProperty());
 					if (refStmt != null) {
 						map.put(key, refStmt);
 					}
@@ -106,10 +76,10 @@ public class MapResource implements Map<String, RDFNode> {
 	}
 	
 	private RDFNode getValueFromStatement(Statement stmt) {
-		if (stmt.getPredicate().equals(litValueProp)) {
+		if (stmt.getPredicate().equals(mapType.getLiteralValueProperty())) {
 			var value = stmt.getLiteral();
 			return value;
-		} else if (stmt.getPredicate().equals(objectValueProp)) {
+		} else if (stmt.getPredicate().equals(mapType.getObjectValueProperty())) {
 			var node = stmt.getObject(); // we return the rdf node
 			return node;
 		}
@@ -144,15 +114,15 @@ public class MapResource implements Map<String, RDFNode> {
 			map.put(key,  newStmt);
 			return getValueFromStatement(prevStmt);
 		} else {
-			OntIndividual entry = getMapEntryClass(model).createIndividual();
-			entry.addLiteral(keyProp, key);
+			OntIndividual entry = mapType.getMapEntryClass().createIndividual(); //FIXME: we should create a childclass instance, not from the base class, but could work
+			entry.addLiteral(mapType.getKeyProperty(), key);
 			Statement newStmt = null;
 			if (node.isLiteral()) {
-				entry.addProperty(litValueProp, node);
-				newStmt = entry.listProperties(litValueProp).next();
+				entry.addProperty(mapType.getLiteralValueProperty(), node);
+				newStmt = entry.listProperties(mapType.getLiteralValueProperty()).next();
 			} else {
-				entry.addProperty(objectValueProp, node);
-				newStmt = entry.listProperties(objectValueProp).next();
+				entry.addProperty(mapType.getObjectValueProperty(), node);
+				newStmt = entry.listProperties(mapType.getObjectValueProperty()).next();
 			}			
 			map.put(key,  newStmt);
 			mapOwner.addProperty(mapEntryProperty, entry);

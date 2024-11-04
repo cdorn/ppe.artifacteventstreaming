@@ -26,9 +26,8 @@ public class DelayingDirectBranchCommitStreamer extends DefaultDirectBranchCommi
 
 	@Override
 	public void handleCommit(Commit commit) {
-		super.handleCommit(commit);
 		try {
-			log.debug(name+" Starting to 'work'");
+			log.debug(name+" Starting to 'work' for millis: "+sleepInMillis);
 			currentThread = Thread.currentThread();
 			Thread.currentThread().sleep(sleepInMillis);
 			super.handleCommit(commit);

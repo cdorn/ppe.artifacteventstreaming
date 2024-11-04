@@ -5,6 +5,7 @@ import java.util.stream.Stream;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntClass;
+import org.apache.jena.ontapi.model.OntClass.DataMaxCardinality;
 import org.apache.jena.ontapi.model.OntClass.ObjectMaxCardinality;
 import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntIndividual;
@@ -19,10 +20,13 @@ import org.apache.jena.reasoner.Reasoner;
 import org.apache.jena.reasoner.ReasonerRegistry;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
+import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.Test;
 
+import at.jku.isse.passiveprocessengine.rdf.MapResource;
+import at.jku.isse.passiveprocessengine.rdf.MapResourceType;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.ChangeListener;
 
 class OntologyModelTest {
@@ -37,6 +41,8 @@ class OntologyModelTest {
 		reasoner.bindSchema(m);
 		InfModel infmodel = ModelFactory.createInfModel(reasoner, m);
 		
+		MapResourceType mapType = new MapResourceType(m);
+		
 		OntClass artifactType = m.createOntClass(NS+"artifact");		
 		OntClass otherType = m.createOntClass(NS+"other");
 		otherType.addDisjointClass(artifactType);
@@ -46,12 +52,19 @@ class OntologyModelTest {
 		successorProp.addLabel("has successor");
 		
 		
+		ObjectMaxCardinality maxSuccessor = m.createObjectMaxCardinality(successorProp, Integer.MAX_VALUE,  mapType.getMapEntryClass());
+		artifactType.addSuperClass(maxSuccessor);
+		
+		OntDataProperty hintProp = m.createDataProperty(NS+"collectionType");
+		hintProp.addRange(m.getDatatype(XSD.xstring));
 		
 		OntDataProperty keyProp = m.createDataProperty(NS+"artKey");
 		keyProp.addDomain(artifactType);
 		keyProp.addRange(m.getDatatype(XSD.xstring));
-		//DataMaxCardinality maxOneKey = m.createDataMaxCardinality(keyProp, 1, OntDataRange.);
-		//TODO continue here: artifactType.addSuperClass(maxOneKey);
+		DataMaxCardinality maxOneKey = m.createDataMaxCardinality(keyProp, 1, null);
+		maxOneKey.addProperty(hintProp, "SINGLE");
+		//TODO continue here: 
+		artifactType.addSuperClass(maxOneKey);
 			
 		// lets create some instances:
 

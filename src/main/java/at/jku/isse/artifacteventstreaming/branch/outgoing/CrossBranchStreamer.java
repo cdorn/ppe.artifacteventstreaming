@@ -60,7 +60,7 @@ public class CrossBranchStreamer implements Runnable {
 		outgoingCommitProcessors.stream().forEach(processor -> {                    	
     		// each processor has the duty to add the commit reliably then to their configured branch's inqueue
     		try {
-				processor.handleCommit(deepClone(commit));
+				processor.handleCommit(createShallowClone(commit));
 			} catch (Exception e) {
 				log.info(String.format("Forwarding Commit %s from %s failed for processor %s due to %s", commit.getCommitId(), branchId, processor.toString(), e.getMessage()));
 			}                            		
@@ -76,16 +76,16 @@ public class CrossBranchStreamer implements Runnable {
 	}
 	
 	/**
-	 * @param cloneFrom
+	 * @param cloneSource
 	 * @return a commit with the same id, message, preceding commit, and branch, with separate statement lists, but references back to the same statements, i.e., no statement cloning occurs
 	 */
-	private Commit deepClone(Commit cloneFrom) {
-		StatementCommitImpl clone = new StatementCommitImpl(cloneFrom.getOriginatingBranchId()
-				, cloneFrom.getCommitId()
-				, cloneFrom.getCommitMessage()
-				, cloneFrom.getPrecedingCommitId()
-				, new LinkedHashSet<>(cloneFrom.getAddedStatements())
-				, new LinkedHashSet<>(cloneFrom.getRemovedStatements()));
+	private Commit createShallowClone(Commit cloneSource) {
+		StatementCommitImpl clone = new StatementCommitImpl(cloneSource.getOriginatingBranchId()
+				, cloneSource.getCommitId()
+				, cloneSource.getCommitMessage()
+				, cloneSource.getPrecedingCommitId()
+				, new LinkedHashSet<>(cloneSource.getAddedStatements())
+				, new LinkedHashSet<>(cloneSource.getRemovedStatements()));
 		return clone;
 	}
 }
