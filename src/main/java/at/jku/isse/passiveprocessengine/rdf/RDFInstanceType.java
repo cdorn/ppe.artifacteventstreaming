@@ -21,12 +21,6 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	}
 
 	@Override
-	public PPEInstanceType getInstanceType() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public void setInstanceType(PPEInstanceType arg0) {
 		// noop, cannot override instancetype of an InstanceType (i.e., meta type cannot be overridden)
 	}
@@ -65,7 +59,7 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	@Override
 	public PPEInstanceType getParentType() {
 		Optional<OntClass> parent = type.asNamed().superClasses(true).findFirst();
-		//TODO: check if we need to filter some basic rdf/owl classes here
+		//TODO: we need to filter some basic rdf/owl classes like restrictions here
 		return parent.map(ontClass -> resolver.resolveToType(ontClass)).orElse(null);
 	}
 

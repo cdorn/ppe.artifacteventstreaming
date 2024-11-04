@@ -6,7 +6,9 @@ import java.util.Set;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.StmtIterator;
+import org.apache.jena.vocabulary.RDF;
 
+import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -58,6 +60,16 @@ public class RDFElement {
 		return owners;
 	}
 	
+
+	public PPEInstanceType getInstanceType() {
+		var stmt = element.getProperty(RDF.type); // for now an arbitrary one of there are multiple ones
+		//FIXME: get all classes and filter out restrictions!
+		if (stmt != null) {
+			var node = stmt.getObject();
+			return resolver.resolveToType(node);
+		}
+		return null;
+	}
 
 	/**
 	 * Expects fully qualified named properties , i.e., as they are used at the RDF layer
