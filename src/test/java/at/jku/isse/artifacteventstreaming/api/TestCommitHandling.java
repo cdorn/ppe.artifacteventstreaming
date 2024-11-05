@@ -1,5 +1,6 @@
 package at.jku.isse.artifacteventstreaming.api;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -11,6 +12,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.jena.ontapi.OntModelFactory;
+import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
@@ -38,13 +40,18 @@ class TestCommitHandling {
 	void testCreateBranch() throws Exception {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.build();
+		System.out.println(branch.toString());
 		assertEquals(branch.getBranchName(), "main");
+		assertEquals(branch.getRepositoryURI(), repoURI.toString());		
 	}
+	
+	
 	
 	@Test
 	void testTwoServicesBranch() throws Exception {
-		OntModel repoModel = OntModelFactory.createModel();
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		Dataset repoDataset = DatasetFactory.createTxnMem();
+		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
 				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
 				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
 				.build();
@@ -61,8 +68,9 @@ class TestCommitHandling {
 	
 	@Test
 	void testAbortCommit() throws Exception {
-		OntModel repoModel = OntModelFactory.createModel();
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		Dataset repoDataset = DatasetFactory.createTxnMem();
+		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
 				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
 				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
 				.build();
@@ -85,36 +93,45 @@ class TestCommitHandling {
 
 	@Test
 	void testLoopDetection() throws Exception {
-		OntModel repoModel = OntModelFactory.createModel();
-		CountDownLatch latch = new CountDownLatch(1);;
+		Dataset repoDataset = DatasetFactory.createTxnMem();
+		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		CountDownLatch latch = new CountDownLatch(1);
 		var service = new SyncForTestingService("Out1", latch, repoModel);
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
 				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
 				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
 				.addOutgoingCommitDistributer(service)
 				.build();
-		Dataset dataset = branch.getDataset();
 		CommitHandler merger = new CompleteCommitMerger(branch);
 		branch.appendIncomingCommitMerger(merger);
 		branch.startCommitHandlers(null);
+		
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("TestCommit");
-		assertEquals(0, branch.getOutQueue().size());
-	
-		branch.enqueueIncomingCommit(commit);
-		boolean success = latch.await(5, TimeUnit.SECONDS);
-		assert(success);
-		assertEquals(0, branch.getInQueue().size());
+		boolean success = latch.await(1,  TimeUnit.SECONDS);
+		assertEquals(0, branch.getOutQueue().size());	
 		assertEquals(1, service.getReceivedCommits().size());
+		branch.removeOutgoingCommitDistributer(service); // replace by new one for with new latch
+		
+		latch = new CountDownLatch(1);
+		service = new SyncForTestingService("Out2", latch, repoModel);
+		branch.appendOutgoingCommitDistributer(service);
+		
+		branch.enqueueIncomingCommit(commit);		
+		success = latch.await(1, TimeUnit.SECONDS);
+		assertFalse(success);
+		assertEquals(0, branch.getInQueue().size());
+		assertEquals(0, service.getReceivedCommits().size());
 	}
 	
 	@Test
 	void testSameCommitHandling() throws Exception {
 		CountDownLatch latch = new CountDownLatch(2);
-		OntModel repoModel = OntModelFactory.createModel();
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		Dataset repoDataset = DatasetFactory.createTxnMem();
+		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
 				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
 				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
 				.addOutgoingCommitDistributer(new SyncForTestingService("Out1", latch, repoModel))

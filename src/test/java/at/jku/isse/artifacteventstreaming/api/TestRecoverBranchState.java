@@ -12,8 +12,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.jena.atlas.logging.Log;
 import org.apache.jena.ontapi.OntModelFactory;
+import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
@@ -36,13 +39,15 @@ class TestRecoverBranchState {
 	@Test
 	void testRecoverPrelimCommit() throws Exception {
 		// everything done inmemory!
-		OntModel branchModel = OntModelFactory.createModel();
+		Dataset repoDataset = DatasetFactory.createTxnMem();
+		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		//OntModel branchModel = OntModelFactory.createModel();
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
 		URI branchURI = URI.create(BranchBuilder.generateBranchURI(repoURI, "main"));
 		BranchStateUpdater stateKeeper = stateFactory.createStateKeeperFor(branchURI);
-		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel)
 				.setStateKeeper(stateKeeper)				
-				.addBranchInternalCommitService(new LongRunningNoOpLocalService(branchModel, 2000))
+				.addBranchInternalCommitService(new LongRunningNoOpLocalService(repoModel, 2000))
 				.build();		
 		OntModel model = branch.getModel();
 		stateKeeper.loadState();
@@ -55,25 +60,38 @@ class TestRecoverBranchState {
 			try {
 				Resource testResource = model.createResource(repoURI+"#art1");
 				model.add(testResource, RDFS.label, model.createTypedLiteral(1));
-				Commit commit = branch.commitChanges("TestCommit");
+				branch.commitChanges("TestCommit");
+				assert(false);
 			} catch (Exception e) {
-				e.printStackTrace();
+				assert(true);
 			}
 		};
 		ExecutorService executor = Executors.newSingleThreadExecutor();
 		executor.execute(task);
 		Thread.sleep(500); // enought to "persist" in memory
 		executor.shutdownNow(); // interrupt service
+		branch.deactivate();
+		try {
+			branch.getDataset().end();
+			branch.getDataset().begin();
+			Resource testResource = model.createResource(repoURI+"#art1");
+			model.add(testResource, RDFS.label, model.createTypedLiteral(1));
+			branch.commitChanges("IgnoredTestCommit");
+			assert(false);
+		} catch (Exception e) {			
+			assert(true);
+		}		
 		
 		CountDownLatch latch = new CountDownLatch(1);
 		// recreate branch, ensure that commit is created by checking that commit is created
 		// note that we are not testing recovery of service config, we set that manually here, just that the recovery mechanism works
-		OntModel branchModel2 = OntModelFactory.createModel();
+		Dataset repoDataset2 = DatasetFactory.createTxnMem();
+		OntModel repoModel2 =  OntModelFactory.createModel(repoDataset2.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		BranchStateUpdater stateKeeper2 = stateFactory.createStateKeeperFor(branchURI);
-		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		Branch branch2 = new BranchBuilder(repoURI, repoDataset2, repoModel2)
 				.setStateKeeper(stateKeeper2)				
-				.addBranchInternalCommitService(new LongRunningNoOpLocalService(branchModel2, 2000))
-				.addOutgoingCommitDistributer(new SyncForTestingService("Out1", latch, branchModel2))
+				.addBranchInternalCommitService(new LongRunningNoOpLocalService(repoModel2, 2000))
+				.addOutgoingCommitDistributer(new SyncForTestingService("Out1", latch, repoModel2))
 				.build();		
 		OntModel model2 = branch2.getModel();
 		Commit unfinishedCommit = stateKeeper2.loadState();
@@ -86,15 +104,16 @@ class TestRecoverBranchState {
 
 	@Test
 	void testNonDeliveredCommitToMerge() throws Exception {
-		OntModel branchModel = OntModelFactory.createModel();
+		Dataset repoDataset = DatasetFactory.createTxnMem();
+		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
 		URI branchURI = URI.create(BranchBuilder.generateBranchURI(repoURI, "main"));
 		BranchStateUpdater stateKeeper = stateFactory.createStateKeeperFor(branchURI);
 		CountDownLatch latch = new CountDownLatch(1);
-		SyncForTestingService service1 = new SyncForTestingService("Out1", latch, branchModel);
-		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		SyncForTestingService service1 = new SyncForTestingService("Out1", latch, repoModel);
+		Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel)
 				.setStateKeeper(stateKeeper)				
-				.addIncomingCommitMerger(new LongRunningNoOpLocalService(branchModel, 2000))
+				.addIncomingCommitMerger(new LongRunningNoOpLocalService(repoModel, 2000))
 				.addOutgoingCommitDistributer(service1)
 				.build();		
 		OntModel model = branch.getModel();
@@ -121,11 +140,13 @@ class TestRecoverBranchState {
 		
 		// now 'restart' branch and check if commit is there
 		CountDownLatch latch2 = new CountDownLatch(1);
-		SyncForTestingService service2 = new SyncForTestingService("Out2", latch2, OntModelFactory.createModel());
+		Dataset repoDataset2 = DatasetFactory.createTxnMem();
+		OntModel repoModel2 =  OntModelFactory.createModel(repoDataset2.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		SyncForTestingService service2 = new SyncForTestingService("Out2", latch2, repoModel2);
 		BranchStateUpdater stateKeeper2 = stateFactory.createStateKeeperFor(branchURI);
-		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		Branch branch2 = new BranchBuilder(repoURI, repoDataset2, repoModel2)
 				.setStateKeeper(stateKeeper2)		
-				.addIncomingCommitMerger(new LongRunningNoOpLocalService(branchModel, 500))		
+				.addIncomingCommitMerger(new LongRunningNoOpLocalService(repoModel2, 500))		
 				.addOutgoingCommitDistributer(service2)
 				.build();		
 		OntModel model2 = branch2.getModel();
@@ -184,10 +205,12 @@ class TestRecoverBranchState {
 		stateKeeperNew.loadState();
 		
 		CountDownLatch latch = new CountDownLatch(2);
-		SyncForTestingService service1 = new SyncForTestingService("InNew", latch, OntModelFactory.createModel());
-		SyncForTestingService service2 = new SyncForTestingService("Out2New", latch, OntModelFactory.createModel());
+		Dataset repoDataset = DatasetFactory.createTxnMem();
+		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		SyncForTestingService service1 = new SyncForTestingService("InNew", latch, repoModel);
+		SyncForTestingService service2 = new SyncForTestingService("Out2New", latch, repoModel);
 		BranchStateUpdater stateKeeperNew2 = stateFactory.createStateKeeperFor(branchURI2);
-		Branch branchNew2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		Branch branchNew2 = new BranchBuilder(repoURI, repoDataset, repoModel)
 				.setStateKeeper(stateKeeperNew2)	
 				.setBranchLocalName("dest")
 				.addIncomingCommitMerger(service1)

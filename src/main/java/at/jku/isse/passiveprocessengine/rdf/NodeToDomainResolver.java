@@ -15,4 +15,8 @@ public class NodeToDomainResolver {
 	public OntClass getMapEntryBaseType() {
 		return null;
 	}
+
+	public OntClass getListBaseType() {		
+		return null;
+	}
 }

@@ -13,8 +13,8 @@ import lombok.Getter;
 
 public abstract class CommitLoggingService extends AbstractHandlerBase implements IncrementalCommitHandler {
 
-	public CommitLoggingService(String serviceName, OntModel branchModel) {
-		super(serviceName, branchModel);
+	public CommitLoggingService(String serviceName, OntModel repoModel) {
+		super(serviceName, repoModel);
 	}
 
 	public CommitLoggingService(OntModel branchModel) {

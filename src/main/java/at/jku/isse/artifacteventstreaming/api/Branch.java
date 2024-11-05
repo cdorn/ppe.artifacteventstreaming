@@ -20,6 +20,10 @@ public interface Branch {
 	public Commit getLastCommit();
 	public BranchStateKeeper getStateKeeper();
 	
+	// stops all incoming handlers, and distributers etc, so the branch can be garbage collected,
+	// one deactivated the branch object should not be used any more and all distributers connected to this branch object should be notified and paused as well, resp, updated with a new branch object
+	public void deactivate();
+	
 	//public BlockingQueue<Commit> getInQueue();	
 	//public BlockingQueue<Commit> getOutQueue();
 	

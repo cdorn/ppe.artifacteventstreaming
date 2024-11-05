@@ -116,7 +116,7 @@ public class BranchBuilder {
 	
 	public static String getBranchNameFromURI(@NonNull URI branchURI) {
 		int pos = branchURI.toString().lastIndexOf("#");
-		if (pos < 0) {
+		if (pos < 0 || pos == branchURI.toString().length()) {
 			return null;
 		} else {
 			return branchURI.toString().substring(pos+1);

@@ -80,7 +80,13 @@ public class BranchImpl  implements Branch, Runnable {
 		}
 		// create thread for incoming commits to be merged
 		inExecutor.execute(this);
-		outExecutor.execute(crossBranchStreamer);
+		outExecutor.execute(crossBranchStreamer);			
+	}
+	
+	@Override
+	public void deactivate() {
+		inQueue.add(PoisonPillCommit.POISONPILL);
+		outQueue.add(PoisonPillCommit.POISONPILL);		
 	}
 	
 	@Override
@@ -127,27 +133,7 @@ public class BranchImpl  implements Branch, Runnable {
 		return "Branch[" + branchResource.getLabel() + "]";
 	}
     
-	private Seq createOrGetListResource(Property refToList) {
-		Resource listResource = branchResource.getPropertyResourceValue(refToList);
-		Seq list;
-		if (listResource == null) {
-			list = branchResource.getModel().createSeq(branchResource.getURI()+"#"+refToList.getLocalName());
-			branchResource.addProperty(refToList, list);
-		} else {
-			list = branchResource.getModel().getSeq(listResource);
-			//list = (Seq)listResource;
-		}
-		return list;
-	}
 	
-	private List<OntIndividual> fromSeqResourceToContent(Seq list) {
-		NodeIterator iter = list.iterator();
-		List<OntIndividual> elements = new ArrayList<>();
-		while(iter.hasNext()) {
-			elements.add(branchResource.getModel().getIndividual(iter.next().asResource().getURI()));
-		}
-		return elements;
-	}
 	
 	// incoming commit handling -------------------------------------------------------------------------
 	
@@ -180,6 +166,10 @@ public class BranchImpl  implements Branch, Runnable {
 		}
 		handlers.add(handler);
 		configs.add(handler.getConfigResource());
+		if (isShutdown) {
+			isShutdown = false;
+			inExecutor.execute(this);	
+		}
 	}
 	
 	@Override
@@ -189,10 +179,15 @@ public class BranchImpl  implements Branch, Runnable {
 		if (pos >= 0) {
 			handlers.remove(handler);
 			configs.remove(pos+1); //RDF lists are 1-indexed!
+		}				
+		if (handlers.isEmpty() && isShutdown==false) { 
+			log.debug(String.format("Shutting down inQueue thread for branch: %s", this.getBranchName()));
+			inQueue.add(PoisonPillCommit.POISONPILL);
+			// this stop dequeuing of commits, restarted upon anning one again
 		}
+		
 	}
 
-	@Getter
     private boolean isShutdown = false;
 	
 	public void run() {
@@ -216,7 +211,7 @@ public class BranchImpl  implements Branch, Runnable {
         }
 	}
 	
-	private void forwardCommit(Commit commit) {
+	private void forwardCommit(Commit commit) {					
 	//	if (dataset.isInTransaction()) // this is too brittle, we need to ensure this is not happening by other means
 	//		dataset.abort();
 		dataset.begin(ReadWrite.WRITE);
@@ -255,7 +250,7 @@ public class BranchImpl  implements Branch, Runnable {
 		if (pos >= 0) {
 			services.remove(service);
 			configs.remove(pos+1); // RDF lists are 1-indexed
-		}
+		}				
 	}
 	
 	@Override
@@ -269,6 +264,11 @@ public class BranchImpl  implements Branch, Runnable {
 	 */
 	@Override
 	public Commit commitChanges(String commitMsg) throws Exception {
+		if (isShutdown) {
+			this.undoNoncommitedChanges();
+			throw new Exception(String.format("Branch %s with objectid %s has been deactivated, cannot make changes on non-active branch, please create a new branch object", getBranchId(), this.hashCode()));
+		}
+		
 		if (!stmtAggregator.hasAdditions() && !stmtAggregator.hasRemovals()) {
 			log.debug("Commit not created as no changes occurred since last commit: "+getLastCommitId());
 			return null;
@@ -415,5 +415,26 @@ public class BranchImpl  implements Branch, Runnable {
 		return fromSeqResourceToContent(list);
 	}
 
+	private Seq createOrGetListResource(Property refToList) {
+		Resource listResource = branchResource.getPropertyResourceValue(refToList);
+		Seq list;
+		if (listResource == null) {
+			list = branchResource.getModel().createSeq(branchResource.getURI()+"#"+refToList.getLocalName());
+			branchResource.addProperty(refToList, list);
+		} else {
+			list = branchResource.getModel().getSeq(listResource);
+			//list = (Seq)listResource;
+		}
+		return list;
+	}
+	
+	private List<OntIndividual> fromSeqResourceToContent(Seq list) {
+		NodeIterator iter = list.iterator();
+		List<OntIndividual> elements = new ArrayList<>();
+		while(iter.hasNext()) {
+			elements.add(branchResource.getModel().getIndividual(iter.next().asResource().getURI()));
+		}
+		return elements;
+	}
 
 }

@@ -75,6 +75,10 @@ public class CrossBranchStreamer implements Runnable {
 		outgoingCommitProcessors.remove(handler);
 	}
 	
+	public int getHandlerCount() {
+		return outgoingCommitProcessors.size();
+	}
+	
 	/**
 	 * @param cloneSource
 	 * @return a commit with the same id, message, preceding commit, and branch, with separate statement lists, but references back to the same statements, i.e., no statement cloning occurs

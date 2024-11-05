@@ -5,13 +5,17 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntClass;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.vocabulary.RDFS;
 import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.CARDINALITIES;
+import at.jku.isse.passiveprocessengine.rdf.ListResourceType;
 import at.jku.isse.passiveprocessengine.rdf.MapResourceType;
 import at.jku.isse.passiveprocessengine.rdf.RDFPropertyType;
 
@@ -23,16 +27,31 @@ class TestRDFPropertyType {
 	static OntClass artifactType;
 	static OntClass otherType;
 	static MapResourceType mapFactory;
+	static ListResourceType listFactory;
 	
 	@BeforeEach
 	void setup() {
 		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM );
 		resolver = new RDFNodeToDomainResolver(m);
 		resolver.getMapEntryBaseType();
+		resolver.getListBaseType();
 		mapFactory = resolver.getMapBase();
+		listFactory = resolver.getListBase();
 		artifactType = m.createOntClass(NS+"artifact");		
 		otherType = m.createOntClass(NS+"other");
 		otherType.addProperty(RDFS.label, "other");
+	}
+	
+	@Test
+	void testDetectListProperty() {
+		String propURI = NS+"hasList";		
+		var prop = listFactory.addObjectListProperty(artifactType, propURI, otherType)	;	
+		assertNotNull(prop);
+		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+		
+		assertEquals(CARDINALITIES.LIST, propType.getCardinality());
+		assertEquals("other", propType.getInstanceType().getName());
+		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
 	}
 	
 	@Test
@@ -73,7 +92,16 @@ class TestRDFPropertyType {
 		assertEquals("other", propType.getInstanceType().getName());
 	}
 	
-	// TODO: test lists, once they are implemented
+	@Test
+	void testDetectListDataProperty() {
+		String propURI = NS+"hasList";		
+		var prop = listFactory.addLiteralListProperty(artifactType, propURI, m.getDatatype(XSD.xdouble))	;	
+		assertNotNull(prop);
+		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+		
+		assertEquals(CARDINALITIES.LIST, propType.getCardinality());
+		assertEquals("FLOAT", propType.getInstanceType().getName());
+	}
 	
 	@Test
 	void testDetectDataMapProperty() {
@@ -111,5 +139,126 @@ class TestRDFPropertyType {
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
 		assertEquals("STRING", propType.getInstanceType().getName());
+	}
+	
+	@Test
+	void testDetectIntegerMapProperty() {
+		String propURI = NS+"hasMap";
+		var prop = mapFactory.addLiteralMapProperty(artifactType, propURI, m.getDatatype(XSD.xint));
+		assertNotNull(prop);
+		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+		
+		assertEquals(CARDINALITIES.MAP, propType.getCardinality());
+		assertEquals(BuildInType.INTEGER.getName(), propType.getInstanceType().getName());
+	}
+
+	@Test
+	void testDetectIntegerSetProperty() {
+		String propURI = NS+"hasSet";
+		var prop = m.createDataProperty(propURI);
+		prop.addRange(m.getDatatype(XSD.xint));
+		prop.addDomain(artifactType);
+		assertNotNull(prop);
+		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+		
+		assertEquals(CARDINALITIES.SET, propType.getCardinality());
+		assertEquals(BuildInType.INTEGER.getName(), propType.getInstanceType().getName());
+	}
+	
+	@Test
+	void testDetectUnsupportedUnsigLongSetProperty() {
+		String propURI = NS+"hasSet";
+		var prop = m.createDataProperty(propURI);
+		prop.addRange(m.getDatatype(XSD.unsignedLong));
+		prop.addDomain(artifactType);
+		assertNotNull(prop);
+		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+		
+		assertEquals(CARDINALITIES.SET, propType.getCardinality());
+		assertEquals(BuildInType.STRING.getName(), propType.getInstanceType().getName());
+	}
+	
+	@Test
+	void testDetectSingleLongProperty() {
+		String propURI = NS+"hasSet";
+		var prop = m.createDataProperty(propURI);
+		prop.addRange(m.getDatatype(XSD.xlong));
+		prop.addDomain(artifactType);
+		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
+		artifactType.addSuperClass(maxOneKey);		
+		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+		
+		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
+		assertEquals(BuildInType.INTEGER.getName(), propType.getInstanceType().getName());
+	}
+	
+	@Test
+	void testDetectSingleBooleanProperty() {
+		String propURI = NS+"hasSet";
+		var prop = m.createDataProperty(propURI);
+		prop.addRange(m.getDatatype(XSD.xboolean));
+		prop.addDomain(artifactType);
+		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
+		artifactType.addSuperClass(maxOneKey);		
+		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+		
+		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
+		assertEquals(BuildInType.BOOLEAN.getName(), propType.getInstanceType().getName());
+	}
+	
+	@Test
+	void testDetectSingleFloatProperty() {
+		String propURI = NS+"hasSet";
+		var prop = m.createDataProperty(propURI);
+		prop.addRange(m.getDatatype(XSD.xfloat));
+		prop.addDomain(artifactType);
+		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
+		artifactType.addSuperClass(maxOneKey);		
+		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+		
+		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
+		assertEquals(BuildInType.FLOAT.getName(), propType.getInstanceType().getName());
+	}
+	
+	@Test
+	void testDetectSingleDoubleProperty() {
+		String propURI = NS+"hasSet";
+		var prop = m.createDataProperty(propURI);
+		prop.addRange(m.getDatatype(XSD.xdouble));
+		prop.addDomain(artifactType);
+		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
+		artifactType.addSuperClass(maxOneKey);		
+		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+		
+		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
+		assertEquals(BuildInType.FLOAT.getName(), propType.getInstanceType().getName());
+	}
+	
+	@Test
+	void testDetectSingleShortProperty() {
+		String propURI = NS+"hasSet";
+		var prop = m.createDataProperty(propURI);
+		prop.addRange(m.getDatatype(XSD.xshort));
+		prop.addDomain(artifactType);
+		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
+		artifactType.addSuperClass(maxOneKey);		
+		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+		
+		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
+		assertEquals(BuildInType.STRING.getName(), propType.getInstanceType().getName());
+	}
+	
+	@Test
+	void testDetectSingleUnsupportedDateProperty() {
+		String propURI = NS+"hasSet";
+		var prop = m.createDataProperty(propURI);
+		prop.addRange(m.getDatatype(XSD.date));
+		prop.addDomain(artifactType);
+		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
+		artifactType.addSuperClass(maxOneKey);		
+		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+		
+		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
+		assertEquals(BuildInType.STRING.getName(), propType.getInstanceType().getName());
 	}
 }

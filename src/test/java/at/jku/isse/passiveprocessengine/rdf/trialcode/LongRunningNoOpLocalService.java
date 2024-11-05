@@ -9,13 +9,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class LongRunningNoOpLocalService extends CommitLoggingService {
 
-	public LongRunningNoOpLocalService(OntModel branchModel, int sleepInMillis) {
-		super(branchModel);
+	public LongRunningNoOpLocalService(OntModel repoModel, int sleepInMillis) {
+		super(repoModel);
 		this.sleepInMillis = sleepInMillis;
 	}
 	
-	public LongRunningNoOpLocalService(String name, OntModel branchModel, int sleepInMillis) {
-		super(name, branchModel);
+	public LongRunningNoOpLocalService(String name, OntModel repoModel, int sleepInMillis) {
+		super(name, repoModel);
 		this.sleepInMillis = sleepInMillis;
 	}
 
@@ -28,9 +28,7 @@ public class LongRunningNoOpLocalService extends CommitLoggingService {
 			log.debug("Starting to 'work'");
 			Thread.currentThread().sleep(sleepInMillis);
 			log.debug("Ending 'work'");
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} catch (InterruptedException e) {					
 			throw new RuntimeException("Faking crash");
 		}
 	}

@@ -4,9 +4,12 @@ import static org.junit.Assert.assertEquals;
 
 import java.net.URI;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.jena.ontapi.OntModelFactory;
+import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
@@ -33,17 +36,22 @@ class TestNonPersistedCrossBranchStreaming {
 		int commitRounds = 1;
 		int changeCount = 10;
 		CountDownLatch latch = new CountDownLatch(commitRounds*2);
-		OntModel repoModel = OntModelFactory.createModel();
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI1, DatasetFactory.createTxnMem())	
+		
+		Dataset repoDataset = DatasetFactory.createTxnMem();
+		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+				
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI1, repoDataset, repoModel )	
 				.setBranchLocalName("branch1")
 				.build();		
 		OntModel model = branch.getModel();
 		
-		Branch branch2 = new BranchBuilder(repoURI2, DatasetFactory.createTxnMem())
+		var branch2signaller = new SyncForTestingService("Branch2Signaller", latch, repoModel);
+		BranchImpl branch2 = (BranchImpl) new BranchBuilder(repoURI2, DatasetFactory.createTxnMem())
 				.setBranchLocalName("branch2")
-				.addBranchInternalCommitService(new SyncForTestingService("Branch2Signaller", latch, repoModel))
+				.addBranchInternalCommitService(branch2signaller)
 				.build();		
-		branch2.appendIncomingCommitMerger(new CompleteCommitMerger(branch2));
+		var merger2 = new CompleteCommitMerger(branch2);
+		branch2.appendIncomingCommitMerger(merger2);
 
 		Branch branch3 = new BranchBuilder(repoURI3, DatasetFactory.createTxnMem())
 				.setBranchLocalName("branch3")
@@ -67,13 +75,17 @@ class TestNonPersistedCrossBranchStreaming {
 			Commit commit = branch.commitChanges("TestCommit"+j);			
 		}
 				
-		latch.await();
+		boolean success = latch.await(2, TimeUnit.SECONDS);
+		assert(success);
 		
 		branch.getDataset().end();
+		branch.getDataset().begin();
 		OntModel model2 = branch2.getModel();
 		branch2.getDataset().end();
+		//branch2.getDataset().begin();
 		OntModel model3 = branch3.getModel();
 		branch3.getDataset().end();
+		//branch3.getDataset().begin();
 		//why are models 2 and 3 sizes not updated, some content, while logging says statements have been added
 		//hmm, apparently we need to have dataset.end()
 		System.out.println("Model 1 size: "+model.size());
@@ -90,6 +102,18 @@ class TestNonPersistedCrossBranchStreaming {
 		//cannot compare full model anymore as the branch info is different
 		assertEquals(model.size(), model2.size());
 		assertEquals(model3.size(), model2.size());
+		
+		// now lets test unregistering an inservice:
+		branch2.removeIncomingCommitMerger(branch2signaller); // should have no effect
+		branch2.removeIncomingCommitMerger(merger2);
+		latch = new CountDownLatch(1);
+		branch.appendOutgoingCommitDistributer(new SyncForTestingService("Branch1OutSignaller", latch, repoModel));
+		
+		Resource testResource = model.createResource(repoURI1+"#artFinaly");
+		model.add(testResource, RDFS.label, model.createTypedLiteral(-1));
+		Commit commit = branch.commitChanges("FinalTestCommit");
+		success = latch.await(2, TimeUnit.SECONDS);
+		assert(branch2.getInQueue().size() == 1);
 	}
 	
 	
