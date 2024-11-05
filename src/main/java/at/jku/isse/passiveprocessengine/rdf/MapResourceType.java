@@ -76,7 +76,7 @@ public class MapResourceType {
 	
 	public OntObjectProperty addLiteralMapProperty(OntClass resource, String propertyURI, OntDataRange valueType) {
 		OntModel model = resource.getModel();
-		var p = model.getProperty(propertyURI);
+		var p = model.getDataProperty(propertyURI);
 		if (p == null) {
 			OntClass mapType = model.createOntClass(propertyURI+ENTRY_TYPE);
 			mapType.addSuperClass(mapEntryClass);
@@ -97,7 +97,7 @@ public class MapResourceType {
 	
 	public OntObjectProperty addObjectMapProperty(OntClass resource, String propertyURI, OntClass valueType) {
 		OntModel model = resource.getModel();
-		var p = model.getProperty(propertyURI);
+		var p = model.getObjectProperty(propertyURI);
 		if (p == null) {
 			OntClass mapType = model.createOntClass(propertyURI+ENTRY_TYPE);
 			mapType.addSuperClass(mapEntryClass);

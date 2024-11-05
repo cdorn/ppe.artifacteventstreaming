@@ -28,9 +28,9 @@ public class RDFPropertyType implements PPEPropertyType {
 		super();
 		this.property = property;
 		this.resolver = resolver;
-		Entry<PPEInstanceType, CARDINALITIES> entry = extract();
+		Entry<OntObject, CARDINALITIES> entry = extract();
 		this.cardinality = entry.getValue();
-		this.valueType = entry.getKey();
+		this.valueType = resolver.resolveToType(entry.getKey());
 	}
 
 	
@@ -53,7 +53,7 @@ public class RDFPropertyType implements PPEPropertyType {
 	 * 		if there is no qualification --> LIST (we assume, realized as an rdf:seq)
 	 * 		
 	 */
-	protected Entry<PPEInstanceType, CARDINALITIES> extract() {
+	protected Entry<OntObject, CARDINALITIES> extract() {
 		OntObject valueObj;
 		CARDINALITIES cardinality;
 			Optional<CardinalityRestriction> optRestriction = property.referringRestrictions()
@@ -74,6 +74,7 @@ public class RDFPropertyType implements PPEPropertyType {
 						.filter(OntRelationalProperty.class::isInstance)
 						.map(OntRelationalProperty.class::cast)
 						.filter(prop -> MapResourceType.isEntryProperty(prop))
+						.filter(prop -> prop.ranges().count() > 0)
 						.findFirst().get();
 					valueObj = valueProperty.ranges().findFirst().get();
 					cardinality = CARDINALITIES.MAP;
@@ -91,7 +92,7 @@ public class RDFPropertyType implements PPEPropertyType {
 					cardinality = CARDINALITIES.LIST;
 				}
 			}
-			return new AbstractMap.SimpleEntry<PPEInstanceType, CARDINALITIES>(resolver.resolveToType(valueObj), cardinality);
+			return new AbstractMap.SimpleEntry<OntObject, CARDINALITIES>(valueObj, cardinality);
 	}
 	
 	
