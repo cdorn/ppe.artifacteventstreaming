@@ -116,7 +116,7 @@ public class BranchBuilder {
 	
 	public static String getBranchNameFromURI(@NonNull URI branchURI) {
 		int pos = branchURI.toString().lastIndexOf("#");
-		if (pos < 0 || pos == branchURI.toString().length()) {
+		if (pos < 0 || pos == branchURI.toString().length()-1) {
 			return null;
 		} else {
 			return branchURI.toString().substring(pos+1);
@@ -133,7 +133,7 @@ public class BranchBuilder {
 		BlockingQueue<Commit> outQueue = new LinkedBlockingQueue<>();
 		// we init the statekeeper before the branch to avoid triggering the services --> not anymore with separate startHandlers method
 		// stateKeeper.loadState(model); only upon setting up all services, not the duty of the builder
-		branchDataset.begin();
+		//branchDataset.begin();
 		OntModel model = OntModelFactory.createModel(branchDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		if (stateKeeper == null) {
 			stateKeeper = new StateKeeperImpl(URI.create(branchURI), new InMemoryBranchStateCache(), new InMemoryEventStore());

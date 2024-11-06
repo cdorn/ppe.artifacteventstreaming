@@ -1,12 +1,14 @@
 package at.jku.isse.artifacteventstreaming.api;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -55,6 +57,7 @@ class TestCommitHandling {
 				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
 				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
 				.build();
+		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
@@ -74,11 +77,14 @@ class TestCommitHandling {
 				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
 				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
 				.build();
+		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();
+		branch.getDataset().begin();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("TestCommit");
 		// now lets change and undo it
+		branch.getDataset().begin();
 		model.remove(testResource, RDFS.label, model.createTypedLiteral(21))
 			 .add(testResource, RDFS.label, model.createTypedLiteral(-1));
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
@@ -169,7 +175,9 @@ class TestCommitHandling {
 	void testCancelingOutLiteralStatements() throws Exception {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())				
 				.build();
+		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();
+		branch.getDataset().begin();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		testResource.removeAll(RDFS.label);
@@ -182,7 +190,9 @@ class TestCommitHandling {
 	void testCancelingOutResourceStatements() throws Exception {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())				
 				.build();
+		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();
+		branch.getDataset().begin();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		Resource art2 = model.createResource(repoURI+"#art2");
 		model.add(testResource, RDFS.seeAlso, art2);
@@ -196,7 +206,9 @@ class TestCommitHandling {
 	void testNonCancelingOutLiteralStatements() throws Exception {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())				
 				.build();
+		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();
+		branch.getDataset().begin();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		Literal lit1 = model.createTypedLiteral(1);		
 		model.add(testResource, RDFS.label, lit1);
@@ -214,7 +226,9 @@ class TestCommitHandling {
 		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.addBranchInternalCommitService(new AllUndoService("UndoService1", repoModel))
 				.build();
+		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();
+		branch.getDataset().begin();
 		var modelSize = model.size();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		Literal lit1 = model.createTypedLiteral(1);		
@@ -229,6 +243,19 @@ class TestCommitHandling {
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		assertEquals(modelSize, modelSizeAfter);
 		assertTrue(commit.isEmpty());
+	}
+	
+	@Test
+	void testCommitComparison() {
+		StatementCommitImpl commit1 = new StatementCommitImpl("", "", "", "", Collections.emptySet(), Collections.emptySet());
+		StatementCommitImpl commit2 = new StatementCommitImpl("", "", "", "", Collections.emptySet(), Collections.emptySet());
+		StatementCommitImpl commit3 = new StatementCommitImpl("", "1", "", "", Collections.emptySet(), Collections.emptySet());
+		assertEquals(commit1, commit2);
+		assertNotEquals(commit1, commit3);
+				
+		commit1.toString();
+		assertEquals(commit1.hashCode(), commit2.hashCode());
+				
 	}
 
 }

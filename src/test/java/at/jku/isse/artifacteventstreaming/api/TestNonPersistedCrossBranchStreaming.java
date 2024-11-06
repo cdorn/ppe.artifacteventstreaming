@@ -68,6 +68,7 @@ class TestNonPersistedCrossBranchStreaming {
 		
 		
 		for (int j = 0; j < commitRounds; j++) {
+			branch.getDataset().begin();
 			Resource testResource = model.createResource(repoURI1+"#art"+j);
 			for (int i = 0; i<changeCount ; i++) {
 				model.add(testResource, RDFS.label, model.createTypedLiteral(i));	
@@ -107,8 +108,8 @@ class TestNonPersistedCrossBranchStreaming {
 		branch2.removeIncomingCommitMerger(branch2signaller); // should have no effect
 		branch2.removeIncomingCommitMerger(merger2);
 		latch = new CountDownLatch(1);
-		branch.appendOutgoingCommitDistributer(new SyncForTestingService("Branch1OutSignaller", latch, repoModel));
-		
+		branch3.appendIncomingCommitMerger(new SyncForTestingService("Branch3InSignaller", latch, repoModel));
+				
 		Resource testResource = model.createResource(repoURI1+"#artFinaly");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(-1));
 		Commit commit = branch.commitChanges("FinalTestCommit");

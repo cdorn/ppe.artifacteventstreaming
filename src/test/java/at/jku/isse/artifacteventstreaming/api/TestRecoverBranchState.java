@@ -70,9 +70,9 @@ class TestRecoverBranchState {
 		executor.execute(task);
 		Thread.sleep(500); // enought to "persist" in memory
 		executor.shutdownNow(); // interrupt service
-		branch.deactivate();
+		branch.deactivate();	
 		try {
-			branch.getDataset().end();
+			//branch.getDataset().end();
 			branch.getDataset().begin();
 			Resource testResource = model.createResource(repoURI+"#art1");
 			model.add(testResource, RDFS.label, model.createTypedLiteral(1));
@@ -98,7 +98,8 @@ class TestRecoverBranchState {
 		assertNotNull(unfinishedCommit);
 		branch2.startCommitHandlers(unfinishedCommit);
 		
-		latch.await();
+		boolean success = latch.await(2, TimeUnit.SECONDS);
+		assert(success);
 		assertEquals(1, stateKeeper2.getHistory().size());
 	}
 
@@ -154,7 +155,8 @@ class TestRecoverBranchState {
 		assertNull(unfinishedCommit);
 		branch2.startCommitHandlers(unfinishedCommit);
 		
-		latch2.await();
+		boolean success = latch2.await(2, TimeUnit.SECONDS);
+		assert(success);
 		assertEquals(1, service2.getReceivedCommits().size());
 	}
 	
@@ -185,6 +187,7 @@ class TestRecoverBranchState {
 		branch2.startCommitHandlers(null);
 		
 		OntModel model = branch.getModel();
+		branch.getDataset().begin();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("Commit to Forward");

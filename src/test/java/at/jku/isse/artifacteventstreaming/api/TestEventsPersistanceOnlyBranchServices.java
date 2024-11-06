@@ -3,9 +3,12 @@ package at.jku.isse.artifacteventstreaming.api;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.net.URI;
+import java.util.Set;
 
+import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.DatasetFactory;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
@@ -15,11 +18,15 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.eventstore.dbclient.DeleteStreamOptions;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
+import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
+import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonDeserializer;
+import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonSerializer;
 
 class TestEventsPersistanceOnlyBranchServices {
 
@@ -49,13 +56,33 @@ class TestEventsPersistanceOnlyBranchServices {
 	
 	
 	@Test
+	void testSerializeStatements() throws Exception{
+		JsonMapper jsonMapper = new JsonMapper();
+		StatementJsonSerializer.registerSerializationModule(jsonMapper);	
+		StatementJsonDeserializer.registerDeserializationModule(jsonMapper);
+		OntModel model = OntModelFactory.createModel();
+		Resource testResource = model.createResource(repoURI+"#art1");
+		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
+		
+		Commit commit = new StatementCommitImpl("", "", "");
+		commit.appendAddedStatements(Set.of(model.createStatement(testResource, RDFS.seeAlso, testResource)));
+		
+		String json = jsonMapper.writeValueAsString(commit);
+		StatementCommitImpl commit2 = jsonMapper.readValue(json, StatementCommitImpl.class);
+		assertEquals(commit2, commit);
+		assertEquals(commit2.getAddedStatements().get(0), commit.getAddedStatements().get(0));
+	}
+	
+	@Test
 	void testSimpleCommitPersistence() throws Exception {	
 		BranchStateUpdater stateKeeper = new StateKeeperImpl(repoURI, branchCache, factory.getEventStore(repoURI.toString()));
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
 				.build();		
+		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();
 		stateKeeper.loadState();
+		branch.getDataset().begin();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("TestCommit");
@@ -72,8 +99,10 @@ class TestEventsPersistanceOnlyBranchServices {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
 				.build();		
+		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();
 		stateKeeper.loadState();
+		branch.getDataset().begin();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("TestCommit");
@@ -93,14 +122,18 @@ class TestEventsPersistanceOnlyBranchServices {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(new StateKeeperImpl(repoURI, branchCache, factory.getEventStore(repoURI.toString())))				
 				.build();
+		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();
+		branch.getDataset().begin();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("TestCommit1");
 		
+		branch.getDataset().begin();
 		model.add(testResource, RDFS.label, model.createTypedLiteral(2));
 		commit = branch.commitChanges("TestCommit2");
 		
+		branch.getDataset().begin();
 		model.add(testResource, RDFS.label, model.createTypedLiteral(3));
 		commit = branch.commitChanges("TestCommit3");
 		
@@ -113,6 +146,7 @@ class TestEventsPersistanceOnlyBranchServices {
 				.build();		
 		OntModel model2 = branch2.getModel();
 		stateKeeper2.loadState();
+		branch2.getDataset().begin();
 		// now we do manual application of history onto model 
 		stateKeeper2.getHistory().stream().forEach(pastCommit -> {
 			System.out.println("Adding commit: "+pastCommit.getCommitMessage());

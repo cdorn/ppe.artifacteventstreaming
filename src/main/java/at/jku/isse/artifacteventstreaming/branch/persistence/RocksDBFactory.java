@@ -65,7 +65,11 @@ public class RocksDBFactory {
 
 		@Override
 		public String get(String key) throws RocksDBException {
-			return new String(db.get(key.getBytes()));
+			byte[] content = db.get(key.getBytes());
+			if (content != null)
+				return new String(content);
+			else
+				return null;
 		}
 		
 	}

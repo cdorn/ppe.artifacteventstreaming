@@ -1,69 +1,71 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>at.jku.isse</groupId>
 	<artifactId>artifacteventstreaming.jena</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 
 	<properties>
-	    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <maven.compiler.plugin.version>3.8.1</maven.compiler.plugin.version>
-        <forceJavacCompilerUse>true</forceJavacCompilerUse>
-        <java.version>17</java.version>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-        <lombok.version>1.18.30</lombok.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<maven.compiler.plugin.version>3.8.1</maven.compiler.plugin.version>
+		<forceJavacCompilerUse>true</forceJavacCompilerUse>
+		<java.version>17</java.version>
+		<maven.compiler.source>17</maven.compiler.source>
+		<maven.compiler.target>17</maven.compiler.target>
+		<lombok.version>1.18.30</lombok.version>
 	</properties>
-	
-	<distributionManagement>
-        <repository>
-            <id>JKU.ISSE</id>
-            <url>http://3.66.206.6:9999/snapshots</url>
-        </repository>
-    </distributionManagement>
 
-    <repositories>
-        <!-- The order of definitions matters. Explicitly defining central here
+	<distributionManagement>
+		<repository>
+			<id>JKU.ISSE</id>
+			<url>http://3.66.206.6:9999/snapshots</url>
+		</repository>
+	</distributionManagement>
+
+	<repositories>
+		<!-- The order of definitions matters. Explicitly defining central here
             to make sure it has the highest priority. -->
-        <!-- Main Maven repository -->
-        <repository>
-            <id>central</id>
-            <url>https://repo.maven.apache.org/maven2</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-        <!-- own ones -->
-        <repository>
-            <id>JKU.ISSE</id>
-            <url>http://3.66.206.6:9999/snapshots</url>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
-	
+		<!-- Main Maven repository -->
+		<repository>
+			<id>central</id>
+			<url>https://repo.maven.apache.org/maven2</url>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
+		<!-- own ones -->
+		<repository>
+			<id>JKU.ISSE</id>
+			<url>http://3.66.206.6:9999/snapshots</url>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
+
 	<dependencies>
 		<dependency>
-	 		<groupId>at.jku.isse.designspace</groupId>    		   
-    		<artifactId>artifact-connector.core</artifactId>
-    		<version>2.0.7</version>
+			<groupId>at.jku.isse.designspace</groupId>
+			<artifactId>artifact-connector.core</artifactId>
+			<version>2.0.7</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.jena</groupId>
 			<artifactId>apache-jena-libs</artifactId>
 			<type>pom</type>
 			<version>5.1.0</version>
-		</dependency>		
-		<dependency>
-    		<groupId>org.rocksdb</groupId>
-    		<artifactId>rocksdbjni</artifactId>
-    		<version>9.6.1</version>
 		</dependency>
 		<dependency>
-  			<groupId>com.eventstore</groupId>
-  			<artifactId>db-client-java</artifactId>
-  			<version>5.2.0</version>
+			<groupId>org.rocksdb</groupId>
+			<artifactId>rocksdbjni</artifactId>
+			<version>9.6.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.eventstore</groupId>
+			<artifactId>db-client-java</artifactId>
+			<version>5.2.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
@@ -71,26 +73,38 @@
 			<version>${lombok.version}</version>
 		</dependency>
 		<dependency>
-    		<groupId>ch.qos.logback</groupId>
-    		<artifactId>logback-classic</artifactId>
-    		<version>1.5.10</version>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.5.10</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+    		<groupId>org.mockito</groupId>
+    		<artifactId>mockito-core</artifactId>
+    		<version>5.14.2</version>
     		<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-junit-jupiter</artifactId>
+			<version>5.14.2</version>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <forceJavacCompilerUse>true</forceJavacCompilerUse>
-                    <source>17</source>
-                    <target>17</target>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<forceJavacCompilerUse>true</forceJavacCompilerUse>
+					<source>17</source>
+					<target>17</target>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
 
 </project>

@@ -7,8 +7,10 @@ import java.util.Optional;
 
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
+import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
+import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Statement;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
@@ -21,6 +23,7 @@ import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactoryRegistry;
 import at.jku.isse.artifacteventstreaming.api.StateKeeperFactory;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -88,60 +91,51 @@ public class BranchRepository {
 		}
 	}
 
-	private void initializeBranch(Branch branch) {
+	private void initializeBranch(Branch branch) throws Exception {
 		// we inspect the branch resource for any configuration data
-		branch.getLocalCommitServiceConfig().stream().forEach(config -> {
-			Statement typeStmt = config.getProperty(AES.isConfigForHandlerType);
-			if (typeStmt != null) {
-				Optional<ServiceFactory> factory = factoryRegistry.getFactory(typeStmt.getResource().getURI());
-				if (factory.isPresent()) {
-					IncrementalCommitHandler service;
-					try {
-						service = (IncrementalCommitHandler)factory.get().getCommitHandlerInstanceFor(branch, config);
-						branch.appendBranchInternalCommitService(service); 
-					} catch (Exception e) {
-						log.warn(String.format("Error creating CommitHandler %s while initializing branch %s: %s", typeStmt.getResource().getURI(), branch.getBranchId(), e.getMessage()));
-					}
-				} else {
-					log.warn(String.format("Could not resolve Factory for %s while initializing branch %s", typeStmt.getResource().getURI(), branch.getBranchId()));
-				}
-			}
-		});
+		for(var config : branch.getLocalCommitServiceConfig()) {
+			CommitHandler handler = resolveHandler(branch, config);
+			if (handler != null) {
+				branch.appendBranchInternalCommitService((IncrementalCommitHandler) handler);
+			}	
+		};
 
-		branch.getOutgoingCommitDistributerConfig().stream().forEach(config -> {
-			Statement typeStmt = config.getProperty(AES.isConfigForHandlerType);
-			if (typeStmt != null) {
-				Optional<ServiceFactory> factory = factoryRegistry.getFactory(typeStmt.getResource().getURI());
-				if (factory.isPresent()) {
-					try {
-						CommitHandler service = factory.get().getCommitHandlerInstanceFor(branch, config);
-						branch.appendOutgoingCommitDistributer(service);
-					} catch (Exception e) {
-						log.warn(String.format("Error creating CommitHandler %s while initializing branch %s: %s", typeStmt.getResource().getURI(), branch.getBranchId(), e.getMessage()));
-					}
-				} else {
-					log.warn(String.format("Could not resolve Factory for %s while initializing branch %s", typeStmt.getResource().getURI(), branch.getBranchId()));
-				}
-			}
+		for (var config : branch.getOutgoingCommitDistributerConfig()){
+			CommitHandler handler = resolveHandler(branch, config);
+			if (handler != null) {
+				branch.appendOutgoingCommitDistributer(handler);
+			}						
 			// we cant start the distributer as enqueuing relies on the destination branch's stateKeeper (which might not be ready yet) 
-		});
+		};
 
-		branch.getIncomingCommitHandlerConfig().stream().forEach(config -> {
-			Statement typeStmt = config.getProperty(AES.isConfigForHandlerType);
-			if (typeStmt != null) {
-				Optional<ServiceFactory> factory = factoryRegistry.getFactory(typeStmt.getResource().getURI());
-				if (factory.isPresent()) {
-					try {
-						CommitHandler service = factory.get().getCommitHandlerInstanceFor(branch, config);
-						branch.appendIncomingCommitMerger(service); 
-					} catch (Exception e) {
-						log.warn(String.format("Error creating CommitHandler %s while initializing branch %s: %s", typeStmt.getResource().getURI(), branch.getBranchId(), e.getMessage()));
-					}
-				} else {
-					log.warn(String.format("Could not resolve Factory for %s while initializing branch %s", typeStmt.getResource().getURI(), branch.getBranchId()));
-				}
+		for (var config : branch.getIncomingCommitHandlerConfig()) {
+			CommitHandler handler = resolveHandler(branch, config);
+			if (handler != null) {
+				branch.appendIncomingCommitMerger(handler);
 			}
-		});
+		};
+	}
+	
+	private CommitHandler resolveHandler(Branch branch, OntIndividual config) throws Exception{
+		Statement typeStmt = config.getProperty(AES.isConfigForHandlerType);
+		if (typeStmt != null) {
+			Optional<ServiceFactory> factory = factoryRegistry.getFactory(typeStmt.getResource().getURI());
+			if (factory.isPresent()) {
+				try {
+					CommitHandler service = factory.get().getCommitHandlerInstanceFor(branch, config);
+					return service;
+				} catch (Exception e) {
+					String msg = String.format("Error creating CommitHandler %s while initializing branch %s: %s", typeStmt.getResource().getURI(), branch.getBranchId(), e.getMessage());
+					log.warn(msg);
+					throw new Exception(msg);
+				}
+			} else {
+				String msg = String.format("Could not resolve Factory for %s while initializing branch %s", typeStmt.getResource().getURI(), branch.getBranchId());
+				log.warn(msg);
+				throw new Exception(msg);
+			}
+		}
+		return null;
 	}
 
 	public void registerBranch(Branch branch) {

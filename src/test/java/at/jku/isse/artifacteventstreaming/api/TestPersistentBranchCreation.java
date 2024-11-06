@@ -1,5 +1,6 @@
 package at.jku.isse.artifacteventstreaming.api;
 
+import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -21,6 +22,36 @@ class TestPersistentBranchCreation {
 	@BeforeAll
 	static void clearPersistenceDirectory() {
 		
+	}
+	
+	@Test
+	void testEmptyBranchName() {
+		try {
+		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())		
+				.setBranchLocalName("")
+				.build();
+			assert(false);
+		} catch (Exception e) {
+			assert(true);
+		}
+		
+		try {
+		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())		
+				.setBranchLocalName(null)
+				.build();
+			assert(false);
+		} catch (Exception e) {
+			assert(true);
+		}
+		
+		String name = BranchBuilder.getBranchNameFromURI(repoURI);
+		assertNull(name);
+		
+		name = BranchBuilder.getBranchNameFromURI(URI.create(repoURI.toString()+"#"));
+		assertNull(name);
+		
+		name = BranchBuilder.getBranchNameFromURI(URI.create(repoURI.toString()+"#test"));
+		assertEquals("test", name);
 	}
 	
 	@Test

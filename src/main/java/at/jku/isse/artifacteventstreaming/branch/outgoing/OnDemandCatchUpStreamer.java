@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @RequiredArgsConstructor
 @Slf4j
-public class OnDemandCatchUpStreamer implements CommitHandler {
+public class OnDemandCatchUpStreamer { //implements CommitHandler {
 
 	private final Branch sourceBranch;
 	private final Branch destinationBranch;
@@ -24,24 +24,24 @@ public class OnDemandCatchUpStreamer implements CommitHandler {
 	// finishes
 	
 	
-	@Override
-	public void handleCommit(Commit commit) {
-		try {
-			destinationBranch.enqueueIncomingCommit(commit);
-		} catch (Exception e) {
-			log.warn(String.format("Error enqueuing commit %s  from branch %s to branch %s", commit.getCommitId(), sourceBranch.getBranchId(), destinationBranch.getBranchId()));
-			//TODO: retry later necessary
-		}
-	}
-	
-	@Override
-	public OntIndividual getConfigResource() {
-		OntModel repoModel = sourceBranch.getBranchResource().getModel();
-		OntIndividual config = repoModel.createIndividual(sourceBranch.getBranchId()+"#"+this.getClass().getSimpleName());
-		config.addProperty(AES.isConfigForHandlerType, repoModel.createResource(CommitHandler.serviceTypeBaseURI+this.getClass().getSimpleName()));
-		config.addProperty(AES.destinationBranch, destinationBranch.getBranchResource().getURI());
-		// no other config necessary
-		return config;
-	}
+//	@Override
+//	public void handleCommit(Commit commit) {
+//		try {
+//			destinationBranch.enqueueIncomingCommit(commit);
+//		} catch (Exception e) {
+//			log.warn(String.format("Error enqueuing commit %s  from branch %s to branch %s", commit.getCommitId(), sourceBranch.getBranchId(), destinationBranch.getBranchId()));
+//			//TODO: retry later necessary
+//		}
+//	}
+//	
+//	@Override
+//	public OntIndividual getConfigResource() {
+//		OntModel repoModel = sourceBranch.getBranchResource().getModel();
+//		OntIndividual config = repoModel.createIndividual(sourceBranch.getBranchId()+"#"+this.getClass().getSimpleName());
+//		config.addProperty(AES.isConfigForHandlerType, repoModel.createResource(CommitHandler.serviceTypeBaseURI+this.getClass().getSimpleName()));
+//		config.addProperty(AES.destinationBranch, destinationBranch.getBranchResource().getURI());
+//		// no other config necessary
+//		return config;
+//	}
 
 }

@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
@@ -47,6 +48,7 @@ public class BranchImpl  implements Branch, Runnable {
 	private final List<IncrementalCommitHandler> services = Collections.synchronizedList(new LinkedList<>());
 	@Getter private final BlockingQueue<Commit> outQueue;
 	private final CrossBranchStreamer crossBranchStreamer;
+	private AtomicBoolean isReady = new AtomicBoolean(false);
 	
 	public BranchImpl(@NonNull Dataset dataset
 			, @NonNull OntModel model
@@ -70,6 +72,7 @@ public class BranchImpl  implements Branch, Runnable {
 	public void startCommitHandlers(Commit unfinishedPreliminaryCommit) throws Exception {
 		if (unfinishedPreliminaryCommit != null) {
 			// continue aborted processing: e.g., single internal commit not yet completely processed by services (can only be one)
+			dataset.begin();
 			this.handleCommitInternally(unfinishedPreliminaryCommit);
 		}
 		// re-forward all nonforwarded commits
@@ -80,13 +83,16 @@ public class BranchImpl  implements Branch, Runnable {
 		}
 		// create thread for incoming commits to be merged
 		inExecutor.execute(this);
-		outExecutor.execute(crossBranchStreamer);			
+		outExecutor.execute(crossBranchStreamer);		
+		isReady.set(true);
 	}
 	
 	@Override
 	public void deactivate() {
+		isReady.set(false);
 		inQueue.add(PoisonPillCommit.POISONPILL);
-		outQueue.add(PoisonPillCommit.POISONPILL);		
+		outQueue.add(PoisonPillCommit.POISONPILL);
+		
 	}
 	
 	@Override
@@ -138,19 +144,6 @@ public class BranchImpl  implements Branch, Runnable {
 	// incoming commit handling -------------------------------------------------------------------------
 	
 	@Override
-	public void enqueueIncomingCommit(Commit commit) throws Exception {
-		// if we have processed this commit before, then wont do it again to avoid loops
-		if (!stateKeeper.hasSeenCommit(commit) && !inQueue.contains(commit)) {
-			//persist which commits we have received but not merged yet, 
-			stateKeeper.beforeMerge(commit);
-			// if this crashes before returning this call, then cross branch streamer has to assume failure and retry adding/enqueuing upon restart
-			inQueue.add(commit);
-		} else {
-			log.info(String.format("Ignoring incoming commit %s that has been seen by this branch before", commit.getCommitId()));
-		}
-	}
-	
-	@Override
 	public List<OntIndividual> getIncomingCommitHandlerConfig() {
 		Seq list = createOrGetListResource(AES.incomingCommitMerger);
 		return fromSeqResourceToContent(list);
@@ -162,7 +155,7 @@ public class BranchImpl  implements Branch, Runnable {
 		int pos = handlers.indexOf(handler);
 		if (pos >= 0) {
 			handlers.remove(handler);
-			configs.remove(pos);
+			configs.remove(pos+1);
 		}
 		handlers.add(handler);
 		configs.add(handler.getConfigResource());
@@ -186,6 +179,19 @@ public class BranchImpl  implements Branch, Runnable {
 			// this stop dequeuing of commits, restarted upon anning one again
 		}
 		
+	}
+    
+	@Override
+	public void enqueueIncomingCommit(Commit commit) throws Exception {
+		// if we have processed this commit before, then wont do it again to avoid loops
+		if (!stateKeeper.hasSeenCommit(commit) && !inQueue.contains(commit)) {
+			//persist which commits we have received but not merged yet, 
+			stateKeeper.beforeMerge(commit);
+			// if this crashes before returning this call, then cross branch streamer has to assume failure and retry adding/enqueuing upon restart
+			inQueue.add(commit);
+		} else {
+			log.info(String.format("Ignoring incoming commit %s that has been seen by this branch before", commit.getCommitId()));
+		}
 	}
 
     private boolean isShutdown = false;
@@ -237,7 +243,7 @@ public class BranchImpl  implements Branch, Runnable {
 		int pos = services.indexOf(service);
 		if (pos >= 0) {
 			services.remove(service);
-			configs.remove(pos);
+			configs.remove(pos+1);
 		}
 		services.add(service);
 		configs.add(service.getConfigResource());
@@ -264,7 +270,7 @@ public class BranchImpl  implements Branch, Runnable {
 	 */
 	@Override
 	public Commit commitChanges(String commitMsg) throws Exception {
-		if (isShutdown) {
+		if (!isReady.get()) {
 			this.undoNoncommitedChanges();
 			throw new Exception(String.format("Branch %s with objectid %s has been deactivated, cannot make changes on non-active branch, please create a new branch object", getBranchId(), this.hashCode()));
 		}
@@ -312,7 +318,7 @@ public class BranchImpl  implements Branch, Runnable {
 		} finally {
 			dataset.end();
 		}
-		dataset.begin(); // prepare for next round of transactions
+		//dataset.begin(); // prepare for next round of transactions
 	}
 	
 	private void executeServiceLoop(Commit commit) {
@@ -389,7 +395,7 @@ public class BranchImpl  implements Branch, Runnable {
 		stmtAggregator.retrieveAddedStatements();
 		stmtAggregator.retrieveRemovedStatements();
 
-		dataset.begin();
+		//dataset.begin();
 	}
 
 	@Override

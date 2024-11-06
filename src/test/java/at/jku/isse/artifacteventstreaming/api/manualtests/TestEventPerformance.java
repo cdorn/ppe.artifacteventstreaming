@@ -9,7 +9,9 @@ import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -34,7 +36,7 @@ class TestEventPerformance {
 	private static EventStoreFactory factory = new EventStoreFactory();
 	private static BranchStateCache branchCache;
 			
-	@BeforeAll
+	@BeforeEach
 	static void removeStream() {
 		try {
 			cacheFactory = new RocksDBFactory("./branchStatusTestCache/");
@@ -47,13 +49,13 @@ class TestEventPerformance {
 		}		
 	}
 	
-	@AfterAll
+	@AfterEach
 	static void clearCache() {
 		cacheFactory.closeCache();
 	}
 	
 	
-	@Test @Disabled
+	@Test //@Disabled
 	void test10KEvents10CommitPersistence() throws Exception {	
 		PerBranchEventStore client = factory.getEventStore(repoURI.toString());
 		BranchStateUpdater stateKeeper = new StateKeeperImpl(repoURI, branchCache, client);
@@ -62,9 +64,11 @@ class TestEventPerformance {
 				.build();		
 		OntModel model = branch.getModel();
 		stateKeeper.loadState();		
+		branch.startCommitHandlers(null);
 		
 		long start = System.currentTimeMillis();
 		for (int j = 0; j < 10; j++) {
+			branch.getDataset().begin();
 			Resource testResource = model.createResource(repoURI+"#art"+j);
 			for (int i = 0; i<1000 ; i++) {
 				model.add(testResource, RDFS.label, model.createTypedLiteral(i));	
@@ -81,9 +85,10 @@ class TestEventPerformance {
 		OntModel model2 = branch2.getModel();
 		long initModel2Size = model2.size();
 		stateKeeper2.loadState();
+		branch.startCommitHandlers(null);
 		System.out.println("Model2 size:"+model2.size());
 		assertTrue(model2.size() == initModel2Size);
-		
+				
 		// now we do manual application
 		stateKeeper2.getHistory().stream().forEach(pastCommit -> {
 			model2.add(pastCommit.getRemovedStatements());
@@ -99,18 +104,20 @@ class TestEventPerformance {
 		System.out.println("End to End: "+(end-start));
 	}
 	
-	@Test @Disabled
+	@Test// @Disabled
 	void test1KCommitPersistence() throws Exception {	
 		PerBranchEventStore client = factory.getEventStore(repoURI.toString());
 		BranchStateUpdater stateKeeper = new StateKeeperImpl(repoURI, branchCache, client);
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.setStateKeeper(stateKeeper)				
 				.build();				
+		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();
 		
 		long start = System.currentTimeMillis();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		for (int i = 0; i<1000 ; i++) {
+			branch.getDataset().begin();
 			model.add(testResource, RDFS.label, model.createTypedLiteral(i));
 			Commit commit = branch.commitChanges("TestCommit"+i);
 		}						
@@ -124,6 +131,7 @@ class TestEventPerformance {
 				.build();		
 		OntModel model2 = branch2.getModel();
 		stateKeeper2.loadState();
+		branch2.startCommitHandlers(null);
 		// now we do manual application
 		stateKeeper2.getHistory().stream().forEach(pastCommit -> {
 			model2.add(pastCommit.getRemovedStatements());
