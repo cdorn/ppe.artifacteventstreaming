@@ -68,8 +68,7 @@ public class RDFPropertyType implements PPEPropertyType {
 					.map(OntClass.class::cast)
 					.filter(range -> range.hasSuperClass(resolver.getMapEntryBaseType(), true)) //immediate super class
 					.findFirst();
-			if (optMapEntry.isPresent()) {
-				// now optMapEntry is a Map that
+			if (optMapEntry.isPresent()) { 	// now optMapEntry is a Map that
 				OntRelationalProperty valueProperty = optMapEntry.get().declaredProperties(true)
 						.filter(OntRelationalProperty.class::isInstance)
 						.map(OntRelationalProperty.class::cast)
@@ -110,7 +109,7 @@ public class RDFPropertyType implements PPEPropertyType {
 				cardinality = CARDINALITIES.SET;
 			}
 		}
-		return new AbstractMap.SimpleEntry<OntObject, CARDINALITIES>(valueObj, cardinality);
+		return new AbstractMap.SimpleEntry<>(valueObj, cardinality);
 	}
 
 

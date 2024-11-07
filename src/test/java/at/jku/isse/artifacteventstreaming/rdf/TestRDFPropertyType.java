@@ -17,13 +17,15 @@ import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.CARDINALITIES;
 import at.jku.isse.passiveprocessengine.rdf.ListResourceType;
 import at.jku.isse.passiveprocessengine.rdf.MapResourceType;
+import at.jku.isse.passiveprocessengine.rdf.NodeToDomainResolver;
 import at.jku.isse.passiveprocessengine.rdf.RDFPropertyType;
+import at.jku.isse.passiveprocessengine.rdf.RDFInstanceType;
 
 class TestRDFPropertyType {
 
 	public static String NS = "http://at.jku.isse.test#";
 	static OntModel m;
-	static RDFNodeToDomainResolver resolver;
+	static NodeToDomainResolver resolver;
 	static OntClass artifactType;
 	static OntClass otherType;
 	static MapResourceType mapFactory;
@@ -32,13 +34,13 @@ class TestRDFPropertyType {
 	@BeforeEach
 	void setup() {
 		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM );
-		resolver = new RDFNodeToDomainResolver(m);
+		resolver = new NodeToDomainResolver(m);
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
 		mapFactory = resolver.getMapBase();
 		listFactory = resolver.getListBase();
-		artifactType = m.createOntClass(NS+"artifact");		
-		otherType = m.createOntClass(NS+"other");
+		artifactType = ((RDFInstanceType) resolver.createNewInstanceType(NS+"artifact")).getType();	
+		otherType =  ((RDFInstanceType) resolver.createNewInstanceType(NS+"other")).getType();	
 		otherType.addProperty(RDFS.label, "other");
 	}
 	

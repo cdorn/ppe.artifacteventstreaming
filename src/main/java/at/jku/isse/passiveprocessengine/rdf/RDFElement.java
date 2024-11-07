@@ -25,13 +25,13 @@ public class RDFElement {
 	}
 
 	public String getName() {
-		return element.getLabel();
+		return element.getLocalName();
 	}
 	
 
 	public void markAsDeleted() {
 		element.removeProperties();		
-		//TODO: remove from cache
+		//remove from cache needs to be done in childclasses
 	}
 
 

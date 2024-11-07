@@ -23,6 +23,7 @@ import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactoryRegistry;
 import at.jku.isse.artifacteventstreaming.api.StateKeeperFactory;
+import at.jku.isse.artifacteventstreaming.api.exceptions.NotFoundException;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,21 +38,20 @@ public class BranchRepository {
 	private final ServiceFactoryRegistry factoryRegistry;
 	private final Map<String, Branch> branches = new HashMap<>();
 
-	public BranchRepository(URI repositoryURI
-			, DatasetRepository datasetLoader
-			, StateKeeperFactory stateKeeperFactory
-			, ServiceFactoryRegistry factoryRegistry) {
+	public BranchRepository(@NonNull URI repositoryURI
+			, @NonNull DatasetRepository datasetLoader
+			, @NonNull StateKeeperFactory stateKeeperFactory
+			, @NonNull ServiceFactoryRegistry factoryRegistry) throws NotFoundException {
 		this.repositoryURI = repositoryURI;
 		Optional<Dataset> datasetOpt = datasetLoader.loadDataset(repositoryURI);
 		if (datasetOpt.isEmpty()) {
-			throw new RuntimeException("Could not find repository for: "+repositoryURI);
+			throw new NotFoundException("Could not find repository for: "+repositoryURI);
 		}
 		this.repoDataset = datasetOpt.get();
 		this.repoModel = OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		this.stateKeeperFactory = stateKeeperFactory;
 		this.factoryRegistry = factoryRegistry;
 		this.datasetLoader = datasetLoader;
-		
 	}
 
 	public Dataset getRepositoryDataset() {
@@ -98,7 +98,7 @@ public class BranchRepository {
 			if (handler != null) {
 				branch.appendBranchInternalCommitService((IncrementalCommitHandler) handler);
 			}	
-		};
+		}
 
 		for (var config : branch.getOutgoingCommitDistributerConfig()){
 			CommitHandler handler = resolveHandler(branch, config);
@@ -106,14 +106,14 @@ public class BranchRepository {
 				branch.appendOutgoingCommitDistributer(handler);
 			}						
 			// we cant start the distributer as enqueuing relies on the destination branch's stateKeeper (which might not be ready yet) 
-		};
+		}
 
 		for (var config : branch.getIncomingCommitHandlerConfig()) {
 			CommitHandler handler = resolveHandler(branch, config);
 			if (handler != null) {
 				branch.appendIncomingCommitMerger(handler);
 			}
-		};
+		}
 	}
 	
 	private CommitHandler resolveHandler(Branch branch, OntIndividual config) throws Exception{
@@ -122,8 +122,7 @@ public class BranchRepository {
 			Optional<ServiceFactory> factory = factoryRegistry.getFactory(typeStmt.getResource().getURI());
 			if (factory.isPresent()) {
 				try {
-					CommitHandler service = factory.get().getCommitHandlerInstanceFor(branch, config);
-					return service;
+					return factory.get().getCommitHandlerInstanceFor(branch, config);
 				} catch (Exception e) {
 					String msg = String.format("Error creating CommitHandler %s while initializing branch %s: %s", typeStmt.getResource().getURI(), branch.getBranchId(), e.getMessage());
 					log.warn(msg);

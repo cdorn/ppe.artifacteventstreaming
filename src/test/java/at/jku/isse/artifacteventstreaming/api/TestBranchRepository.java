@@ -21,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 
+import at.jku.isse.artifacteventstreaming.api.exceptions.NotFoundException;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.branch.BranchRepository;
@@ -113,7 +114,7 @@ class TestBranchRepository {
 	@Mock DatasetRepository nullRepo;
 	
 	@Test
-	void testUnloadableReposet() {
+	void testUnloadableReposet() throws NotFoundException {
 		when(nullRepo.loadDataset(Mockito.any())).thenReturn(Optional.empty());
 		ServiceFactoryRegistry factoryRegistry = new ServiceFactoryRegistry(); // not used for the first repo
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();		
