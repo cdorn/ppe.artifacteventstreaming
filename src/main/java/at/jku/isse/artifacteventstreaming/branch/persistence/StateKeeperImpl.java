@@ -20,6 +20,7 @@ import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitDeliveryEvent;
 import at.jku.isse.artifacteventstreaming.api.PerBranchEventStore;
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonDeserializer;
 import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonSerializer;
@@ -53,7 +54,7 @@ public class StateKeeperImpl implements BranchStateUpdater {
 	}
 
 	@Override
-	public Commit loadState() throws Exception {
+	public Commit loadState() throws PersistenceException {
 		loadHistory();
 		// make cache entries consistent:
 		// if last open 
@@ -68,7 +69,14 @@ public class StateKeeperImpl implements BranchStateUpdater {
 					|| !hasSeenCommit(lastCommit) // we have not recorded this commit as completed
 					) {
 				// then we reprocess this commit before doing anything else
-				StatementCommitImpl commit = jsonMapper.readValue(lastPrelimCommit, StatementCommitImpl.class);
+				StatementCommitImpl commit;
+				try {
+					commit = jsonMapper.readValue(lastPrelimCommit, StatementCommitImpl.class);
+				} catch (JsonProcessingException e) {
+					String msg = String.format("Error serializing commit %s for branch %s with error %s", lastPrelimCommit, branchURI, e.getMessage());
+					log.warn(msg);
+					throw new PersistenceException(msg);
+				}
 				return commit; // not the statekeeper's job to trigger replay
 			} else { // we have processed this but could not set the cache entries anymore
 				// clean the cache, done below
@@ -80,7 +88,7 @@ public class StateKeeperImpl implements BranchStateUpdater {
 		return null;
 	}
 
-	private void loadHistory() throws Exception {		
+	private void loadHistory() throws PersistenceException {		
 		// for now, we do a inefficient sequential load of all commits and keep them in memory
 		List<Commit> commits = eventDBclient.loadAllCommits();
 		for (Commit commit : commits) {
@@ -91,48 +99,44 @@ public class StateKeeperImpl implements BranchStateUpdater {
 	}
 	
 	@Override
-	public void beforeMerge(Commit commit) throws Exception {
+	public void beforeMerge(Commit commit) throws PersistenceException {
 		// add to event db the info that we received this commit
 		CommitDeliveryEvent event = new CommitDeliveryEvent(commit.getCommitId(), commit, commit.getOriginatingBranchId(), this.branchURI);
 		eventDBclient.appendCommitDelivery(event);
 	}
 	
 	@Override
-	public List<Commit> getNonMergedCommits() throws Exception {
+	public List<Commit> getNonMergedCommits() throws PersistenceException {
 		String lastMergedCommitId = cache.get(LAST_PROCESSED_INCOMING_COMMIT+branchURI);
 		return eventDBclient.loadAllIncomingCommitsForBranchFromCommitIdOnward(lastMergedCommitId);
 	}
 
 	@Override
-	public void finishedMerge(Commit commit) throws Exception {
+	public void finishedMerge(Commit commit) throws PersistenceException {
 		cache.put(LAST_PROCESSED_INCOMING_COMMIT+branchURI, commit.getCommitId());
 		log.debug("Finished merge of" +commit.getCommitId());
 	}
 
 	@Override
-	public void beforeServices(Commit commit) throws Exception {
-
+	public void beforeServices(Commit commit) throws PersistenceException {
 		try {
+			String commitAsJson = jsonMapper.writeValueAsString(commit);
 			cache.put(LAST_OPEN_PRELEMINARY_COMMIT_ID+branchURI, commit.getCommitId());
-			cache.put(LAST_OPEN_PRELEMINARY_COMMIT_CONTENT+branchURI, jsonMapper.writeValueAsString(commit));
-		} catch (Exception e) {
-			log.warn(String.format("Error writing preliminary commit %s of branch %s to cache with error %s", commit.getCommitId(), branchURI, e.getMessage()));
-			throw e;
-		}
-
+			cache.put(LAST_OPEN_PRELEMINARY_COMMIT_CONTENT+branchURI, commitAsJson);
+		} catch (JsonProcessingException e) {
+			String msg = String.format("Error serializing commit %s for branch %s with error %s", commit.getCommitId(), branchURI, e.getMessage());
+			log.warn(msg);
+			throw new PersistenceException(msg);
+		}					
 		seenCommitIds.add(commit.getCommitId());
 		log.debug("Pre Services: "+commit.getCommitId());
 	}
 
 	@Override
-	public void afterServices(Commit commit) throws Exception {
+	public void afterServices(Commit commit) throws PersistenceException {
 		// first store the commit
-		try {
-			eventDBclient.appendCommit(commit);
-		} catch (JsonProcessingException | InterruptedException | ExecutionException e) {
-			log.warn(String.format("Error writing commit %s event to branch %s with error %s", commit.getCommitId(), branchURI, e.getMessage()));
-			throw e;
-		}
+		eventDBclient.appendCommit(commit);
+	
 		// then store the cache entry
 		cache.put(LAST_PRODUCED_COMMIT+branchURI, commit.getCommitId()); // first store what we have processed
 		cache.put(LAST_OPEN_PRELEMINARY_COMMIT_ID+branchURI, "");
@@ -164,22 +168,22 @@ public class StateKeeperImpl implements BranchStateUpdater {
 	}
 
 	@Override
-	public void afterForwarded(Commit commit) throws Exception {
+	public void afterForwarded(Commit commit) throws PersistenceException {
 		cache.put(LAST_FORWARDED_COMMIT+branchURI, commit.getCommitId()); 
 	}
 
-	@Override
-	public Optional<String> getLastMergedCommitId() {
-		try {
-			return Optional.ofNullable(cache.get(LAST_PROCESSED_INCOMING_COMMIT+branchURI));
-		} catch (Exception e) {
-			log.warn("Error reading from cache "+e.getMessage());
-			return Optional.empty();
-		}
-	}
+//	@Override
+//	public Optional<String> getLastMergedCommitId() {
+//		try {
+//			return Optional.ofNullable(cache.get(LAST_PROCESSED_INCOMING_COMMIT+branchURI));
+//		} catch (Exception e) {
+//			log.warn("Error reading from cache "+e.getMessage());
+//			return Optional.empty();
+//		}
+//	}
 
 	@Override
-	public List<Commit> getNonForwardedCommits() {
+	public List<Commit> getNonForwardedCommits() throws PersistenceException {
 		Optional<Commit> lastCommit = getLastCommit();
 		Optional<String> lastForwardedCommitId = getLastForwardedCommitId();
 		if (lastCommit.isPresent()) {
@@ -205,12 +209,13 @@ public class StateKeeperImpl implements BranchStateUpdater {
 	}
 	
 	@Override
-	public Optional<String> getLastForwardedCommitId() {
+	public Optional<String> getLastForwardedCommitId() throws PersistenceException {
 		try {
 			return Optional.ofNullable(cache.get(LAST_FORWARDED_COMMIT+branchURI));
 		} catch (Exception e) {
-			log.warn("Error reading from cache "+e.getMessage());
-			return Optional.empty();
+			String msg = String.format("Cannot access cache for last forwarded commit id for branch %s with error %s", branchURI, e.getMessage()); 
+			log.warn(msg);
+			throw new PersistenceException(msg);
 		}
 	}
 

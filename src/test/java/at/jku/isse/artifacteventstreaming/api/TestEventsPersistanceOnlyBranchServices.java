@@ -3,6 +3,7 @@ package at.jku.isse.artifacteventstreaming.api;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.jena.ontapi.OntModelFactory;
@@ -14,7 +15,9 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.eventstore.dbclient.DeleteStreamOptions;
@@ -22,7 +25,9 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
+import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
+import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory.EventStoreImpl;
 import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonDeserializer;
@@ -36,21 +41,30 @@ class TestEventsPersistanceOnlyBranchServices {
 	private static EventStoreFactory factory = new EventStoreFactory();
 	private static BranchStateCache branchCache;
 			
-	@BeforeAll
-	static void removeStream() {
+	@BeforeEach
+	void removeStream() {
 		try {
 			cacheFactory = new RocksDBFactory("./branchStatusTestCache/");
 			cacheFactory.resetCache();
-			branchCache = cacheFactory.getCache();
+		}catch (Exception e) {
+			e.printStackTrace();
+		}
+		branchCache = cacheFactory.getCache();
+		try {
 			factory.getClient().getStreamMetadata(repoURI.toString()); //throws exception if doesn't exist, then we wont need to delete
 			factory.getClient().deleteStream(repoURI.toString(), DeleteStreamOptions.get()).get();
+		}catch (Exception e) {
+			e.printStackTrace();
+		} try {	
+			factory.getClient().getStreamMetadata(repoURI.toString()+EventStoreImpl.INCOMING_COMMITS_STREAM_POSTFIX); //throws exception if doesn't exist, then we wont need to delete
+			factory.getClient().deleteStream(repoURI.toString()+EventStoreImpl.INCOMING_COMMITS_STREAM_POSTFIX, DeleteStreamOptions.get()).get();
 		}catch (Exception e) {
 			e.printStackTrace();
 		}		
 	}
 	
-	@AfterAll
-	static void clearCache() {
+	@AfterEach
+	void clearCache() {
 		cacheFactory.closeCache();
 	}
 	
@@ -160,5 +174,30 @@ class TestEventsPersistanceOnlyBranchServices {
 		assert(model2.containsAll(model));
 		assert(model.containsAll(model2));
 		assert(stateKeeper2.getHistory().size() > 2);
+	}
+	
+	@Test
+	void testEventStoreBackedReadCommits() throws Exception {
+		PerBranchEventStore eventStore = factory.getEventStore(repoURI.toString());
+		var c1 = new StatementCommitImpl("b1", "msg1", null);
+		var c2 = new StatementCommitImpl("b1", "msg2", c1.getCommitId());
+		var c3 = new StatementCommitImpl("b1", "msg3", c2.getCommitId());
+		var cde1 = new CommitDeliveryEvent(c1.getCommitId(), c1, "b1", "b2");
+		var cde2 = new CommitDeliveryEvent(c2.getCommitId(), c2, "b1", "b2");
+		var cde3 = new CommitDeliveryEvent(c3.getCommitId(), c3, "b1", "b2");
+		eventStore.appendCommitDelivery(cde1);
+		eventStore.appendCommitDelivery(cde2);
+		eventStore.appendCommitDelivery(cde3);
+		
+		var result = eventStore.loadAllIncomingCommitsForBranchFromCommitIdOnward(null);
+		assert(result.containsAll(List.of(c1, c2, c3)));
+		
+		result = eventStore.loadAllIncomingCommitsForBranchFromCommitIdOnward(c2.getCommitId());
+		assert(result.containsAll(List.of(c3)));
+		
+		result = eventStore.loadAllIncomingCommitsForBranchFromCommitIdOnward(c3.getCommitId());
+		assert(result.isEmpty());
+		
+		
 	}
 }

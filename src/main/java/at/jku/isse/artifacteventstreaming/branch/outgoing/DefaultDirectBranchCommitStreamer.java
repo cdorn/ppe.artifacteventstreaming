@@ -54,11 +54,9 @@ public class DefaultDirectBranchCommitStreamer extends AbstractHandlerBase {
 			} else {
 			// get only any commits after the last forwarded one	
 				List<Commit> commitsToForward = sourceState.getCommitsForwardIncludingFrom(lastForwardedCommit);
-				if (commitsToForward.size() <= 1) { // if only one element, which is the last forwarded one, then we are done
-					return;
-				} else {
+				if (commitsToForward.size() > 1) { 					
 					commitsToForward.subList(1, commitsToForward.size()).stream().forEach(commit -> handleCommit(commit));
-				}
+				} // else wont be reached as covered above
 			}
 		}
 	}

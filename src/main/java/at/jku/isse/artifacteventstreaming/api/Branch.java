@@ -6,6 +6,8 @@ import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 
+import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import lombok.NonNull;
 
 
@@ -45,9 +47,10 @@ public interface Branch {
  *    7) it commits the changes to the backend model (internal transaction)
  *    8) it puts the augmented commit into the branch's outqueue.
  *    @return the newly created/augmented commit
-	 * @throws Exception 
+	 * @throws BranchConfigurationException 
+	 * @throws PersistenceException 
 	 */
-	public Commit commitChanges(String commitMsg) throws Exception;
+	public Commit commitChanges(String commitMsg) throws PersistenceException, BranchConfigurationException;
 	
 	/**
 	 * @param mergedCommit 
@@ -57,7 +60,7 @@ public interface Branch {
 	 * @return the augmentation commit by any service additions, if no augmentation, returns merged commit
 	 * @throws Exception 
 	 */
-	public Commit commitMergeOf(Commit mergedCommit) throws Exception;
+	public Commit commitMergeOf(Commit mergedCommit) throws PersistenceException;
 	
 	/**
 	 * drops all currently cached changes/statements
@@ -73,9 +76,10 @@ public interface Branch {
 	 * routes the commit through any available filters and processors (statements within the commit are not changes, just the decision which ones are applied)
 	 * before applying the remaining statements onto this model within a transaction
 	 * whenever there is a filter a replacement commit is created, to document that not the original commit was applied
-	 * @throws Exception  when persisting in queue fails, then must assume commit has not been processed 
+	 * @throws BranchConfigurationException when branch has been deactivated, or no merge handlers are configured
+	 * @throws PersistenceException  when persisting in queue fails, then must assume commit has not been processed 
 	 */
-	public void enqueueIncomingCommit(Commit commit) throws Exception;
+	public void enqueueIncomingCommit(Commit commit) throws PersistenceException, BranchConfigurationException;
 	
 
 	/**
@@ -122,8 +126,9 @@ public interface Branch {
 	/**
 	 * @param unfinishedPreliminaryCommit any leftover commit to be processed by services upon restart from before a crash, can be null
 	 * To signal that init of the branch is complete (incl state and/or history loading) and the commit handlers for in and out commits can start
+	 * @throws BranchConfigurationException  when incoming commits are reenqueue but no merge handler is available
 	 * @throws Exception when handling of preliminary commit or any other replaying to get up to date fails
 	 */
-	void startCommitHandlers(Commit unfinishedPreliminaryCommit) throws Exception;
+	void startCommitHandlers(Commit unfinishedPreliminaryCommit) throws PersistenceException, BranchConfigurationException;
 	
 }

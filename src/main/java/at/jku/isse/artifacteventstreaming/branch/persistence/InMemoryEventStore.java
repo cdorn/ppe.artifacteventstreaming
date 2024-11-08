@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitDeliveryEvent;
 import at.jku.isse.artifacteventstreaming.api.PerBranchEventStore;
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 
 /**
  * @author Christoph Mayr-Dorn
@@ -18,12 +19,12 @@ public class InMemoryEventStore implements PerBranchEventStore {
 	private final List<CommitDeliveryEvent> deliveries = new LinkedList<>();
 	
 	@Override
-	public List<Commit> loadAllCommits() throws Exception {
+	public List<Commit> loadAllCommits() throws PersistenceException {
 		return new LinkedList<>(allCommits);
 	}
 
 	@Override
-	public List<Commit> loadAllIncomingCommitsForBranchFromCommitIdOnward(String fromCommitIdOnwards) throws Exception {
+	public List<Commit> loadAllIncomingCommitsForBranchFromCommitIdOnward(String fromCommitIdOnwards) throws PersistenceException {
 		if (fromCommitIdOnwards == null) {
 			return deliveries.stream().map(event -> event.getCommit())
 					.collect(Collectors.toList());
@@ -43,12 +44,12 @@ public class InMemoryEventStore implements PerBranchEventStore {
 	}
 
 	@Override
-	public void appendCommit(Commit commit) throws Exception {
+	public void appendCommit(Commit commit) throws PersistenceException {
 		allCommits.add(commit);
 	}
 
 	@Override
-	public void appendCommitDelivery(CommitDeliveryEvent event) throws Exception {
+	public void appendCommitDelivery(CommitDeliveryEvent event) throws PersistenceException {
 		deliveries.add(event);
 	}
 

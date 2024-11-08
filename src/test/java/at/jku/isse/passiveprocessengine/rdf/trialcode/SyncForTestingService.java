@@ -1,21 +1,13 @@
 package at.jku.isse.passiveprocessengine.rdf.trialcode;
 
-import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.riot.protobuf.wire.PB_RDF.RDF_Stream;
-import org.apache.jena.vocabulary.RDFS;
-
-import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
-import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -39,7 +31,7 @@ public class SyncForTestingService extends CommitLoggingService {
 	public void handleCommitFromOffset(Commit commit, int indexOfNewAddition, int indexOfNewRemoval) {		
 		super.handleCommitFromOffset(commit, indexOfNewAddition, indexOfNewRemoval);
 
-		log.debug(String.format("%s counted down to %s upon commit %s", serviceName, latch.getCount(), commit.getCommitMessage()));
+		log.debug(String.format("%s counting down from %s upon commit %s", serviceName, latch.getCount(), commit.getCommitMessage()));
 		latch.countDown();
 	}
 

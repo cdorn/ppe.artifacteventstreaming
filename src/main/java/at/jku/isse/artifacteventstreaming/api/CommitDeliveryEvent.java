@@ -1,13 +1,28 @@
 package at.jku.isse.artifacteventstreaming.api;
 
-import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonCreator;
 
-@Data
+import lombok.Getter;
+
+
 public class CommitDeliveryEvent {
 
-	private final String commitId;
-	private final Commit commit; // we need to explicitly save this here, as any forwarding service might have conducted destination branch specific filtering of commit content
-	private final String sendingBranchId;
-	private final String receivingBranchId;
+	@JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
+	public CommitDeliveryEvent(@JsonProperty("commitId") String commitId
+			, @JsonProperty("commit") Commit commit
+			, @JsonProperty("sendingBranchId") String sendingBranchId
+			, @JsonProperty("receivingBranchId") String receivingBranchId) {
+		super();
+		this.commitId = commitId;
+		this.commit = commit;
+		this.sendingBranchId = sendingBranchId;
+		this.receivingBranchId = receivingBranchId;
+	}
+	
+	@Getter	private final String commitId;
+	@Getter	private final Commit commit; // we need to explicitly save this here, as any forwarding service might have conducted destination branch specific filtering of commit content	
+	@Getter private final String sendingBranchId;
+	@Getter private final String receivingBranchId;
 	
 }

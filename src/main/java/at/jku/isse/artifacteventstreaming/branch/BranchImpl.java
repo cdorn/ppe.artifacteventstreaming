@@ -26,6 +26,8 @@ import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
+import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.CrossBranchStreamer;
 import lombok.Getter;
 import lombok.NonNull;
@@ -69,7 +71,7 @@ public class BranchImpl  implements Branch, Runnable {
 	}
 	
 	@Override
-	public void startCommitHandlers(Commit unfinishedPreliminaryCommit) throws Exception {
+	public void startCommitHandlers(Commit unfinishedPreliminaryCommit) throws BranchConfigurationException, PersistenceException {
 		if (unfinishedPreliminaryCommit != null) {
 			// continue aborted processing: e.g., single internal commit not yet completely processed by services (can only be one)
 			dataset.begin();
@@ -182,12 +184,17 @@ public class BranchImpl  implements Branch, Runnable {
 	}
     
 	@Override
-	public void enqueueIncomingCommit(Commit commit) throws Exception {
+	public void enqueueIncomingCommit(Commit commit) throws BranchConfigurationException, PersistenceException {
 		// if we have processed this commit before, then wont do it again to avoid loops
 		if (!stateKeeper.hasSeenCommit(commit) && !inQueue.contains(commit)) {
 			//persist which commits we have received but not merged yet, 
 			stateKeeper.beforeMerge(commit);
 			// if this crashes before returning this call, then cross branch streamer has to assume failure and retry adding/enqueuing upon restart
+			if (handlers.isEmpty()) { // there are not handlers to process , thus no queuing and error thrown
+				String msg = String.format("Branch %s received incomming commit %s to merge but no merge handlers are registered, dropping commit", this.getBranchName(), commit.getCommitId());
+				log.warn(msg);
+				throw new BranchConfigurationException(msg);				
+			}
 			inQueue.add(commit);
 		} else {
 			log.info(String.format("Ignoring incoming commit %s that has been seen by this branch before", commit.getCommitId()));
@@ -269,10 +276,10 @@ public class BranchImpl  implements Branch, Runnable {
 	 * assumes no other tread is making changes to the model while services are processing
 	 */
 	@Override
-	public Commit commitChanges(String commitMsg) throws Exception {
+	public Commit commitChanges(String commitMsg) throws BranchConfigurationException, PersistenceException {
 		if (!isReady.get()) {
 			this.undoNoncommitedChanges();
-			throw new Exception(String.format("Branch %s with objectid %s has been deactivated, cannot make changes on non-active branch, please create a new branch object", getBranchId(), this.hashCode()));
+			throw new BranchConfigurationException(String.format("Branch %s with objectid %s has been deactivated, cannot make changes on non-active branch, please create a new branch object", getBranchId(), this.hashCode()));
 		}
 		
 		if (!stmtAggregator.hasAdditions() && !stmtAggregator.hasRemovals()) {
@@ -287,7 +294,7 @@ public class BranchImpl  implements Branch, Runnable {
 	}
 	
 	@Override
-	public Commit commitMergeOf(Commit mergedCommit) throws Exception {
+	public Commit commitMergeOf(Commit mergedCommit) throws PersistenceException {
 		//we always create a local commit upon a merge to signal that we received and processed that commit
 		var commit = new StatementCommitImpl( branchResource.getURI() , mergedCommit.getCommitId(), mergedCommit.getCommitMessage(), getLastCommitId(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());
 		if (commit.isEmpty()) {
@@ -299,7 +306,7 @@ public class BranchImpl  implements Branch, Runnable {
 		
 	}
 	
-	private void handleCommitInternally(Commit commit) throws Exception {
+	private void handleCommitInternally(Commit commit) throws PersistenceException {
 		log.debug(String.format("Handling commit %s in branch %s", commit.getCommitId(), branchResource.getURI()));
 		// clear the changes
 		if (services.size() > 0 && !commit.isEmpty()) {

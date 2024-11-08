@@ -8,6 +8,7 @@ import java.util.concurrent.BlockingQueue;
 import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.PoisonPillCommit;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,7 @@ public class CrossBranchStreamer implements Runnable {
 	/**
 	 * for any commits not forwarded yet, re-add them to the out queue
 	 */
-	public void recoverState() {
+	public void recoverState() throws PersistenceException {
 		var nonForwarded = stateKeeper.getNonForwardedCommits();
 		sourceQueue.addAll(nonForwarded);
 	}

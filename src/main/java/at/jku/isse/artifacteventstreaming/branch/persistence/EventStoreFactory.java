@@ -1,5 +1,6 @@
 package at.jku.isse.artifacteventstreaming.branch.persistence;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -15,21 +16,28 @@ import com.eventstore.dbclient.ReadStreamOptions;
 import com.eventstore.dbclient.RecordedEvent;
 import com.eventstore.dbclient.ResolvedEvent;
 import com.eventstore.dbclient.StreamNotFoundException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitDeliveryEvent;
 import at.jku.isse.artifacteventstreaming.api.PerBranchEventStore;
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonDeserializer;
 import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonSerializer;
 import lombok.Data;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class EventStoreFactory {
 
 	 private final EventStoreDBClient client;
 	 private final JsonMapper jsonMapper = new JsonMapper();
+	 private final static SimpleModule commitModule = new SimpleModule().addAbstractTypeMapping(Commit.class, StatementCommitImpl.class);
 	 
 	 public EventStoreFactory() {
 		 EventStoreDBClientSettings settings = EventStoreDBClientSettings.builder()
@@ -40,7 +48,8 @@ public class EventStoreFactory {
 				  .buildConnectionSettings();
 		client = EventStoreDBClient.create(settings);		
 		StatementJsonSerializer.registerSerializationModule(jsonMapper);	
-		StatementJsonDeserializer.registerDeserializationModule(jsonMapper);
+		StatementJsonDeserializer.registerDeserializationModule(jsonMapper);		
+		jsonMapper.registerModule(commitModule);
 	 }
 	 
 	 public EventStoreDBClient getClient() {
@@ -65,7 +74,7 @@ public class EventStoreFactory {
 		 final JsonMapper jsonMapper;
 
 		@Override
-		public List<Commit> loadAllCommits() throws Exception{
+		public List<Commit> loadAllCommits() throws PersistenceException{
 			// for now, we do a inefficient sequential load of all commits and keep them in memory
 			List<Commit> commits = new LinkedList<>();
 			ReadStreamOptions options = ReadStreamOptions.get()
@@ -81,18 +90,29 @@ public class EventStoreFactory {
 					return Collections.emptyList(); //done
 				}
 			}
-			for (ResolvedEvent resolvedEvent : result.getEvents()) {
-				RecordedEvent recordedEvent = resolvedEvent.getOriginalEvent();
-				StatementCommitImpl commit = jsonMapper.readValue(recordedEvent.getEventData(), StatementCommitImpl.class);
-				if (commit != null) {
-					commits.add(commit);
-				}
-			}		
+			
+			try {
+				for (ResolvedEvent resolvedEvent : result.getEvents()) {
+					RecordedEvent recordedEvent = resolvedEvent.getOriginalEvent();
+					StatementCommitImpl commit = jsonMapper.readValue(recordedEvent.getEventData(), StatementCommitImpl.class);
+					if (commit != null) {
+						commits.add(commit);
+					}
+				}	
+			} catch (IOException e) {
+				String msg = String.format("Error loading commits for branch %s with error %s", branchURI, e.getMessage());
+				log.warn(msg);
+				throw new PersistenceException(msg);
+			}  catch (NullPointerException e) {
+				String msg = String.format("Error accessing event stream for branch %s with error %s", branchURI, e.getMessage());
+				log.warn(msg);
+				throw new PersistenceException(msg);
+			}
 			return commits;
 		}
 
 		@Override
-		public List<Commit> loadAllIncomingCommitsForBranchFromCommitIdOnward(String fromCommitIdOnwards)  throws Exception{
+		public List<Commit> loadAllIncomingCommitsForBranchFromCommitIdOnward(String fromCommitIdOnwards)  throws PersistenceException{
 			ReadStreamOptions options;
 			Boolean isReverse = false;
 			if (fromCommitIdOnwards == null) { // we read forward as we need to append all commits
@@ -116,15 +136,22 @@ public class EventStoreFactory {
 				}
 			}
 			List<Commit> commits = new LinkedList<>();
+			
 			for (ResolvedEvent resolvedEvent : result.getEvents()) {
 				RecordedEvent recordedEvent = resolvedEvent.getOriginalEvent();
-				CommitDeliveryEvent event = jsonMapper.readValue(recordedEvent.getEventData(), CommitDeliveryEvent.class);
-				if (event != null) {
-					if (event.getCommitId().equals(fromCommitIdOnwards)) {
-						break;
-					} else {
-						commits.add(event.getCommit());
+				try {
+					CommitDeliveryEvent event = jsonMapper.readValue(recordedEvent.getEventData(), CommitDeliveryEvent.class);
+					if (event != null) {
+						if (event.getCommitId().equals(fromCommitIdOnwards)) {
+							break;
+						} else {
+							commits.add(event.getCommit());
+						}
 					}
+				} catch (IOException e) {
+					String msg = String.format("Error loading CommitDeliveryEvents for branch %s with error %s", branchURI, e.getMessage());
+					log.warn(msg);
+					throw new PersistenceException(msg);
 				}
 			}
 			if (isReverse) {
@@ -134,26 +161,40 @@ public class EventStoreFactory {
 		}
 
 		@Override
-		public void appendCommit(Commit commit) throws Exception {
-			EventMetaData metadata = new EventMetaData(commit.getCommitId());
-			byte[] metaByte = jsonMapper.writeValueAsBytes(metadata);
+		public void appendCommit(Commit commit) throws PersistenceException {
+			EventMetaData metadata = new EventMetaData(commit.getCommitId());					
+			try {
+				byte[] metaByte = jsonMapper.writeValueAsBytes(metadata);
+				byte[] eventByte = jsonMapper.writeValueAsBytes(commit);
+				long size = metaByte.length + eventByte.length;
+				
+				//TODO: check for commit serialization size to avoid write failures if there are too many statements in a commit!
+				//store via event db
+				EventData eventData = EventData
+						.builderAsBinary("CommitEventType", eventByte) // we cannot use commit UUID as its reused for each branch		
+						.metadataAsBytes(metaByte)
+						.build();
 
-			//TODO: check for commit serialization size to avoid write failures if there are too many statements in a commit!
-			//store via event db
-			EventData eventData = EventData
-					.builderAsBinary("CommitEventType", jsonMapper.writeValueAsBytes(commit)) // we cannot use commit UUID as its reused for each branch		
-					.metadataAsBytes(metaByte)
-					.build();
+				AppendToStreamOptions options = AppendToStreamOptions.get()
+						.expectedRevision(ExpectedRevision.any());
 
-			AppendToStreamOptions options = AppendToStreamOptions.get()
-					.expectedRevision(ExpectedRevision.any());
-
-			eventDBclient.appendToStream(branchURI, options, eventData) 
-			.get();
+				var result = eventDBclient.appendToStream(branchURI, options, eventData) 
+				.get();			
+				log.trace("Obtained log position upon write: "+result.getLogPosition().toString());
+			} catch (JsonProcessingException e) {
+				String msg = String.format("Error serializing commit %s event to branch %s with error %s", commit.getCommitId(), branchURI, e.getMessage()) ;
+				log.warn(msg);
+				throw new PersistenceException(msg);
+			} catch (InterruptedException | ExecutionException e) {
+				String msg = String.format("Error storing commit %s event to branch %s with error %s", commit.getCommitId(), branchURI, e.getMessage()) ;
+				log.warn(msg);
+				throw new PersistenceException(msg);
+			} 
 		}
 
 		@Override
-		public void appendCommitDelivery(CommitDeliveryEvent event) throws Exception {
+		public void appendCommitDelivery(@NonNull CommitDeliveryEvent event) throws PersistenceException {
+			try {
 			EventData eventData = EventData
 					.builderAsBinary("CommitDeliveryType", jsonMapper.writeValueAsBytes(event)) 	
 					.build();
@@ -163,6 +204,15 @@ public class EventStoreFactory {
 
 			eventDBclient.appendToStream(branchURI+INCOMING_COMMITS_STREAM_POSTFIX, options, eventData) 
 			.get();
+			} catch (JsonProcessingException e) {
+				String msg = String.format("Error serializing commitdeliveryevent %s event to branch %s with error %s", event.getCommitId(), branchURI, e.getMessage()) ;
+				log.warn(msg);
+				throw new PersistenceException(msg);
+			} catch (InterruptedException | ExecutionException e) {
+				String msg = String.format("Error storing commitdeliveryevent %s event to branch %s with error %s", event.getCommitId(), branchURI, e.getMessage()) ;
+				log.warn(msg);
+				throw new PersistenceException(msg);
+			} 
 		}
 		 
 	 }

@@ -5,6 +5,7 @@ import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 
 import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import lombok.RequiredArgsConstructor;
 
 public class RocksDBFactory {
@@ -59,13 +60,22 @@ public class RocksDBFactory {
 		private final RocksDB db;
 		
 		@Override
-		public void put(String key, String value) throws RocksDBException {
-			db.put(key.getBytes(), value.getBytes());
+		public void put(String key, String value) throws PersistenceException {
+			try {
+				db.put(key.getBytes(), value.getBytes());
+			} catch (RocksDBException e) {
+				throw new PersistenceException(String.format("Error writing key %s to cache with underlying exception %s", key, e.getMessage()));
+			}
 		}
 
 		@Override
-		public String get(String key) throws RocksDBException {
-			byte[] content = db.get(key.getBytes());
+		public String get(String key) throws PersistenceException {
+			byte[] content;
+			try {
+				content = db.get(key.getBytes());
+			} catch (RocksDBException e) {
+				throw new PersistenceException(String.format("Error reading key %s to cache with underlying exception %s", key, e.getMessage()));
+			}
 			if (content != null)
 				return new String(content);
 			else
