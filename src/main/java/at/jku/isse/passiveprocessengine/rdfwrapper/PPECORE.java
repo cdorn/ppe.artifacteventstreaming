@@ -1,4 +1,4 @@
-package at.jku.isse.passiveprocessengine.rdf;
+package at.jku.isse.passiveprocessengine.rdfwrapper;
 
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;

@@ -1,4 +1,4 @@
-package at.jku.isse.passiveprocessengine.rdf;
+package at.jku.isse.passiveprocessengine.rdfwrapper;
 
 import java.util.HashMap;
 import java.util.List;
@@ -15,6 +15,8 @@ import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.Resource;
+
+import com.ctc.wstx.shaded.msv_core.util.Uri;
 
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
@@ -112,7 +114,10 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	}
 
 	private String createPropertyURI(String localName) {
-		return this.element.getURI()+"#"+localName;
+		if (Uri.isValid(localName))
+			return localName;
+		else 
+			return this.element.getURI()+"#"+localName;
 	}
 	
 	private PPEPropertyType insertAndReturn(OntRelationalProperty prop) {

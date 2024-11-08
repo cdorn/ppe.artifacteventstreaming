@@ -15,11 +15,11 @@ import org.junit.jupiter.api.Test;
 
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.CARDINALITIES;
-import at.jku.isse.passiveprocessengine.rdf.ListResourceType;
-import at.jku.isse.passiveprocessengine.rdf.MapResourceType;
-import at.jku.isse.passiveprocessengine.rdf.NodeToDomainResolver;
-import at.jku.isse.passiveprocessengine.rdf.RDFPropertyType;
-import at.jku.isse.passiveprocessengine.rdf.RDFInstanceType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.ListResourceType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.MapResourceType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType;
 
 class TestRDFPropertyType {
 

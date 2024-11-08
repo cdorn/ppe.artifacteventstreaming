@@ -1,4 +1,4 @@
-package at.jku.isse.passiveprocessengine.rdf;
+package at.jku.isse.passiveprocessengine.rdfwrapper;
 
 
 import java.util.AbstractMap;
@@ -12,6 +12,7 @@ import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntObjectProperty.Named;
 import org.apache.jena.rdf.model.RDFNode;
@@ -22,14 +23,14 @@ public class MapResource implements Map<String, RDFNode> {
 	
 
 	
-	private final OntIndividual mapOwner;
+	private final OntObject mapOwner;
 	private final OntObjectProperty.Named mapEntryProperty;	
 	private final Map<String, Statement> map = new HashMap<>();
 	
 	private final OntModel model;
 	private final MapResourceType mapType;
 	
-	private MapResource(OntIndividual mapOwner, Named mapEntryProperty, MapResourceType mapType) {
+	private MapResource(OntObject mapOwner, Named mapEntryProperty, MapResourceType mapType) {
 		super();
 		this.mapType = mapType;
 		this.mapOwner = mapOwner;
@@ -38,7 +39,7 @@ public class MapResource implements Map<String, RDFNode> {
 		init();
 	}
 
-	public static MapResource asMapResource(OntIndividual mapOwner, OntObjectProperty.Named mapEntryProperty, MapResourceType mapType) throws ResourceMismatchException {
+	public static MapResource asMapResource(OntObject mapOwner, OntObjectProperty.Named mapEntryProperty, MapResourceType mapType) throws ResourceMismatchException {
 		
 		if (mapType.isMapEntrySubclass(mapEntryProperty)) {
 			MapResource map = new MapResource(mapOwner, mapEntryProperty, mapType);
@@ -148,7 +149,7 @@ public class MapResource implements Map<String, RDFNode> {
 	@Override
 	public boolean containsValue(Object value) {
 		return map.values().stream()
-				.map(stmt -> getValueFromStatement(stmt))
+				.map(this::getValueFromStatement)
 				.anyMatch(entryValue -> entryValue.equals(value));
 	}
 
@@ -172,8 +173,8 @@ public class MapResource implements Map<String, RDFNode> {
 	@Override
 	public Collection<RDFNode> values() {
 		return map.values().stream()
-			.map(stmt -> getValueFromStatement(stmt))
-			.collect(Collectors.toList());
+			.map(this::getValueFromStatement)
+			.toList();
 	}
 
 	@Override

@@ -1,4 +1,4 @@
-package at.jku.isse.passiveprocessengine.rdf;
+package at.jku.isse.passiveprocessengine.rdfwrapper;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -11,12 +11,14 @@ import org.apache.jena.datatypes.RDFDatatype;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntClass.Named;
 import org.apache.jena.ontapi.model.OntDataRange;
+import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.vocabulary.XSD;
 
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.InstanceWrapper;
+import at.jku.isse.passiveprocessengine.core.PPEInstance;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
 import at.jku.isse.passiveprocessengine.core.RuleDefinition;
 import at.jku.isse.passiveprocessengine.core.SchemaRegistry;
@@ -34,12 +36,12 @@ public class NodeToDomainResolver implements SchemaRegistry {
 	@Getter
 	private ListResourceType listBase;
 	
-	private final Map<OntClass, PPEInstanceType> typeIndex = new HashMap<>();
-	
-	
+	private final Map<OntClass, PPEInstanceType> typeIndex = new HashMap<>();	
+	private final Map<OntIndividual, PPEInstance> instanceIndex = new HashMap<>();
 	
 	private void init() {
 		model.classes().forEach(ontClass -> typeIndex.put(ontClass, new RDFInstanceType(ontClass, this)));
+		//list all individuals via ontClass.individuals()
 	}
 	
 	public PPEInstanceType resolveToType(RDFNode node) {

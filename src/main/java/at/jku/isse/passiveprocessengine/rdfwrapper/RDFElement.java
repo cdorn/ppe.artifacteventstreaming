@@ -1,12 +1,18 @@
-package at.jku.isse.passiveprocessengine.rdf;
+package at.jku.isse.passiveprocessengine.rdfwrapper;
 
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.jena.ontapi.model.OntObject;
+import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.vocabulary.RDF;
+
+import com.ctc.wstx.shaded.msv_core.util.Uri;
 
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
 import lombok.Getter;
@@ -19,6 +25,7 @@ public class RDFElement {
 	protected final OntObject element;
 	protected final NodeToDomainResolver resolver;
 
+	private boolean isDeleted = false; // in case someone holds on to wrapper object
 
 	public String getId() {
 		return element.getURI();
@@ -30,6 +37,7 @@ public class RDFElement {
 	
 
 	public void markAsDeleted() {
+		this.isDeleted = true;
 		element.removeProperties();		
 		//remove from cache needs to be done in childclasses
 	}
@@ -37,7 +45,7 @@ public class RDFElement {
 
 	public boolean isMarkedAsDeleted() {
 		//we dont mark anything deleted, we just delete (for now)
-		return false;
+		return isDeleted;
 	}
 
 
@@ -87,18 +95,56 @@ public class RDFElement {
 		}
 	}
 
-
-
-	private Property resolveProperty(String property) {
-		// TODO Auto-generated method stub
-		return null;
+	private OntRelationalProperty.Named resolveProperty(String property) {
+		if (Uri.isValid(property)) {			
+			var objProp = element.getModel().getObjectProperty(property);
+			if (objProp != null)
+				return objProp;
+			else 
+				return element.getModel().getDataProperty(property);
+		} else {		
+			var objProp = element.getModel().getObjectProperty(this.element.getURI()+"#"+property);
+			if (objProp != null)
+				return objProp;
+			else 
+				return element.getModel().getDataProperty(this.element.getURI()+"#"+property);
+		}
 	}
 
 	public <T> T getTypedProperty(String property, Class<T> clazz) {
+		
+		OntRelationalProperty prop = resolveProperty(property);
+		if (prop == null);
+		
+		else {
 		// check if single or collection property
+		var iter = element.listProperties(prop);
+		if (Set.class.isAssignableFrom(clazz)) {
+			if (iter.hasNext()) {
+				
+			} else {
+				return (T) Collections.emptySet();
+			}
+		} else 
+		if (List.class.isAssignableFrom(clazz)) {
+				if (iter.hasNext()) {
+					
+				} else {
+					return (T) Collections.emptyList();
+				}
+		} else
+		if (Map.class.isAssignableFrom(clazz)) {
+				if (iter.hasNext()) {
+					MapResource.asMapResource(this.element, prop, resolver.getMapBase());
+				} else {
+					return (T) Collections.emptyMap();
+				}
+		}
+		
 		
 		// TODO Auto-generated method stub
 		return null;
+		}
 	}
 
 	public <T> T getTypedProperty(String property, Class<T> clazz, T defaultValue) {

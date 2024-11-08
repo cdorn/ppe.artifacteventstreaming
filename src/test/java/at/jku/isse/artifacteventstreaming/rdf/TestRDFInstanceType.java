@@ -17,8 +17,8 @@ import org.junit.jupiter.api.Test;
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.PPEPropertyType;
-import at.jku.isse.passiveprocessengine.rdf.NodeToDomainResolver;
-import at.jku.isse.passiveprocessengine.rdf.RDFInstanceType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
 
 class TestRDFInstanceType {
 
