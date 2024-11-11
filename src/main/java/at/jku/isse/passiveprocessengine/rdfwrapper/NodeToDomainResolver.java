@@ -7,28 +7,34 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.codec.Resources;
 import org.apache.jena.datatypes.RDFDatatype;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntClass.Named;
 import org.apache.jena.ontapi.model.OntDataRange;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
 
 import at.jku.isse.passiveprocessengine.core.BuildInType;
+import at.jku.isse.passiveprocessengine.core.InstanceRepository;
 import at.jku.isse.passiveprocessengine.core.InstanceWrapper;
 import at.jku.isse.passiveprocessengine.core.PPEInstance;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
 import at.jku.isse.passiveprocessengine.core.RuleDefinition;
 import at.jku.isse.passiveprocessengine.core.SchemaRegistry;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RequiredArgsConstructor
-public class NodeToDomainResolver implements SchemaRegistry {
+public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository {
 
 	private final OntModel model;
 	@Getter
@@ -36,8 +42,8 @@ public class NodeToDomainResolver implements SchemaRegistry {
 	@Getter
 	private ListResourceType listBase;
 	
-	private final Map<OntClass, PPEInstanceType> typeIndex = new HashMap<>();	
-	private final Map<OntIndividual, PPEInstance> instanceIndex = new HashMap<>();
+	private final Map<OntClass, RDFInstanceType> typeIndex = new HashMap<>();	
+	private final Map<OntIndividual, RDFInstance> instanceIndex = new HashMap<>();
 	
 	private void init() {
 		model.classes().forEach(ontClass -> typeIndex.put(ontClass, new RDFInstanceType(ontClass, this)));
@@ -74,7 +80,9 @@ public class NodeToDomainResolver implements SchemaRegistry {
 			
 		} else if (node instanceof OntClass ontClass) {
 			return typeIndex.get(ontClass);
-		}		
+		} else if (node.canAs(OntClass.class)) {
+			return typeIndex.get(node.as(OntClass.class));
+		}
 		log.warn(String.format("Unknown RDFNode type %s cannot be resolved to a PPEInstanceType", node.toString()));
 		return null;
 	}
@@ -136,7 +144,7 @@ public class NodeToDomainResolver implements SchemaRegistry {
 		return typeIndex.values().stream()
 		.filter(type -> type.getName().equals(arg0))
 		.findAny()
-		.orElseGet(null);
+		.orElse(null);
 	}
 
 	/**
@@ -152,7 +160,7 @@ public class NodeToDomainResolver implements SchemaRegistry {
 
 	@Override
 	public void registerTypeByName(PPEInstanceType arg0) {
-		typeIndex.putIfAbsent(((RDFInstanceType) arg0).getType(), arg0);
+		typeIndex.putIfAbsent(((RDFInstanceType) arg0).getType(), (RDFInstanceType) arg0);
 	}
 
 	@Override
@@ -204,6 +212,65 @@ public class NodeToDomainResolver implements SchemaRegistry {
 	public RuleDefinition getRuleByNameAndContext(String arg0, PPEInstanceType arg1) {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public void concludeTransaction() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public PPEInstance createInstance(@NonNull String id, @NonNull PPEInstanceType arg1) {
+		if (arg1 instanceof RDFInstanceType type) {
+			var individual = model.createIndividual(id, type.getType());
+			return instanceIndex.computeIfAbsent(individual, k -> new RDFInstance(k, this));
+		}
+		else 
+			throw new RuntimeException("PPEInstance object not a RDFInstance but "+arg1.getClass());
+	}
+
+	/**
+	 * assumes ID is a URI as used per underlying RDF implementation
+	 */
+	@Override
+	public Optional<PPEInstance> findInstanceById(@NonNull String arg0) {
+		var res = ResourceFactory.createResource(arg0);
+		if (model.contains(res, RDF.type)) {
+			var indiv = model.getIndividual(res);
+			return Optional.ofNullable(instanceIndex.computeIfAbsent(indiv, k -> new RDFInstance(k, this)));
+		} else
+			return Optional.empty();
+	}
+
+	@Override
+	public Set<PPEInstance> getAllInstancesOfTypeOrSubtype(@NonNull PPEInstanceType arg0) {
+		if (arg0 instanceof RDFInstanceType type) {
+			return type.getType().individuals()
+			.map(el -> instanceIndex.computeIfAbsent(el, k->new RDFInstance(k, this)))
+			.collect(Collectors.toSet());
+		}
+		else 
+			throw new IllegalArgumentException("PPEInstance object not a RDFInstance but "+arg0.getClass());
+	}
+
+	public RDFElement resolveToRDFElement(RDFNode node) {
+		if (node instanceof OntClass) {
+			return typeIndex.get(node);
+		} else if (node instanceof OntIndividual) {
+			return instanceIndex.get(node);
+		} else if (node instanceof OntObject obj) {
+			if (obj.canAs(OntClass.class)) {
+				return typeIndex.get(node);
+			} else {
+				return instanceIndex.get(node);
+			}
+		} else
+			return null;
+	}
+
+	public OntModel getModel() {
+		return model;
 	}
 	
 	

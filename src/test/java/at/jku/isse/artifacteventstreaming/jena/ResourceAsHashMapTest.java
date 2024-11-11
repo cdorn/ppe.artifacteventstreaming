@@ -88,10 +88,10 @@ class ResourceAsHashMapTest {
 		
 		map.clear();
 		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
-		assertEquals(map.size(), 0);
+		assertEquals(0, map.size());
 		
 		Map<String, RDFNode> newMap = MapResource.asMapResource(art1, hasMapProp, mapTypeDef);
-		assertEquals(newMap.size(), 0);
+		assertEquals(0, newMap.size());
 	}
 
 }
