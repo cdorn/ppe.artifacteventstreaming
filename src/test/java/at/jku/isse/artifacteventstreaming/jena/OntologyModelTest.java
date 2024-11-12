@@ -1,5 +1,8 @@
 package at.jku.isse.artifacteventstreaming.jena;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.util.stream.Stream;
 
 import org.apache.jena.ontapi.OntModelFactory;
@@ -15,6 +18,7 @@ import org.apache.jena.rdf.model.Bag;
 import org.apache.jena.rdf.model.InfModel;
 import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Seq;
 import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.reasoner.Reasoner;
 import org.apache.jena.reasoner.ReasonerRegistry;
@@ -26,6 +30,7 @@ import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.Test;
 
 import at.jku.isse.passiveprocessengine.rdf.trialcode.ChangeListener;
+import at.jku.isse.passiveprocessengine.rdfwrapper.ListResourceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.MapResource;
 import at.jku.isse.passiveprocessengine.rdfwrapper.MapResourceType;
 
@@ -136,4 +141,26 @@ class OntologyModelTest {
 			.forEach(rest -> System.out.println(rest.getCardinality()));
 	}
 
+	
+	@Test
+	void testSeq() {
+		OntModel m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM );
+		m.register(new ChangeListener());
+		var listFactory = new ListResourceType(m);
+		
+		OntClass artifactType = m.createOntClass(NS+"artifact");
+		OntIndividual art1 = artifactType.createIndividual(NS+"art1");
+		var successorProp = listFactory.addObjectListProperty(artifactType, NS+"hasSuccessor", artifactType);
+		
+		
+		OntIndividual art2 = artifactType.createIndividual(NS+"art2");
+		Seq seq = m.createSeq(NS+"seq");											
+		assertTrue(listFactory.isListContainer(seq.as(OntIndividual.class)));
+		
+		seq.add(art2);		
+		art1.addProperty(successorProp.asProperty(), seq);
+		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
+		
+		
+	}
 }

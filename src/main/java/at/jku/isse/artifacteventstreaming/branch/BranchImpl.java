@@ -309,7 +309,7 @@ public class BranchImpl  implements Branch, Runnable {
 	private void handleCommitInternally(Commit commit) throws PersistenceException {
 		log.debug(String.format("Handling commit %s in branch %s", commit.getCommitId(), branchResource.getURI()));
 		// clear the changes
-		if (services.size() > 0 && !commit.isEmpty()) {
+		if (!services.isEmpty() && !commit.isEmpty()) {
 			executeServiceLoop(commit);
 		}		 
 		// persist augmented commit and  mark preliminary commit as processed
