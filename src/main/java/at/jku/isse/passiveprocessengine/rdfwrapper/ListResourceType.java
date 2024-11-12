@@ -36,11 +36,9 @@ public class ListResourceType {
 	}
 	
 	private OntClass createListBaseClass() {
-		//		OntClass listType = m.createOntClass(LIST_BASETYPE_URI);
 		OntClass superClass = m.getOntClass(RDF.Seq);
 		if (superClass == null)
-			superClass = m.createOntClass(RDF.Seq.getURI());
-//		listType.addSuperClass(superClass);		
+			superClass = m.createOntClass(RDF.Seq.getURI());	
 		return superClass;
 	}
 	

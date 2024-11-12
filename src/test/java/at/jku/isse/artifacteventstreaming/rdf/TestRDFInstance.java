@@ -6,17 +6,21 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import java.util.List;
 import java.util.Map;
 
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstance;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
+import at.jku.isse.passiveprocessengine.core.PPEInstanceType.PPEPropertyType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.MapWrapper;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
@@ -32,6 +36,10 @@ public class TestRDFInstance {
 	static NodeToDomainResolver resolver;
 	PPEInstanceType typeBase;
 	PPEInstanceType typeChild;
+	PPEPropertyType parent;
+	PPEPropertyType priority;
+	PPEPropertyType mapOfArt;
+	PPEPropertyType mapOfString;
 	
 	@BeforeEach
 	void setup() {
@@ -41,9 +49,10 @@ public class TestRDFInstance {
 		resolver.getListBaseType();
 		typeBase = resolver.createNewInstanceType(NS+"artifact");
 		typeChild = resolver.createNewInstanceType(NS+"issue", typeBase);
-		typeBase.createSinglePropertyType(PRIORITY, BuildInType.INTEGER);
-		typeChild.createMapPropertyType(MAP_OF_ART, BuildInType.STRING, typeBase);
-		typeChild.createSinglePropertyType(PARENT, typeBase);
+		priority = typeBase.createSinglePropertyType(PRIORITY, BuildInType.INTEGER);
+		mapOfArt = typeChild.createMapPropertyType(MAP_OF_ART, BuildInType.STRING, typeBase);
+		mapOfString = typeChild.createMapPropertyType("mapOfString", BuildInType.STRING, BuildInType.STRING);
+		parent = typeChild.createSinglePropertyType(PARENT, typeBase);
 	}
 	
 	@Test
@@ -99,12 +108,12 @@ public class TestRDFInstance {
 	}
 	
 	@Test
-	void userObjectPropertyOnInstance() {
+	void useObjectPropertyOnInstance() {
 		var art1 = resolver.createInstance(NS+"art1", typeChild);
 		var art2 = resolver.createInstance(NS+"art1", typeChild);
-		art1.setSingleProperty(PARENT, art2);
+		art1.setSingleProperty(parent.getId(), art2);
 		
-		var result = art1.getTypedProperty(PARENT, PPEInstanceType.class);
+		var result = art1.getTypedProperty(parent.getId(), PPEInstance.class);
 		assertEquals(result, art2);
 	}
 	
@@ -112,10 +121,11 @@ public class TestRDFInstance {
 	void useMapObjectPropertyOnInstance() {
 		var art1 = resolver.createInstance(NS+"art1", typeChild);
 		var art2 = resolver.createInstance(NS+"art1", typeChild);
-		var artMap = art1.getTypedProperty(MAP_OF_ART, MapWrapper.class);
+		var artMap = art1.getTypedProperty(mapOfArt.getId(), MapWrapper.class);
+		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
 		artMap.put("key1", art2);
 		
-		var resultMap = art1.getTypedProperty(MAP_OF_ART, Map.class);
+		var resultMap = art1.getTypedProperty(mapOfArt.getId(), Map.class);
 		var entry1 = ((RDFInstance)resultMap.get("key1"));
 		assertEquals(art2, entry1);
 		
@@ -123,10 +133,38 @@ public class TestRDFInstance {
 	}
 	
 	@Test
+	void failOnUseStringMapWithObject() {
+		var art1 = resolver.createInstance(NS+"art1", typeChild);
+		var art2 = resolver.createInstance(NS+"art1", typeChild);
+		var artMap = art1.getTypedProperty(mapOfString.getId(), MapWrapper.class);
+		assertThrows(IllegalArgumentException.class, () -> artMap.put("key1", art2));
+		
+		Map<String, String> resultMap = art1.getTypedProperty(mapOfString.getId(), Map.class);
+		assertNull(resultMap.get("unusedkey"));
+	}
+	
+	@Test
+	void testStreamEntries() {
+		var art1 = resolver.createInstance(NS+"art1", typeChild);
+		var artMap = art1.getTypedProperty(mapOfString.getId(), MapWrapper.class);
+		var values = List.of("1", "2", "3");
+		var keys = List.of("Key1", "Key2", "Key3");
+		artMap.put(keys.get(0), values.get(0));
+		artMap.put(keys.get(1), values.get(1));
+		artMap.put(keys.get(2), values.get(2));
+		
+		var artMap2 = art1.getTypedProperty(mapOfString.getId(), MapWrapper.class); // to recreate map
+		assertTrue(artMap2.values().containsAll(values));
+		assertTrue(artMap2.keySet().containsAll(keys));
+	}
+	
+	
+	@Test
 	void setInvalidObjectProperty() {
 		var art1 = resolver.createInstance(NS+"art1", typeChild);
 		var art2 = resolver.createInstance(NS+"art1", typeChild);
-		assertThrows(Exception.class, () -> art1.setSingleProperty(LIST_OF_ART, art2));
-		
+		assertThrows(IllegalArgumentException.class, () -> art1.setSingleProperty(LIST_OF_ART, art2));	
 	}
+	
+
 }

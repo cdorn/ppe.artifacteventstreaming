@@ -18,6 +18,7 @@ import lombok.Getter;
 
 public class RDFPropertyType implements PPEPropertyType {
 
+
 	@Getter
 	private final OntRelationalProperty property;
 	private final NodeToDomainResolver resolver;
@@ -129,7 +130,10 @@ public class RDFPropertyType implements PPEPropertyType {
 	}
 
 
-
+	@Override
+	public String toString() {
+		return "RDFPropertyType [" + property.getLocalName() + " [" + cardinality + "] of type=" + valueType.getName();
+	}
 
 
 	/// not needed below

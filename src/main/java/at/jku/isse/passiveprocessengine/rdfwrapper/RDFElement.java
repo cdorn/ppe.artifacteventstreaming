@@ -168,7 +168,7 @@ public class RDFElement {
 	private Object getPropertyAsMap(@NonNull RDFPropertyType prop) {
 		var named = (OntObjectProperty.Named) prop.getProperty();
 		try { // lets not cache anything
-			return new MapWrapper(MapResource.asMapResource(this.element, named, resolver.getMapBase()), resolver);
+			return new MapWrapper(MapResource.asMapResource(this.element, named, resolver.getMapBase(), resolver.resolveTypeToClassOrDatarange(prop.getInstanceType())), resolver);
 		} catch (ResourceMismatchException e) {
 			throw new IllegalArgumentException(e.getMessage());
 		}

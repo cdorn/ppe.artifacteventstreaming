@@ -12,6 +12,7 @@ import org.apache.jena.ontapi.model.OntClass.CardinalityRestriction;
 import org.apache.jena.ontapi.model.OntClass.ValueRestriction;
 import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntObjectProperty;
+import org.apache.jena.ontapi.model.OntObjectProperty.Named;
 import org.apache.jena.ontapi.model.OntProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.Resource;
@@ -58,14 +59,14 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	@Override
 	public PPEPropertyType createListPropertyType(String arg0, PPEInstanceType arg1) {
 		if (BuildInType.isAtomicType(arg1)) {
-			var prop = resolver.getListBase().addLiteralListProperty(this.type, createPropertyURI(arg0), resolver.resolveAtomicInstanceType(arg1));
+			var prop = resolver.getListBase().addLiteralListProperty(this.type, makePropertyURI(arg0), resolver.resolveAtomicInstanceType(arg1));
 			if (prop == null) { 
 				return null;
 			} else {
 				return insertAndReturn(prop);
 			}
 		} else {
-			var prop = resolver.getListBase().addObjectListProperty(this.type, createPropertyURI(arg0), ((RDFInstanceType) arg1).getType());
+			var prop = resolver.getListBase().addObjectListProperty(this.type, makePropertyURI(arg0), ((RDFInstanceType) arg1).getType());
 			if (prop == null) { 
 				return null;
 			} else {
@@ -75,16 +76,16 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	}
 
 	@Override
-	public PPEPropertyType createMapPropertyType(String arg0, PPEInstanceType arg1, PPEInstanceType arg2) {
-		if (BuildInType.isAtomicType(arg1)) {
-			var prop = resolver.getMapBase().addLiteralMapProperty(this.type, createPropertyURI(arg0), resolver.resolveAtomicInstanceType(arg1));
+	public PPEPropertyType createMapPropertyType(String arg0, PPEInstanceType ignored, PPEInstanceType valueType) {
+		if (BuildInType.isAtomicType(valueType)) {
+			var prop = resolver.getMapBase().addLiteralMapProperty(this.type, makePropertyURI(arg0), resolver.resolveAtomicInstanceType(valueType));
 			if (prop == null) { 
 				return null;
 			} else {
 				return insertAndReturn(prop);
 			}
 		} else {
-			var prop = resolver.getMapBase().addObjectMapProperty(this.type, createPropertyURI(arg0), ((RDFInstanceType) arg1).getType());
+			var prop = resolver.getMapBase().addObjectMapProperty(this.type, makePropertyURI(arg0), ((RDFInstanceType) valueType).getType());
 			if (prop == null) { 
 				return null;
 			} else {
@@ -95,29 +96,30 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 
 	@Override
 	public PPEPropertyType createSetPropertyType(String arg0, PPEInstanceType arg1) {
-		var propUri = createPropertyURI(arg0);
+		OntRelationalProperty prop = createBasePropertyType(arg0, arg1);
+		if (prop != null) {
+			return insertAndReturn(prop);
+		} else
+			return null;
+	}
+	
+	private OntRelationalProperty createBasePropertyType(String arg0, PPEInstanceType arg1) {
+		var propUri = makePropertyURI(arg0);
 		if (BuildInType.isAtomicType(arg1)) {
 			if (this.element.getModel().getDataProperty(propUri) != null)
 				return null;
 			var prop = this.element.getModel().createDataProperty(propUri);
 			prop.addRange(resolver.resolveAtomicInstanceType(arg1));
 			prop.addDomain(this.type);	
-			return insertAndReturn(prop);
+			return prop;
 		} else {
 			if (this.element.getModel().getObjectProperty(propUri) != null)
 				return null;
-			var prop = this.element.getModel().createObjectProperty(createPropertyURI(arg0));
+			var prop = this.element.getModel().createObjectProperty(propUri);
 			prop.addRange(((RDFInstanceType) arg1).getType());
 			prop.addDomain(this.type);	
-			return insertAndReturn(prop);
+			return prop;
 		}
-	}
-
-	private String createPropertyURI(String localName) {
-		if (Uri.isValid(localName))
-			return localName;
-		else 
-			return this.element.getURI()+"#"+localName;
 	}
 	
 	private PPEPropertyType insertAndReturn(OntRelationalProperty prop) {
@@ -128,17 +130,18 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 
 	@Override
 	public PPEPropertyType createSinglePropertyType(String arg0, PPEInstanceType arg1) {
-		PPEPropertyType propType = createSetPropertyType(arg0, arg1);
-		if (propType == null)
-			return propType;
-		if (BuildInType.isAtomicType(arg1)) {
-			var maxOneProp = this.element.getModel().createDataMaxCardinality((OntDataProperty) ((RDFPropertyType) propType).getProperty(), 1, null);
-			this.type.addSuperClass(maxOneProp);		
-			return propType;
-		} else {
-			var maxOneProp = this.element.getModel().createObjectMaxCardinality((OntObjectProperty) ((RDFPropertyType) propType).getProperty(), 1, null);
-			this.type.addSuperClass(maxOneProp);		
-			return propType;
+		var prop = createBasePropertyType(arg0, arg1);
+		if (prop == null)
+			return null;
+		else {
+			if (BuildInType.isAtomicType(arg1)) {
+				var maxOneProp = this.element.getModel().createDataMaxCardinality((OntDataProperty) prop, 1, null);
+				this.type.addSuperClass(maxOneProp);		
+			} else {
+				var maxOneProp = this.element.getModel().createObjectMaxCardinality((OntObjectProperty) prop, 1, null);
+				this.type.addSuperClass(maxOneProp);		
+			}
+			return insertAndReturn(prop);
 		}
 	}
 
@@ -166,9 +169,9 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	}
 
 	@Override
-	public PPEPropertyType getPropertyType(String arg0) {
+	public PPEPropertyType getPropertyType(String uri) {
 		var optProp = type.asNamed().declaredProperties()
-			.filter(prop -> prop.getLocalName().equals(arg0))
+			.filter(prop -> prop.getURI().equals(uri))
 			.filter(OntRelationalProperty.class::isInstance)
 			.map(OntRelationalProperty.class::cast)
 			.findFirst();

@@ -8,11 +8,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.jena.datatypes.RDFDatatype;
+import org.apache.jena.ontapi.model.OntClass;
+import org.apache.jena.ontapi.model.OntDataRange;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntObjectProperty.Named;
+import org.apache.jena.ontapi.model.OntClass.CardinalityRestriction;
+import org.apache.jena.ontapi.model.OntClass.ValueRestriction;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Statement;
 
@@ -21,23 +26,33 @@ public class MapResource implements Map<String, RDFNode> {
 	private final OntObject mapOwner;
 	private final OntObjectProperty.Named mapEntryProperty;	
 	private final Map<String, Statement> map = new HashMap<>();
-	private final OntModel model;
+	private final OntClass objectType;
+	private final RDFDatatype literalType;
 	private final MapResourceType mapType;
 	
-	private MapResource(OntObject mapOwner, Named mapEntryProperty, MapResourceType mapType) {
+	private MapResource(OntObject mapOwner, Named mapEntryProperty, MapResourceType mapType, OntObject classOrDataRange) {
 		super();
 		this.mapType = mapType;
 		this.mapOwner = mapOwner;
-		this.mapEntryProperty = mapEntryProperty;
-		model = mapOwner.getModel();		
+		this.mapEntryProperty = mapEntryProperty;		
+		if (classOrDataRange instanceof OntClass ontClass) {
+			this.objectType = ontClass;
+			this.literalType = null;
+		} else if (classOrDataRange instanceof OntDataRange ontRange) {
+			this.literalType = ontRange.asNamed().toRDFDatatype();
+			this.objectType = null;
+		} else { // untyped
+			this.literalType = null;
+			this.objectType = null;
+		}
+		
 		init();
 	}
 
-	public static MapResource asMapResource(OntObject mapOwner, OntObjectProperty.Named mapEntryProperty, MapResourceType mapType) throws ResourceMismatchException {
+	public static MapResource asMapResource(OntObject mapOwner, OntObjectProperty.Named mapEntryProperty, MapResourceType mapType, OntObject classOrDataRange) throws ResourceMismatchException {
 		
 		if (mapType.isMapEntrySubclass(mapEntryProperty)) {
-			MapResource map = new MapResource(mapOwner, mapEntryProperty, mapType);
-			return map;
+			return new MapResource(mapOwner, mapEntryProperty, mapType, classOrDataRange);
 		}
 		else
 			throw new ResourceMismatchException(String.format("Provided property %s is not in range of a %s", mapEntryProperty.getURI(), MapResourceType.ENTRY_TYPE_URI));		
@@ -103,6 +118,11 @@ public class MapResource implements Map<String, RDFNode> {
 	}
 	
 	public RDFNode put(String key, RDFNode node) {
+		// check if we are actually supposed to put that node into the hashtable
+		if (!isAssignable(node) ) { //&& node.asLiteral()
+			var allowedType = this.literalType!=null ? this.literalType.getURI() : this.objectType.getURI();
+			throw new IllegalArgumentException(String.format("Cannot add %s into a map allowing only values of type %s", node.toString(), allowedType));
+		} 
 		Statement prevStmt = map.remove(key);
 		if (prevStmt != null) {												
 			var newStmt = prevStmt.changeObject(node);
@@ -123,6 +143,34 @@ public class MapResource implements Map<String, RDFNode> {
 			mapOwner.addProperty(mapEntryProperty, entry);
 			return null;
 		}
+	}
+	
+	private boolean isAssignable(RDFNode node) {
+		if (this.literalType != null &&  // with have a literal type, but value is either not a literal, or not a compatible literal
+				(!node.isLiteral() || !literalType.isValidValue(node)) ) 	{
+			return false;
+		} 
+		if (this.objectType != null) {
+			if (node.isLiteral()) { // we have a complex type but provided with a literal
+				return false;
+			}
+			if (!node.asResource().canAs(OntIndividual.class)) {// not a typed resource
+				return false;
+			}
+			var ontInd = node.asResource().as(OntIndividual.class);
+			if (getRegularSuperclasses(ontInd).stream().noneMatch(clazz -> clazz.equals(this.objectType))) {// not a valid subclass
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	private Set<OntClass> getRegularSuperclasses(OntIndividual ind) {
+		return ind.classes(true).flatMap(type -> type.superClasses()
+											.filter(superClass -> !(superClass instanceof CardinalityRestriction))
+											.filter(superClass -> !(superClass instanceof ValueRestriction))
+											  )
+						.collect(Collectors.toSet());
 	}
 
 	@Override

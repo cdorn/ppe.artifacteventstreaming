@@ -90,6 +90,8 @@ class TestRDFPropertyType {
 		artifactType.addSuperClass(maxOneKey);		
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
+		artifactType.superClasses().forEach(superType -> System.out.println(superType));
+		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
 		assertEquals("other", propType.getInstanceType().getName());
 	}

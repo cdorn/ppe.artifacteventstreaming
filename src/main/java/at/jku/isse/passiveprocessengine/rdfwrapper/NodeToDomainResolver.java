@@ -122,6 +122,13 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository 
 			return model.getDatatype(XSD.xstring);
 		}
 	}
+	
+	public OntObject resolveTypeToClassOrDatarange(PPEInstanceType type) {
+		if (BuildInType.isAtomicType(type))
+			return resolveAtomicInstanceType(type);
+		else
+			return ((RDFInstanceType)type).getType();
+	}
 
 	/**
 	 * @deprecated
