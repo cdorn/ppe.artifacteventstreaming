@@ -9,6 +9,7 @@ import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.ontapi.model.OntClass.DataAllValuesFrom;
 import org.apache.jena.ontapi.model.OntClass.ObjectAllValuesFrom;
 import org.apache.jena.ontapi.model.OntDataRange;
+import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.StmtIterator;
@@ -35,12 +36,12 @@ public class ListResourceType {
 	}
 	
 	private OntClass createListBaseClass() {
-		OntClass listType = m.createOntClass(LIST_BASETYPE_URI);
+		//		OntClass listType = m.createOntClass(LIST_BASETYPE_URI);
 		OntClass superClass = m.getOntClass(RDF.Seq);
 		if (superClass == null)
 			superClass = m.createOntClass(RDF.Seq.getURI());
-		listType.addSuperClass(superClass);		
-		return listType;
+//		listType.addSuperClass(superClass);		
+		return superClass;
 	}
 	
 	
@@ -111,5 +112,9 @@ public class ListResourceType {
 			}
 		}
 		return false;
+	}
+	
+	public boolean isListContainer(OntIndividual ontInd) {
+		return ontInd.classes(true).anyMatch(superClass -> superClass.equals(getListClass()));
 	}
 }

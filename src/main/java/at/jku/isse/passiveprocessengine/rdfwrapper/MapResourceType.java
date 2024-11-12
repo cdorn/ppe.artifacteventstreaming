@@ -3,6 +3,7 @@ package at.jku.isse.passiveprocessengine.rdfwrapper;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntDataRange;
+import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
@@ -114,5 +115,9 @@ public class MapResourceType {
 		}
 		else 
 			return null; //as we cannot guarantee that the property that was identified is an OntObjectProperty
+	}
+	
+	public boolean isMapEntry(OntIndividual ontInd) {
+		return ontInd.classes(false).anyMatch(superClass -> superClass.equals(getMapEntryClass()));
 	}
 }
