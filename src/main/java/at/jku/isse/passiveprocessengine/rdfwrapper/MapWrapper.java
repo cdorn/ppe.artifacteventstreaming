@@ -21,16 +21,16 @@ public class MapWrapper extends TypedCollectionResource implements Map<String, O
 	}
 
 	public Object get(Object key) {
-		return fromRDF(delegate.get(key));
+		return resolver.convertFromRDF(delegate.get(key));
 	}
 
 	public Object remove(Object key) {
 		var node = delegate.remove(key);
-		return fromRDF(node);
+		return resolver.convertFromRDF(node);
 	}
 
 	public Object put(String key, Object obj) {		
-		var node = convertToRDF(obj);		
+		var node = resolver.convertToRDF(obj);		
 		if (!isAssignable(node) ) { //&& node.asLiteral()
 			var allowedType = this.literalType!=null ? this.literalType.getURI() : this.objectType.getURI();
 			throw new IllegalArgumentException(String.format("Cannot add %s into a map allowing only values of type %s", node.toString(), allowedType));
@@ -38,7 +38,7 @@ public class MapWrapper extends TypedCollectionResource implements Map<String, O
 
 		var old = delegate.put(key, node);
 		if (old != null) {
-			return fromRDF(old);
+			return resolver.convertFromRDF(old);
 		} else
 			return null;
 
@@ -76,12 +76,12 @@ public class MapWrapper extends TypedCollectionResource implements Map<String, O
 	}
 
 	public Collection<Object> values() {
-		return delegate.values().stream().map(node -> fromRDF(node)).toList();
+		return delegate.values().stream().map(node -> resolver.convertFromRDF(node)).toList();
 	}
 
 	public Set<Entry<String, Object>> entrySet() {
 		return delegate.entrySet().stream()
-				.map(entry ->  new AbstractMap.SimpleEntry<String, Object>(entry.getKey(), fromRDF(entry.getValue())))
+				.map(entry ->  new AbstractMap.SimpleEntry<String, Object>(entry.getKey(), resolver.convertFromRDF(entry.getValue())))
 				.collect(Collectors.toSet());	
 	}
 

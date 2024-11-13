@@ -16,6 +16,7 @@ import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.Test;
 
 import at.jku.isse.passiveprocessengine.core.PPEInstance;
+import at.jku.isse.passiveprocessengine.rdfwrapper.ListWrapper;
 import at.jku.isse.passiveprocessengine.rdfwrapper.MapWrapper;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
 
@@ -38,7 +39,7 @@ public class TestRDFMapWrapper extends TestRDFInstance {
 		var art2 = resolver.createInstance(NS+"art2", typeChild);
 		var base3 = resolver.createInstance(NS+"art3", typeBase);
 		var artMap = art1.getTypedProperty(mapOfArt.getId(), MapWrapper.class);
-		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
+//		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
 		artMap.put("key1", art2);
 		artMap.put("key3", base3);
 		
@@ -50,6 +51,7 @@ public class TestRDFMapWrapper extends TestRDFInstance {
 		assertEquals(base3, entry3);
 		
 		assertNull(resultMap.get("unusedkey"));
+		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
 	}
 	
 	@Test
@@ -151,5 +153,21 @@ public class TestRDFMapWrapper extends TestRDFInstance {
 			assertNull(artMap3.remove(keys.get(1)));
 			
 			assertTrue(artMap3.containsValue(art5));
+	}
+	
+	@Test
+	void testViaDirectAccess() {
+		var art1 = resolver.createInstance(NS+"art1", typeChild);
+		var art2 = resolver.createInstance(NS+"art2", typeChild);
+		
+		art1.put(mapOfArt.getId(), "key", art2);
+		var objectMap = art1.getTypedProperty(mapOfArt.getId(), Map.class);
+		assertTrue(objectMap.containsValue(art2));
+		
+		
+		art1.put(mapOfString.getId(), "key", "Test");
+		var stringMap = art1.getTypedProperty(mapOfString.getId(), Map.class);
+		assertTrue(stringMap.containsValue("Test"));
+		
 	}
 }

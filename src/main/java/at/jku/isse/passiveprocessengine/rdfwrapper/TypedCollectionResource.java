@@ -46,22 +46,4 @@ public abstract class TypedCollectionResource {
 		}
 		return true;
 	}
-	
-	protected Object fromRDF(RDFNode possiblyNull) {
-		if (possiblyNull == null)
-			return null;
-		if (possiblyNull.isLiteral()) {
-			return possiblyNull.asLiteral().getValue();
-		} else {
-			return resolver.resolveToRDFElement(possiblyNull.asResource());
-		}
-	}
-	
-	protected 	RDFNode convertToRDF(Object e) {
-		if (e instanceof RDFElement rdfEl) {
-			return rdfEl.getElement();
-		} else { // a literal
-			return resolver.getModel().createTypedLiteral(e);
-		}
-	}
 }

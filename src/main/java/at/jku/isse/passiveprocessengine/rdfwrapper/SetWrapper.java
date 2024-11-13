@@ -33,7 +33,7 @@ public class SetWrapper extends TypedCollectionResource implements Set<Object> {
 	
 	@Override
 	public boolean remove(Object o) {				
-		var node = convertToRDF(o); 		
+		var node = resolver.convertToRDF(o); 		
 		var oldValue = setOwner.hasProperty(setProperty, node);
 		setOwner.remove(setProperty, node);
 		return oldValue;	
@@ -65,7 +65,7 @@ public class SetWrapper extends TypedCollectionResource implements Set<Object> {
 	}
 
 	public boolean contains(Object o) {
-		var node = convertToRDF(o);
+		var node = resolver.convertToRDF(o);
 		return setOwner.hasProperty(setProperty, node);
 	}
 
@@ -82,7 +82,7 @@ public class SetWrapper extends TypedCollectionResource implements Set<Object> {
 	}
 
 	public boolean add(Object e) {
-		var node = convertToRDF(e);
+		var node = resolver.convertToRDF(e);
 		if (!isAssignable(node) ) { 
 			var allowedType = this.literalType!=null ? this.literalType.getURI() : this.objectType.getURI();
 			throw new IllegalArgumentException(String.format("Cannot add %s into a set allowing only values of type %s", node.toString(), allowedType));

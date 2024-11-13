@@ -293,6 +293,24 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository 
 	public OntModel getModel() {
 		return model;
 	}
+
+	protected Object convertFromRDF(RDFNode possiblyNull) {
+		if (possiblyNull == null)
+			return null;
+		if (possiblyNull.isLiteral()) {
+			return possiblyNull.asLiteral().getValue();
+		} else {
+			return resolveToRDFElement(possiblyNull.asResource());
+		}
+	}
+
+	protected 	RDFNode convertToRDF(Object e) {
+		if (e instanceof RDFElement rdfEl) {
+			return rdfEl.getElement();
+		} else { // a literal
+			return getModel().createTypedLiteral(e);
+		}
+	}
 	
 	
 }

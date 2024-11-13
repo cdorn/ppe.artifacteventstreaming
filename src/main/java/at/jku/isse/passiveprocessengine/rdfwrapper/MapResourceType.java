@@ -7,6 +7,7 @@ import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
+import org.apache.jena.sparql.pfunction.library.container;
 import org.apache.jena.vocabulary.XSD;
 
 import lombok.Getter;
@@ -21,6 +22,7 @@ public class MapResourceType {
 	public static final String KEY_PROPERTY = MAP_NS+"key";
 	public static final String LITERAL_VALUE_PROPERTY_URI = MAP_NS+LITERAL_VALUE;
 	public static final String OBJECT_VALUE_PROPERTY_URI = MAP_NS+OBJECT_VALUE;
+	private static final String CONTAINER_PROPERTY_URI = MAP_NS+"containerRef";
 	
 	@Getter
 	private final OntDataProperty keyProperty;
@@ -28,6 +30,8 @@ public class MapResourceType {
 	private final OntDataProperty literalValueProperty;
 	@Getter
 	private final OntObjectProperty.Named objectValueProperty;
+	@Getter
+	private final OntObjectProperty containerProperty;
 	@Getter
 	private final OntClass mapEntryClass;
 	private final OntModel m;
@@ -38,6 +42,7 @@ public class MapResourceType {
 		keyProperty = createKeyProperty();
 		literalValueProperty = createLiteralValueProperty();
 		objectValueProperty = createObjectValueProperty();
+		containerProperty = createContainerProperty();
 			
 	}
 	
@@ -63,6 +68,10 @@ public class MapResourceType {
 		OntObjectProperty.Named objectValueProp = m.createObjectProperty(OBJECT_VALUE_PROPERTY_URI);
 		objectValueProp.addDomain(mapEntryClass);
 		return objectValueProp;
+	}
+	
+	private OntObjectProperty createContainerProperty() {
+		return m.createObjectProperty(CONTAINER_PROPERTY_URI);
 	}
 	
 	public static boolean isEntryProperty(OntRelationalProperty property) {

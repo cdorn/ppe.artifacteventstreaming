@@ -106,6 +106,7 @@ public class MapResource implements Map<String, RDFNode> {
 			return getValueFromStatement(prevStmt);
 		} else {
 			OntIndividual entry = mapType.getMapEntryClass().createIndividual(); //FIXME: we should create a childclass instance, not from the base class, but could work
+			addBackReference(entry);
 			entry.addLiteral(mapType.getKeyProperty(), key);
 			Statement newStmt = null;
 			if (node.isLiteral()) {
@@ -121,6 +122,9 @@ public class MapResource implements Map<String, RDFNode> {
 		}
 	}
 
+	private void addBackReference(OntIndividual entry) {
+		entry.addProperty(mapType.getContainerProperty().asProperty(), this.mapOwner);
+	}
 
 	@Override
 	public int size() {

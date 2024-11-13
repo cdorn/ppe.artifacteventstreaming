@@ -48,6 +48,7 @@ class TestRDFSetWrapper extends TestRDFInstance {
 		assertTrue(values.size() > 2);
 		
 		RDFInstance art1 = (RDFInstance) resolver.createInstance(NS+"art1", typeBase);
+		
 		var set = art1.getTypedProperty(propUri, SetWrapper.class);
 		printProperties(art1.getInstance(), propUri);		
 		assertTrue(set.isEmpty());
@@ -91,6 +92,23 @@ class TestRDFSetWrapper extends TestRDFInstance {
 		assertTrue(set8.isEmpty());						
 	}
 
+	
+	@Test
+	void testViaDirectAccess() {
+		var art1 = resolver.createInstance(NS+"art1", typeBase);
+		var art2 = resolver.createInstance(NS+"art2", typeChild);
+		
+		art1.add(setOfArt.getId(), art2);
+		var objectSet = art1.getTypedProperty(setOfArt.getId(), SetWrapper.class);
+		assertTrue(objectSet.contains(art2));
+		
+		
+		art1.add(setOfString.getId(), "Test");
+		var stringSet = art1.getTypedProperty(setOfString.getId(), SetWrapper.class);
+		assertTrue(stringSet.contains("Test"));
+		
+	}
+	
 	@Test
 	void testCatchWrongType() {
 		var art1 = resolver.createInstance(NS+"art1", typeBase);		

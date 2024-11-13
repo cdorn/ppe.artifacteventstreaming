@@ -68,7 +68,7 @@ public class ListWrapper extends TypedCollectionResource implements List<Object>
 	}
 	@Override
 	public boolean add(Object e) {
-		var node = convertToRDF(e);
+		var node = resolver.convertToRDF(e);
 		checkOrThrow(node);
 		listContent.add(node);							
 		return true;
@@ -126,13 +126,13 @@ public class ListWrapper extends TypedCollectionResource implements List<Object>
 	@Override
 	public Object get(int index) {
 		var content = listContent.getObject(index+1); //RDF lists are 1-based
-		return fromRDF(content);
+		return resolver.convertFromRDF(content);
 	}
 	
 	@Override
 	public Object set(int index, Object e) {
 		var priorObj = get(index);
-		var node = convertToRDF(e);
+		var node = resolver.convertToRDF(e);
 		checkOrThrow(node);
 		listContent.set(index+1, node);	
 		return priorObj;
@@ -140,7 +140,7 @@ public class ListWrapper extends TypedCollectionResource implements List<Object>
 	
 	@Override
 	public void add(int index, Object e) {		
-		var node = convertToRDF(e);
+		var node = resolver.convertToRDF(e);
 		checkOrThrow(node);
 		listContent.add(index+1, node);	
 	}

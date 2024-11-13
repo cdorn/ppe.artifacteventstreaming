@@ -1,6 +1,7 @@
 package at.jku.isse.passiveprocessengine.rdfwrapper;
 
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -28,7 +29,9 @@ import at.jku.isse.passiveprocessengine.core.PPEInstance;
 import at.jku.isse.passiveprocessengine.core.ProcessInstanceChangeListener;
 import at.jku.isse.passiveprocessengine.core.PropertyChange;
 import at.jku.isse.passiveprocessengine.core.PropertyChange.Update;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class CommitChangeEventTransformer extends AbstractHandlerBase implements ChangeEventTransformer, CommitHandler {
 
 	private final NodeToDomainResolver resolver;
@@ -87,16 +90,16 @@ public class CommitChangeEventTransformer extends AbstractHandlerBase implements
 	}
 
 	
-	private void dispatchType(RDFNode inst, List<StatementWrapper> stmts) {
+	private void dispatchType(RDFNode node, List<StatementWrapper> stmts) {
 		// determine class or individual
-		if (inst.canAs(OntClass.class))	{
-			OntClass ontClass = inst.as(OntClass.class);
+		if (node.canAs(OntClass.class))	{
+			OntClass ontClass = node.as(OntClass.class);
 			
 			
 			
-		} else if (inst.canAs(OntIndividual.class)) {
-			OntIndividual ontInd = inst.as(OntIndividual.class);			
-			// instance or map (list/seq/bag is not an ont individual?!)
+		} else if (node.canAs(OntIndividual.class)) {
+			OntIndividual ontInd = node.as(OntIndividual.class);			
+			// instance or map (list/seq/bag is an ont individual?!)
 			if (resolver.getMapBase().isMapEntry(ontInd)) {
 				// a map entry was inserted or updated
 				processMapEntry(ontInd, stmts);
@@ -109,7 +112,7 @@ public class CommitChangeEventTransformer extends AbstractHandlerBase implements
 			}
 		} else {
 			//untyped 
-			processUntypedSubject(inst, stmts);												
+			processUntypedSubject(node, stmts);												
 		}
 		
 		
@@ -148,13 +151,13 @@ public class CommitChangeEventTransformer extends AbstractHandlerBase implements
 			// should only exist one such resource as we dont share lists across individuals
 			if (iter.hasNext()) {
 				var owner = iter.next().as(OntIndividual.class);
-				RDFInstanceType changeSubject = (RDFInstanceType) resolver.resolveToType(owner);
+				RDFInstance changeSubject = (RDFInstance) resolver.resolveToRDFElement(owner);
 				stmts.stream().forEach(wrapper -> {
 					var res = wrapper.stmt().getResource();
 					if (wrapper.op().equals(OP.ADD)) {
-						new PropertyChange.Add(listProp.getLocalName(), changeSubject, resourceToValue(res));
+						new PropertyChange.Add(listProp.getLocalName(), changeSubject, resolver.convertFromRDF(res));
 					} else {
-						new PropertyChange.Remove(listProp.getLocalName(), changeSubject, resourceToValue(res));
+						new PropertyChange.Remove(listProp.getLocalName(), changeSubject, resolver.convertFromRDF(res));
 					}										
 				});
 			}
@@ -167,14 +170,6 @@ public class CommitChangeEventTransformer extends AbstractHandlerBase implements
 		// adding of a value at pos		
 	}	
 	
-	private Object resourceToValue(Resource res) {
-		if (res.isLiteral()) {
-			return res.asLiteral().getValue();
-		} else {
-			return resolver.resolveToInstance(res);
-		}
-	}
-	
 	private Optional<OntClass> getSeqSubClass(OntIndividual seqInstance) {
 		return seqInstance.classes(true)
 			.filter(superClass -> !superClass.equals(resolver.getListBaseType()))
@@ -183,12 +178,63 @@ public class CommitChangeEventTransformer extends AbstractHandlerBase implements
 	
 	private void processMapEntry(OntIndividual mapEntry, List<StatementWrapper> stmts) {
 		// in any case obtain the owner of the entry
-		
-		// removal of a key + value
+		var owner = mapEntry.getPropertyResourceValue(resolver.getMapBase().getContainerProperty().asProperty());
+		// possible cases: hence either 1 or 3 statements
+		// removal of a key + value + ownerreference
 		// removal of a value
-		// adding of a key + value
+		// adding of a key + value + ownerreference
 		// adding of a new value
+		RDFInstance changeSubject = (RDFInstance) resolver.resolveToRDFElement(owner);
+		var commonProps = findPropertiesBetween(owner, mapEntry);
+		if (commonProps.size() != 1) {
+			log.error(String.format("Cannot unambiguously determine map entry property to use between %s and %s", owner.getURI(), mapEntry.getId()));
+			return;
+		}
+		var prop = commonProps.get(0);
+		if (stmts.size() == 1) {
+			var wrapper = stmts.get(0);
+			var value = resolver.convertFromRDF(wrapper.stmt().getObject());
+			if (wrapper.op().equals(OP.ADD)) {
+				new PropertyChange.Add(prop.getLocalName(), changeSubject, value);
+			} else {
+				new PropertyChange.Remove(prop.getLocalName(), changeSubject, value);
+			}
+		} else if (stmts.size() == 3) {
+			var keyOpt = findFirstStatementAboutProperty(stmts, resolver.getMapBase().getKeyProperty().asProperty());
+			var litValueOpt = findFirstStatementAboutProperty(stmts, resolver.getMapBase().getLiteralValueProperty().asProperty());
+			var objValueOpt = findFirstStatementAboutProperty(stmts, resolver.getMapBase().getObjectValueProperty().asProperty());
+			// we are not interested in back reference
+			if (keyOpt.isEmpty() || (litValueOpt.isEmpty() || objValueOpt.isEmpty())) {
+				log.error("MapEntry change has inconsistent statements, cannot generate change event");
+				return;
+			}
+			var value = resolver.convertFromRDF(litValueOpt.orElse(objValueOpt.get()).getObject());
+			if (stmts.get(0).op().equals(OP.ADD)) { // all statements have to have the same OP, otherwise inconsistent
+				new PropertyChange.Add(prop.getLocalName(), changeSubject, value);
+			} else {
+				new PropertyChange.Remove(prop.getLocalName(), changeSubject, value);
+			}
+			
+		} else {
+			log.error("MapEntry resource received neither 1 or 3 statement changes, something's wrong");
+			return;
+		}
 		
+	}
+	
+	private List<Property> findPropertiesBetween(Resource subject, OntIndividual object) {
+		List<Property> props = new ArrayList<>();
+		var iter = subject.getModel().listStatements(subject, null, object);
+		while (iter.hasNext()) {
+			props.add(iter.next().getPredicate());
+		}
+		return props;
+	}
+	
+	private Optional<Statement> findFirstStatementAboutProperty(List<StatementWrapper> stmts, Property prop) {
+		return stmts.stream().map(wrapper -> wrapper.stmt())
+			.filter(stmt -> stmt.getPredicate().equals(prop))
+			.findAny();
 	}
 	
 	private void processUntypedSubject(RDFNode inst, List<StatementWrapper> stmts) {

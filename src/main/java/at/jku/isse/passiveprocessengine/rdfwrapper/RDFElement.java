@@ -101,7 +101,7 @@ public class RDFElement {
 	}
 	
 	public static Set<OntClass> getSuperTypesAndSuperclasses(OntIndividual ind) {
-		var types = ind.classes(true);		//TODO: perhaps replace this with RDFS Reasoner if this is a performance problem here
+		var types = ind.classes(true);		// perhaps replace this with RDFS Reasoner if this is a performance problem here
 		var superClasses = ind.classes(true).flatMap(type -> type.superClasses()
 											.filter(superClass -> !(superClass instanceof CardinalityRestriction))
 											.filter(superClass -> !(superClass instanceof ValueRestriction))
@@ -233,13 +233,30 @@ public class RDFElement {
 	
 
 	public void put(String property, String key, Object value) {
-		// TODO Auto-generated method stub
-
+		var optProp = resolveToPropertyType(property);
+		if (optProp.isPresent()) {
+			var prop = optProp.get();
+			((Map<String, Object>) getPropertyAsMap(prop)).put(key, value);
+		} else {
+			throw new IllegalArgumentException(String.format("Property %s does not exist on element %s", property, element.getURI()));
+		}
 	}
 
 	public void add(String property, Object value) {
-		// TODO Auto-generated method stub
-
+		var optProp = resolveToPropertyType(property);
+		if (optProp.isPresent()) {
+			var prop = optProp.get();
+			if (prop.getCardinality().equals(CARDINALITIES.LIST)) {
+				((List<Object>) getPropertyAsList(prop)).add(value);
+			} else
+			if (prop.getCardinality().equals(CARDINALITIES.SET)) {
+				((Set<Object>) getPropertyAsSet(prop)).add(value);
+			} else {
+				throw new IllegalArgumentException(String.format("Property %s on element %s cannot be called with add()", property, element.getURI()));
+			}
+		} else {
+			throw new IllegalArgumentException(String.format("Property %s does not exist on element %s", property, element.getURI()));
+		}
 	}
 
 	@Override
