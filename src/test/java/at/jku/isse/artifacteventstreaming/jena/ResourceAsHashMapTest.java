@@ -2,6 +2,7 @@ package at.jku.isse.artifacteventstreaming.jena;
 
 import static at.jku.isse.passiveprocessengine.rdfwrapper.MapResourceType.MAP_NS;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
 import java.util.Map;
 

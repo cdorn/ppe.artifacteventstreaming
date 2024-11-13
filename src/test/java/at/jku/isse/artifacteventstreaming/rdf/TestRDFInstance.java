@@ -27,11 +27,12 @@ import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
 
 public class TestRDFInstance {
 
-	private static final String LIST_OF_ART = "listOfArt";
-	private static final String MAP_OF_ART = "mapOfArt";
-	private static final String PRIORITY = "priority";
-	private static final String PARENT = "parent";
-	public static String NS = "http://at.jku.isse.test#";
+	static final String LIST_OF_ART = "listOfArt";
+	static final String LIST_OF_STRING = "listOfString";
+	static final String MAP_OF_ART = "mapOfArt";
+	static final String PRIORITY = "priority";
+	static final String PARENT = "parent";
+	static String NS = "http://at.jku.isse.test#";
 	static OntModel m;
 	static NodeToDomainResolver resolver;
 	PPEInstanceType typeBase;
@@ -40,6 +41,10 @@ public class TestRDFInstance {
 	PPEPropertyType priority;
 	PPEPropertyType mapOfArt;
 	PPEPropertyType mapOfString;
+	PPEPropertyType listOfArt;
+	PPEPropertyType listOfString;
+	PPEPropertyType setOfArt;
+	PPEPropertyType setOfString;
 	
 	@BeforeEach
 	void setup() {
@@ -52,7 +57,11 @@ public class TestRDFInstance {
 		priority = typeBase.createSinglePropertyType(PRIORITY, BuildInType.INTEGER);
 		mapOfArt = typeChild.createMapPropertyType(MAP_OF_ART, BuildInType.STRING, typeBase);
 		mapOfString = typeChild.createMapPropertyType("mapOfString", BuildInType.STRING, BuildInType.STRING);
-		parent = typeChild.createSinglePropertyType(PARENT, typeBase);
+		parent = typeChild.createSinglePropertyType(PARENT, typeBase);		
+		listOfArt = typeBase.createListPropertyType(LIST_OF_ART, typeChild);
+		listOfString = typeBase.createListPropertyType(LIST_OF_STRING, BuildInType.STRING);
+		setOfArt = typeBase.createSetPropertyType("setofArt", typeChild);
+		setOfString = typeBase.createSetPropertyType("setOfString", BuildInType.STRING);
 	}
 	
 	@Test
@@ -107,64 +116,7 @@ public class TestRDFInstance {
 		assertTrue(resolver.findInstanceById(uri3).isEmpty());
 	}
 	
-	@Test
-	void useObjectPropertyOnInstance() {
-		var art1 = resolver.createInstance(NS+"art1", typeChild);
-		var art2 = resolver.createInstance(NS+"art1", typeChild);
-		art1.setSingleProperty(parent.getId(), art2);
-		
-		var result = art1.getTypedProperty(parent.getId(), PPEInstance.class);
-		assertEquals(result, art2);
-	}
 	
-	@Test
-	void useMapObjectPropertyOnInstance() {
-		var art1 = resolver.createInstance(NS+"art1", typeChild);
-		var art2 = resolver.createInstance(NS+"art1", typeChild);
-		var artMap = art1.getTypedProperty(mapOfArt.getId(), MapWrapper.class);
-		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
-		artMap.put("key1", art2);
-		
-		var resultMap = art1.getTypedProperty(mapOfArt.getId(), Map.class);
-		var entry1 = ((RDFInstance)resultMap.get("key1"));
-		assertEquals(art2, entry1);
-		
-		assertNull(resultMap.get("unusedkey"));
-	}
-	
-	@Test
-	void failOnUseStringMapWithObject() {
-		var art1 = resolver.createInstance(NS+"art1", typeChild);
-		var art2 = resolver.createInstance(NS+"art1", typeChild);
-		var artMap = art1.getTypedProperty(mapOfString.getId(), MapWrapper.class);
-		assertThrows(IllegalArgumentException.class, () -> artMap.put("key1", art2));
-		
-		Map<String, String> resultMap = art1.getTypedProperty(mapOfString.getId(), Map.class);
-		assertNull(resultMap.get("unusedkey"));
-	}
-	
-	@Test
-	void testStreamEntries() {
-		var art1 = resolver.createInstance(NS+"art1", typeChild);
-		var artMap = art1.getTypedProperty(mapOfString.getId(), MapWrapper.class);
-		var values = List.of("1", "2", "3");
-		var keys = List.of("Key1", "Key2", "Key3");
-		artMap.put(keys.get(0), values.get(0));
-		artMap.put(keys.get(1), values.get(1));
-		artMap.put(keys.get(2), values.get(2));
-		
-		var artMap2 = art1.getTypedProperty(mapOfString.getId(), MapWrapper.class); // to recreate map
-		assertTrue(artMap2.values().containsAll(values));
-		assertTrue(artMap2.keySet().containsAll(keys));
-	}
-	
-	
-	@Test
-	void setInvalidObjectProperty() {
-		var art1 = resolver.createInstance(NS+"art1", typeChild);
-		var art2 = resolver.createInstance(NS+"art1", typeChild);
-		assertThrows(IllegalArgumentException.class, () -> art1.setSingleProperty(LIST_OF_ART, art2));	
-	}
 	
 
 }

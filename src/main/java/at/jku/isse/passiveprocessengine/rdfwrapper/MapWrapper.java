@@ -6,38 +6,42 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.rdf.model.RDFNode;
 
 import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
-public class MapWrapper implements Map<String, Object>{
+public class MapWrapper extends TypedCollectionResource implements Map<String, Object>{
 
 	private final MapResource delegate;
-	private final NodeToDomainResolver resolver;
+
+	public MapWrapper(OntObject classOrDataRange, NodeToDomainResolver resolver, MapResource delegate) {
+		super(classOrDataRange, resolver);
+		this.delegate = delegate;
+	}
 
 	public Object get(Object key) {
-		return nodeToObject(delegate.get(key));
+		return fromRDF(delegate.get(key));
 	}
 
 	public Object remove(Object key) {
 		var node = delegate.remove(key);
-		return nodeToObject(node);
+		return fromRDF(node);
 	}
 
-	public Object put(String key, Object node) {
-		if (node instanceof RDFElement rdf) {
-			var old = delegate.put(key, rdf.element);
-			if (old != null) {
-				return resolver.resolveToRDFElement(old);
-			} else
-				return old;
-		}
-		var old = delegate.put(key, resolver.getModel().createTypedLiteral(node));
+	public Object put(String key, Object obj) {		
+		var node = convertToRDF(obj);		
+		if (!isAssignable(node) ) { //&& node.asLiteral()
+			var allowedType = this.literalType!=null ? this.literalType.getURI() : this.objectType.getURI();
+			throw new IllegalArgumentException(String.format("Cannot add %s into a map allowing only values of type %s", node.toString(), allowedType));
+		} 					
+
+		var old = delegate.put(key, node);
 		if (old != null) {
-			return old.asLiteral().getValue();
+			return fromRDF(old);
 		} else
-			return old;
+			return null;
+
 	}
 
 	public int size() {
@@ -56,7 +60,7 @@ public class MapWrapper implements Map<String, Object>{
 		if (value instanceof RDFElement rdf) {
 			return delegate.containsValue(rdf.element);
 		}
-		return delegate.containsValue(value);
+		return delegate.containsValue(resolver.getModel().createTypedLiteral(value));
 	}
 
 	public void putAll(Map<? extends String, ? extends Object> m) {
@@ -72,23 +76,15 @@ public class MapWrapper implements Map<String, Object>{
 	}
 
 	public Collection<Object> values() {
-		return delegate.values().stream().map(node -> nodeToObject(node)).toList();
+		return delegate.values().stream().map(node -> fromRDF(node)).toList();
 	}
 
 	public Set<Entry<String, Object>> entrySet() {
 		return delegate.entrySet().stream()
-				.map(entry ->  new AbstractMap.SimpleEntry<String, Object>(entry.getKey(), nodeToObject(entry.getValue())))
+				.map(entry ->  new AbstractMap.SimpleEntry<String, Object>(entry.getKey(), fromRDF(entry.getValue())))
 				.collect(Collectors.toSet());	
 	}
 
-	private Object nodeToObject(RDFNode node) {
-		if (node == null)
-			return null;
-		if (node.isLiteral()) {
-			return node.asLiteral().getValue();
-		} else {
-			return resolver.resolveToRDFElement(node);
-		}
-	}
-	
+
+
 }

@@ -15,9 +15,16 @@ import org.apache.jena.ontapi.model.OntDataRange;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObject;
+import org.apache.jena.rdf.model.InfModel;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.reasoner.Reasoner;
+import org.apache.jena.reasoner.ReasonerRegistry;
+import org.apache.jena.reasoner.rulesys.RDFSRuleReasonerFactory;
 import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.ReasonerVocabulary;
 import org.apache.jena.vocabulary.XSD;
 
 import at.jku.isse.passiveprocessengine.core.BuildInType;
@@ -33,8 +40,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@RequiredArgsConstructor
 public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository {
+
+	public NodeToDomainResolver(OntModel model) {
+		super();
+		this.model = model;
+		init();		
+	}
 
 	private final OntModel model;
 	@Getter
@@ -44,6 +56,8 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository 
 	
 	private final Map<OntClass, RDFInstanceType> typeIndex = new HashMap<>();	
 	private final Map<OntIndividual, RDFInstance> instanceIndex = new HashMap<>();
+	
+	
 	
 	private void init() {
 		model.classes().forEach(ontClass -> typeIndex.put(ontClass, new RDFInstanceType(ontClass, this)));
@@ -266,14 +280,14 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository 
 			return typeIndex.get(node);
 		} else if (node instanceof OntIndividual) {
 			return instanceIndex.get(node);
-		} else if (node instanceof OntObject obj) {
-			if (obj.canAs(OntClass.class)) {
+		} else if (node.canAs(OntClass.class)) {
 				return typeIndex.get(node);
-			} else {
-				return instanceIndex.get(node);
-			}
-		} else
+		} else if (node.canAs(OntIndividual.class)) {
+				return instanceIndex.get(node);			
+		} else {			
+			log.error("Cannot resolve resource node to RDFELement: "+node.toString());
 			return null;
+		}
 	}
 
 	public OntModel getModel() {

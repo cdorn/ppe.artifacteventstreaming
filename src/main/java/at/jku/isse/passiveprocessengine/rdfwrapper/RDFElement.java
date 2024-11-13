@@ -5,10 +5,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import org.apache.jena.ontapi.model.OntClass;
+import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
+import org.apache.jena.ontapi.model.OntClass.CardinalityRestriction;
+import org.apache.jena.ontapi.model.OntClass.ValueRestriction;
 import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.vocabulary.RDF;
 
@@ -71,13 +77,36 @@ public class RDFElement {
 	
 
 	public PPEInstanceType getInstanceType() {
-		var stmt = element.getProperty(RDF.type); // for now an arbitrary one of there are multiple ones
-		//FIXME: get all classes and filter out restrictions!
+		if (element.canAs(OntClass.class)) {
+			var optType = element.as(OntClass.class).superClasses(true)
+					.filter(superClass -> !(superClass instanceof CardinalityRestriction))
+					.filter(superClass -> !(superClass instanceof ValueRestriction))
+					.findFirst();
+			if (optType.isPresent()) {
+				return resolver.resolveToType(optType.get());
+			}
+		} else if(element.canAs(OntIndividual.class)) {
+			var optType = element.as(OntIndividual.class).classes(true).findFirst();
+			if (optType.isPresent()) {
+				return resolver.resolveToType(optType.get());
+			}
+		}
+		// else we treat as untyped		
+		var stmt = element.getProperty(RDF.type); // for now an arbitrary one of there are potentially multiple ones		
 		if (stmt != null) {
 			var node = stmt.getObject();
 			return resolver.resolveToType(node);
 		}
 		return null;
+	}
+	
+	public static Set<OntClass> getSuperTypesAndSuperclasses(OntIndividual ind) {
+		var types = ind.classes(true);		//TODO: perhaps replace this with RDFS Reasoner if this is a performance problem here
+		var superClasses = ind.classes(true).flatMap(type -> type.superClasses()
+											.filter(superClass -> !(superClass instanceof CardinalityRestriction))
+											.filter(superClass -> !(superClass instanceof ValueRestriction))
+											  );
+		return Stream.concat(types, superClasses).collect(Collectors.toSet());
 	}
 
 	/**
@@ -168,7 +197,7 @@ public class RDFElement {
 	private Object getPropertyAsMap(@NonNull RDFPropertyType prop) {
 		var named = (OntObjectProperty.Named) prop.getProperty();
 		try { // lets not cache anything
-			return new MapWrapper(MapResource.asMapResource(this.element, named, resolver.getMapBase(), resolver.resolveTypeToClassOrDatarange(prop.getInstanceType())), resolver);
+			return new MapWrapper(resolver.resolveTypeToClassOrDatarange(prop.getInstanceType()), resolver, MapResource.asMapResource(this.element, named, resolver.getMapBase()));
 		} catch (ResourceMismatchException e) {
 			throw new IllegalArgumentException(e.getMessage());
 		}
@@ -176,16 +205,11 @@ public class RDFElement {
 
 	private Object getPropertyAsList(@NonNull RDFPropertyType prop) {
 		var named = (OntObjectProperty.Named) prop.getProperty();
-		return new ListWrapper(this.element, named, resolver);
+		return new ListWrapper(this.element, named, resolver, resolver.resolveTypeToClassOrDatarange(prop.getInstanceType()));
 	}
 	
 	private Object getPropertyAsSet(@NonNull RDFPropertyType prop) {
-		if (BuildInType.isAtomicType(prop.getInstanceType()) ) { // then a set of literals
-			
-		} else { //set of elements
-			
-		}
-		return null;
+		return new SetWrapper(this.element, prop.getProperty(), resolver, resolver.resolveTypeToClassOrDatarange(prop.getInstanceType()));
 	}
 
 	private Object getSingleProperty(@NonNull RDFPropertyType prop) {
@@ -216,5 +240,10 @@ public class RDFElement {
 	public void add(String property, Object value) {
 		// TODO Auto-generated method stub
 
+	}
+
+	@Override
+	public String toString() {
+		return "RDFElement [" + element.getURI() + "]";
 	}
 }

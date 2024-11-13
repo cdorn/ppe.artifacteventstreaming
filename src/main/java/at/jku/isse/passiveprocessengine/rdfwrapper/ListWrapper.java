@@ -13,17 +13,20 @@ import java.util.stream.StreamSupport;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty.Named;
+import org.apache.jena.rdf.model.NodeIterator;
+import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Seq;
 
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 
-public class ListWrapper implements List<Object> {
+public class ListWrapper extends TypedCollectionResource implements List<Object> {
 
 	private final NodeToDomainResolver resolver;
 	private final Seq listContent;
 	
-	public ListWrapper(@NonNull OntObject owner, @NonNull Named listReferenceProperty, @NonNull NodeToDomainResolver resolver) {
-		super();
+	public ListWrapper(@NonNull OntObject owner, @NonNull Named listReferenceProperty, @NonNull NodeToDomainResolver resolver, OntObject classOrDataRange) {
+		super(classOrDataRange, resolver);
 		this.resolver = resolver;
 		var seq = owner.getPropertyResourceValue(listReferenceProperty);
 		if( seq == null || seq.canAs(Seq.class)) {
@@ -57,7 +60,7 @@ public class ListWrapper implements List<Object> {
 	}
 	@Override
 	public Object[] toArray() {
-		return this.stream().toArray(Object[]::new);
+		throw new RuntimeException("Not supported");
 	}
 	@Override
 	public <T> T[] toArray(T[] a) {
@@ -65,18 +68,17 @@ public class ListWrapper implements List<Object> {
 	}
 	@Override
 	public boolean add(Object e) {
-		if (e instanceof RDFElement rdfEl) {
-			listContent.add(rdfEl.getElement());
-		} else { // a literal
-			listContent.add(listContent.getModel().createTypedLiteral(e));
-		}
+		var node = convertToRDF(e);
+		checkOrThrow(node);
+		listContent.add(node);							
 		return true;
 	}
+	
 	@Override
 	public boolean remove(Object o) {
-		int pos = this.indexOf(listContent);
-		if (pos > 0) {
-			listContent.remove(pos);
+		int pos = this.indexOf(o);
+		if (pos >= 0) {
+			listContent.remove(pos+1);
 			return true;
 		} else {
 			return false;
@@ -115,41 +117,41 @@ public class ListWrapper implements List<Object> {
 			.filter(result -> result) // for true results
 			.count() > 0; // count them, 
 	}
+	
 	@Override
 	public void clear() {
 		listContent.removeProperties();
 	}
+	
 	@Override
 	public Object get(int index) {
-		var content = listContent.getObject(index);
-		if (content != null) {
-			if (content.isLiteral()) {
-				return content.asLiteral().getValue();
-			} else {
-				return resolver.resolveToRDFElement(content.asResource());
-			}
-		} else 
-			return null;
+		var content = listContent.getObject(index+1); //RDF lists are 1-based
+		return fromRDF(content);
 	}
 	
 	@Override
 	public Object set(int index, Object e) {
 		var priorObj = get(index);
-		if (e instanceof RDFElement rdfEl) {
-			listContent.set(index+1, rdfEl.getElement());
-		} else { // a literal
-			listContent.set(index+1, listContent.getModel().createTypedLiteral(e));
-		}
+		var node = convertToRDF(e);
+		checkOrThrow(node);
+		listContent.set(index+1, node);	
 		return priorObj;
 	}
+	
 	@Override
-	public void add(int index, Object e) {
-		if (e instanceof RDFElement rdfEl) {
-			listContent.add(index+1, rdfEl.getElement());
-		} else { // a literal
-			listContent.add(index+1, listContent.getModel().createTypedLiteral(e));
-		}
+	public void add(int index, Object e) {		
+		var node = convertToRDF(e);
+		checkOrThrow(node);
+		listContent.add(index+1, node);	
 	}
+	
+	private void checkOrThrow(RDFNode node) {
+		if (!isAssignable(node) ) { //&& node.asLiteral()
+			var allowedType = this.literalType!=null ? this.literalType.getURI() : this.objectType.getURI();
+			throw new IllegalArgumentException(String.format("Cannot add %s into a list allowing only values of type %s", node.toString(), allowedType));
+		}			
+	}
+	
 	@Override
 	public Object remove(int index) {
 		var priorObj = get(index);
@@ -179,11 +181,12 @@ public class ListWrapper implements List<Object> {
 	@Override
 	public List<Object> subList(int fromIndex, int toIndex) {
 		List<Object> sublist = new LinkedList<>();
-		for (int i = fromIndex+1 ; i < toIndex+1;  i++ ) {
-			sublist.add(get(i));
+		for (int i = fromIndex ; i < toIndex;  i++ ) {
+			sublist.add(get(i)); // no need to incl index as get(index) will do that to 1-based index
 		}
 		return sublist;
 	}
+	
 	@Override
 	public Stream<Object> stream() {
 		var iter = this.iterator();
@@ -191,6 +194,26 @@ public class ListWrapper implements List<Object> {
 		return StreamSupport.stream(iterable.spliterator(), false);
 	}
 	
-	
+	@RequiredArgsConstructor
+	public static class IteratorWrapper implements Iterator<Object>{
+
+		private final NodeIterator delegate;
+		private final NodeToDomainResolver resolver;
+		
+		@Override
+		public boolean hasNext() {
+			return delegate.hasNext();
+		}
+
+		@Override
+		public Object next() {
+			RDFNode nextNode = delegate.next();
+			if (nextNode.isLiteral())
+				return nextNode.asLiteral().getValue();
+			else
+				return resolver.resolveToRDFElement(nextNode);
+		}
+
+	}
 	
 }
