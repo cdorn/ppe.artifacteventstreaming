@@ -22,17 +22,16 @@ import lombok.RequiredArgsConstructor;
 
 public class ListWrapper extends TypedCollectionResource implements List<Object> {
 
-	private final NodeToDomainResolver resolver;
 	private final Seq listContent;
 	
 	public ListWrapper(@NonNull OntObject owner, @NonNull Named listReferenceProperty, @NonNull NodeToDomainResolver resolver, OntObject classOrDataRange) {
 		super(classOrDataRange, resolver);
-		this.resolver = resolver;
 		var seq = owner.getPropertyResourceValue(listReferenceProperty);
 		if( seq == null || seq.canAs(Seq.class)) {
 			owner.removeAll(listReferenceProperty);
 			seq = owner.getModel().createSeq(owner.getURI()+"#"+listReferenceProperty.getLocalName());
 			owner.addProperty(listReferenceProperty, seq);
+			seq.addProperty(resolver.getListBase().getContainerProperty().asProperty(), owner);
 		} 
 		this.listContent = seq.as(Seq.class);
 	}

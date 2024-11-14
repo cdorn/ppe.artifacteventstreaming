@@ -285,7 +285,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository 
 		} else if (node.canAs(OntIndividual.class)) {
 				return instanceIndex.get(node);			
 		} else {			
-			log.error("Cannot resolve resource node to RDFELement: "+node.toString());
+			log.warn("Cannot resolve resource node to RDFELement: "+node.toString());
 			return null;
 		}
 	}

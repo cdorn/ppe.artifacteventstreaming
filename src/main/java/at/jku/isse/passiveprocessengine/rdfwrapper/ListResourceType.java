@@ -1,6 +1,8 @@
 package at.jku.isse.passiveprocessengine.rdfwrapper;
 
-import java.net.URI;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Stream;
 
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntModel;
@@ -24,15 +26,20 @@ public class ListResourceType {
 	public static final String OBJECT_LIST_NAME = "#liObject";
 	public static final String LITERAL_LIST_NAME = "#liLiteral";	
 	public static final String LIST_TYPE_NAME = "#list";
+	private static final String CONTAINER_PROPERTY_URI = LIST_NS+"containerRef";
 	public static final Resource LI = ResourceFactory.createResource(RDF.uri+"li");
 	
 	@Getter
+	private final OntObjectProperty containerProperty;
+	@Getter
 	private final OntClass listClass;
 	private final OntModel m;
+
 	
 	public ListResourceType(OntModel model) {		
 		this.m = model;
-		listClass = createListBaseClass();					
+		listClass = createListBaseClass();	
+		containerProperty = createContainerProperty();
 	}
 	
 	private OntClass createListBaseClass() {
@@ -42,7 +49,9 @@ public class ListResourceType {
 		return superClass;
 	}
 	
-	
+	private OntObjectProperty createContainerProperty() {
+		return m.createObjectProperty(CONTAINER_PROPERTY_URI);
+	}
 	
 	public OntObjectProperty addObjectListProperty(OntClass resource, String listPropertyURI, OntClass valueType) {
 		OntModel model = resource.getModel();
@@ -115,4 +124,10 @@ public class ListResourceType {
 	public boolean isListContainer(OntIndividual ontInd) {
 		return ontInd.classes(true).anyMatch(superClass -> superClass.equals(getListClass()));
 	}
+
+	public boolean wasListContainer(List<Resource> delTypes) {
+		return delTypes.stream().anyMatch(type -> type.getURI().equals(getListClass().getURI()) || 
+				getListClass().subClasses(true).map(clazz -> clazz.asResource()).anyMatch(clazz -> clazz.equals(type))  );
+	}
+
 }

@@ -1,5 +1,8 @@
 package at.jku.isse.passiveprocessengine.rdfwrapper;
 
+import java.util.List;
+import java.util.stream.Stream;
+
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntDataRange;
@@ -7,6 +10,8 @@ import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
+import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.sparql.pfunction.library.container;
 import org.apache.jena.vocabulary.XSD;
 
@@ -47,8 +52,7 @@ public class MapResourceType {
 	}
 	
 	private OntClass createMapEntryClass() {
-		OntClass mapType = m.createOntClass(ENTRY_TYPE_URI);
-		return mapType;
+		return m.createOntClass(ENTRY_TYPE_URI);
 	}
 	
 	private OntDataProperty createKeyProperty() {
@@ -128,5 +132,10 @@ public class MapResourceType {
 	
 	public boolean isMapEntry(OntIndividual ontInd) {
 		return ontInd.classes(false).anyMatch(superClass -> superClass.equals(getMapEntryClass()));
+	}
+	
+	public boolean wasMapEntry(List<Resource> delTypes) {
+		return delTypes.stream().anyMatch(type -> type.getURI().equals(getMapEntryClass().getURI()) || 
+				getMapEntryClass().subClasses(true).map(clazz -> clazz.asResource()).anyMatch(clazz -> clazz.equals(type))  );
 	}
 }
