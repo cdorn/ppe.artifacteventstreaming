@@ -21,15 +21,13 @@ public class RDFPropertyType implements PPEPropertyType {
 
 	@Getter
 	private final OntRelationalProperty property;
-	private final NodeToDomainResolver resolver;
 	private final CARDINALITIES cardinality;
 	private final PPEInstanceType valueType;
 
 	public RDFPropertyType(OntRelationalProperty property, NodeToDomainResolver resolver) {
 		super();
 		this.property = property;
-		this.resolver = resolver;
-		Entry<OntObject, CARDINALITIES> entry = extract();
+		Entry<OntObject, CARDINALITIES> entry = determineValueTypeAndCardinality(property, resolver.getMapEntryBaseType(), resolver.getListBaseType());
 		this.cardinality = entry.getValue();
 		this.valueType = resolver.resolveToType(entry.getKey());
 	}
@@ -54,9 +52,9 @@ public class RDFPropertyType implements PPEPropertyType {
 	 * 		if there is no qualification --> LIST (we assume, realized as an rdf:seq)
 	 * 		
 	 */
-	protected Entry<OntObject, CARDINALITIES> extract() {
-		OntObject valueObj;
-		CARDINALITIES cardinality;				
+	public static Entry<OntObject, CARDINALITIES> determineValueTypeAndCardinality(OntRelationalProperty property, OntClass mapEntryBaseType, OntClass listBaseType) {
+		OntObject valueObj = null;
+		CARDINALITIES cardinality = null;				
 		Optional<CardinalityRestriction> optRestriction = property.referringRestrictions()
 				.filter(CardinalityRestriction.class::isInstance)
 				.map(CardinalityRestriction.class::cast)
@@ -67,19 +65,27 @@ public class RDFPropertyType implements PPEPropertyType {
 			Optional<OntClass> optMapEntry = property.ranges()
 					.filter(OntClass.class::isInstance)
 					.map(OntClass.class::cast)
-					.filter(range -> range.hasSuperClass(resolver.getMapEntryBaseType(), true)) //immediate super class
+					.filter(range -> range.hasSuperClass(mapEntryBaseType, true)) //immediate super class
 					.findFirst();
 			if (optMapEntry.isPresent()) { 	// now optMapEntry is a Map that
-				OntRelationalProperty valueProperty = optMapEntry.get().declaredProperties(true)
+				var valueProperty = optMapEntry.get().declaredProperties(true)
 						.filter(OntRelationalProperty.class::isInstance)
 						.map(OntRelationalProperty.class::cast)
-						.filter(prop -> MapResourceType.isEntryProperty(prop))
+						.filter(MapResourceType::isEntryProperty)
 						.filter(prop -> prop.ranges().count() > 0)
-						.findFirst().get();
-				valueObj = valueProperty.ranges().findFirst().get();
+						.findFirst();
+				if (valueProperty.isPresent()) {
+					var valueType = valueProperty.get().ranges().findFirst();
+					if (valueType.isPresent()) {
+						valueObj = valueType.get();
+					}
+				}
 				cardinality = CARDINALITIES.MAP;
 			} else	{				
-					valueObj = property.ranges().findFirst().get(); // always must have exactly one range for our purpose
+				var valueType = property.ranges().findFirst();
+				if (valueType.isPresent()) {
+					valueObj = valueType.get();
+				} // always must have exactly one range for our purpose
 					cardinality = CARDINALITIES.SET;				
 			}
 		} else {
@@ -88,25 +94,36 @@ public class RDFPropertyType implements PPEPropertyType {
 				Optional<OntClass> optList = property.ranges()
 						.filter(OntClass.class::isInstance)
 						.map(OntClass.class::cast)
-						.filter(range -> range.hasSuperClass(resolver.getListBaseType(), true)) //immediate super class
+						.filter(range -> range.hasSuperClass(listBaseType, true)) //immediate super class
 						.findFirst();	
 				if (optList.isPresent()) {
-					//TODO: check for ValueRestriction for case of list
+					// check for ValueRestriction for case of list
 					var listType = optList.get();
-					var valueProperty = listType.declaredProperties(true)
+					var optProperty = listType.declaredProperties(true)
 					.filter(OntRelationalProperty.class::isInstance)
 					.map(OntRelationalProperty.class::cast)
-					.filter(prop -> ListResourceType.isLiProperty(prop))
+					.filter(ListResourceType::isLiProperty)
 					.filter(prop -> prop.ranges().count() > 0)
-					.findFirst().get();
-					valueObj =  valueProperty.ranges().findFirst().get();
+					.findFirst();
+					if (optProperty.isPresent()) {
+						var optObj = optProperty.get().ranges().findFirst();
+						if (optObj.isPresent()) {		
+							valueObj = optObj.get();
+						}
+					}
 					cardinality = CARDINALITIES.LIST;
 				} else {								
-					valueObj = property.ranges().findFirst().get(); // always must have exactly one range for our purpose
+					var valueType = property.ranges().findFirst();
+					if (valueType.isPresent()) {
+						valueObj = valueType.get();
+					} // always must have exactly one range for our purpose
 					cardinality = CARDINALITIES.SINGLE;
 				}
 			} else { // if cardinality great than 1, then we have a set 
-				valueObj = property.ranges().findFirst().get(); // always must have exactly one range for our purpose
+				var valueType = property.ranges().findFirst();
+				if (valueType.isPresent()) {
+					valueObj = valueType.get();
+				} // always must have exactly one range for our purpose
 				cardinality = CARDINALITIES.SET;
 			}
 		}
