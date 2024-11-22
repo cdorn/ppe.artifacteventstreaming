@@ -46,13 +46,16 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository 
 		super();
 		this.model = model;
 		init();		
+		singleType = new SingleResourceType(model);
 	}
 
 	private final OntModel model;
 	@Getter
-	private MapResourceType mapBase;
+	private MapResourceType mapType;
 	@Getter
-	private ListResourceType listBase;
+	private ListResourceType listType;
+	@Getter
+	private SingleResourceType singleType;
 	
 	private final Map<OntClass, RDFInstanceType> typeIndex = new HashMap<>();	
 	private final Map<OntIndividual, RDFInstance> instanceIndex = new HashMap<>();
@@ -102,18 +105,17 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository 
 	}
 	
 	public OntClass getMapEntryBaseType() {
-		if (mapBase == null) {
-			mapBase = new MapResourceType(model);			
+		if (mapType == null) {
+			mapType = new MapResourceType(model);			
 		}
-		return mapBase.getMapEntryClass();
-	}
-
+		return mapType.getMapEntryClass();
+	}	
 
 	public OntClass getListBaseType() {
-		if (listBase == null) {
-			listBase = new ListResourceType(model);
+		if (listType == null) {
+			listType = new ListResourceType(model);
 		}
-		return listBase.getListClass();
+		return listType.getListClass();
 	}
 	
 	public OntDataRange resolveAtomicInstanceType(PPEInstanceType type) {

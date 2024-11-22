@@ -44,7 +44,7 @@ public class RuleDefinitionBuilder {
 		return this;
 	}
 	
-	public RuleDefinition build() throws RuleException {
+	public RDFRuleDefinition build() throws RuleException {
 		if (contextType == null)
 			throw new RuleException("Rule context type must not remain undefined");
 		if (ruleExpression == null)
@@ -55,7 +55,7 @@ public class RuleDefinitionBuilder {
 		}
 		// we create the evaluation type and add as super type the rule definition
 		
-		// treat this a type definition first
+		// treat this as a type definition 
 		var ruleEvalType = factory.getDefinitionType().getModel().createOntClass(ruleURI);
 		ruleEvalType.addSuperClass(factory.getResultBaseType());
 		// then treat this as a instance of definition
@@ -64,7 +64,8 @@ public class RuleDefinitionBuilder {
 		if (description != null)
 			rule.setDescription(description);
 		if (title != null)
-			rule.setTitle(title);
+			rule.setName(title);
+		
 		return rule;
 	}
 }

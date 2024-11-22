@@ -27,10 +27,13 @@ public class ListResourceType {
 	public static final String LITERAL_LIST_NAME = "#liLiteral";	
 	public static final String LIST_TYPE_NAME = "#list";
 	private static final String CONTAINER_PROPERTY_URI = LIST_NS+"containerRef";
+	private static final String LIST_REFERENCE_SUPERPROPERTY_URI = LIST_NS+"listRef";
 	public static final Resource LI = ResourceFactory.createResource(RDF.uri+"li");
 	
 	@Getter
 	private final OntObjectProperty containerProperty;
+	@Getter
+	private final OntObjectProperty listReferenceSuperProperty;
 	@Getter
 	private final OntClass listClass;
 	private final OntModel m;
@@ -40,6 +43,8 @@ public class ListResourceType {
 		this.m = model;
 		listClass = createListBaseClass();	
 		containerProperty = createContainerProperty();
+		listReferenceSuperProperty = m.createObjectProperty(LIST_REFERENCE_SUPERPROPERTY_URI);
+		listReferenceSuperProperty.addRange(listClass);
 	}
 	
 	private OntClass createListBaseClass() {
@@ -50,7 +55,9 @@ public class ListResourceType {
 	}
 	
 	private OntObjectProperty createContainerProperty() {
-		return m.createObjectProperty(CONTAINER_PROPERTY_URI);
+		var prop = m.createObjectProperty(CONTAINER_PROPERTY_URI);
+		prop.addDomain(listClass);
+		return prop;
 	}
 	
 	public OntObjectProperty addObjectListProperty(OntClass resource, String listPropertyURI, OntClass valueType) {

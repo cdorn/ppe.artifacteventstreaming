@@ -27,11 +27,11 @@ public class ListWrapper extends TypedCollectionResource implements List<Object>
 	public ListWrapper(@NonNull OntObject owner, @NonNull Named listReferenceProperty, @NonNull NodeToDomainResolver resolver, OntObject classOrDataRange) {
 		super(classOrDataRange, resolver);
 		var seq = owner.getPropertyResourceValue(listReferenceProperty);
-		if( seq == null || seq.canAs(Seq.class)) {
+		if( seq == null || !seq.canAs(Seq.class)) {
 			owner.removeAll(listReferenceProperty);
 			seq = owner.getModel().createSeq(owner.getURI()+"#"+listReferenceProperty.getLocalName());
 			owner.addProperty(listReferenceProperty, seq);
-			seq.addProperty(resolver.getListBase().getContainerProperty().asProperty(), owner);
+			seq.addProperty(resolver.getListType().getContainerProperty().asProperty(), owner);
 		} 
 		this.listContent = seq.as(Seq.class);
 	}

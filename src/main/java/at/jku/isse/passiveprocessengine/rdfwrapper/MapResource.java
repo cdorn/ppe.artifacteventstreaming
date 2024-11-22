@@ -2,8 +2,10 @@ package at.jku.isse.passiveprocessengine.rdfwrapper;
 
 
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -13,6 +15,7 @@ import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntObjectProperty.Named;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.rdf.model.StmtIterator;
 
 public class MapResource implements Map<String, RDFNode> {	
 
@@ -26,7 +29,7 @@ public class MapResource implements Map<String, RDFNode> {
 		this.mapType = mapType;
 		this.mapOwner = mapOwner;
 		this.mapEntryProperty = mapEntryProperty;		
-		init();
+		loadMap(mapOwner.listProperties(mapEntryProperty), mapType).stream().forEach(entry -> map.put(entry.getKey(), entry.getValue()));
 	}
 
 	public static MapResource asMapResource(OntObject mapOwner, OntObjectProperty.Named mapEntryProperty, MapResourceType mapType) throws ResourceMismatchException {
@@ -40,8 +43,8 @@ public class MapResource implements Map<String, RDFNode> {
 
 	
 	
-	private void init() {		
-		var iter = mapOwner.listProperties(mapEntryProperty);				
+	public static Collection<Entry<String, Statement>> loadMap(StmtIterator iter, MapResourceType mapType) {							
+		List<Entry<String, Statement>> entries = new ArrayList<>();
 		while(iter.hasNext()) {
 			var stmt = iter.next();
 			var entry = stmt.getObject().asResource();
@@ -52,17 +55,18 @@ public class MapResource implements Map<String, RDFNode> {
 				// now access value (this is an untyped map, so literals and resource can be mixed!)
 				var litStmt = entry.getProperty(mapType.getLiteralValueProperty());
 				if (litStmt != null) {
-					map.put(key, litStmt);
+					entries.add(new AbstractMap.SimpleEntry<>(key, litStmt));
 				} else {
 					var refStmt = entry.getProperty(mapType.getObjectValueProperty());
 					if (refStmt != null) {
-						map.put(key, refStmt);
+						entries.add(new AbstractMap.SimpleEntry<>(key, refStmt));
 					}
 				}
 			} else {
 				// not an entry object
 			}
 		}
+		return entries;
 	}
 	
 	private RDFNode getValueFromStatement(Statement stmt) {

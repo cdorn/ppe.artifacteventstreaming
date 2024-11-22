@@ -2,9 +2,10 @@ package at.jku.isse.artifacteventstreaming.rule;
 
 import org.apache.jena.ontapi.model.OntClass;
 
+import at.jku.isse.designspace.rule.arl.evaluator.RuleDefinition;
 import at.jku.isse.designspace.rule.arl.expressions.Expression;
 
-public interface RuleDefinition {
+public interface RDFRuleDefinition extends RuleDefinition<OntClass>{
 	
 	public String getRuleExpression();
 	public void setRuleExpression(String expression);
@@ -12,9 +13,10 @@ public interface RuleDefinition {
 	public boolean hasExpressionError();
 	public void setDescription(String description);
 	public String getDescription();
-	public OntClass getContextType();
+	public OntClass getRDFContextType();
 	Expression<Object> getSyntaxTree();
-	void setTitle(String description);
-	String getTitle();
+	void setName(String title);
+	String getName();
+	OntClass getRuleDefinition();
 }
 

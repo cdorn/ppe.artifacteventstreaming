@@ -37,8 +37,8 @@ class TestRDFPropertyType {
 		resolver = new NodeToDomainResolver(m);
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
-		mapFactory = resolver.getMapBase();
-		listFactory = resolver.getListBase();
+		mapFactory = resolver.getMapType();
+		listFactory = resolver.getListType();
 		artifactType = ((RDFInstanceType) resolver.createNewInstanceType(NS+"artifact")).getType();	
 		otherType =  ((RDFInstanceType) resolver.createNewInstanceType(NS+"other")).getType();	
 		otherType.addProperty(RDFS.label, "other");

@@ -16,6 +16,7 @@ import org.apache.jena.ontapi.model.OntObjectProperty.Named;
 import org.apache.jena.ontapi.model.OntProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.RDFS;
 
 import com.ctc.wstx.shaded.msv_core.util.Uri;
 
@@ -59,14 +60,14 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	@Override
 	public PPEPropertyType createListPropertyType(String arg0, PPEInstanceType arg1) {
 		if (BuildInType.isAtomicType(arg1)) {
-			var prop = resolver.getListBase().addLiteralListProperty(this.type, makePropertyURI(arg0), resolver.resolveAtomicInstanceType(arg1));
+			var prop = resolver.getListType().addLiteralListProperty(this.type, makePropertyURI(arg0), resolver.resolveAtomicInstanceType(arg1));
 			if (prop == null) { 
 				return null;
 			} else {
 				return insertAndReturn(prop);
 			}
 		} else {
-			var prop = resolver.getListBase().addObjectListProperty(this.type, makePropertyURI(arg0), ((RDFInstanceType) arg1).getType());
+			var prop = resolver.getListType().addObjectListProperty(this.type, makePropertyURI(arg0), ((RDFInstanceType) arg1).getType());
 			if (prop == null) { 
 				return null;
 			} else {
@@ -78,14 +79,14 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	@Override
 	public PPEPropertyType createMapPropertyType(String arg0, PPEInstanceType ignored, PPEInstanceType valueType) {
 		if (BuildInType.isAtomicType(valueType)) {
-			var prop = resolver.getMapBase().addLiteralMapProperty(this.type, makePropertyURI(arg0), resolver.resolveAtomicInstanceType(valueType));
+			var prop = resolver.getMapType().addLiteralMapProperty(this.type, makePropertyURI(arg0), resolver.resolveAtomicInstanceType(valueType));
 			if (prop == null) { 
 				return null;
 			} else {
 				return insertAndReturn(prop);
 			}
 		} else {
-			var prop = resolver.getMapBase().addObjectMapProperty(this.type, makePropertyURI(arg0), ((RDFInstanceType) valueType).getType());
+			var prop = resolver.getMapType().addObjectMapProperty(this.type, makePropertyURI(arg0), ((RDFInstanceType) valueType).getType());
 			if (prop == null) { 
 				return null;
 			} else {
@@ -130,16 +131,20 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 
 	@Override
 	public PPEPropertyType createSinglePropertyType(String arg0, PPEInstanceType arg1) {
-		var prop = createBasePropertyType(arg0, arg1);
+		var prop = createBasePropertyType(arg0, arg1);		
 		if (prop == null)
 			return null;
 		else {
+			
 			if (BuildInType.isAtomicType(arg1)) {
 				var maxOneProp = this.element.getModel().createDataMaxCardinality((OntDataProperty) prop, 1, null);
 				this.type.addSuperClass(maxOneProp);		
+				resolver.getSingleType().getSingleLiteralProperty().addSubProperty((OntDataProperty) prop);
+				//prop.addProperty(RDFS.subPropertyOf, resolver.getSingleType().getSingleLiteralProperty());
 			} else {
 				var maxOneProp = this.element.getModel().createObjectMaxCardinality((OntObjectProperty) prop, 1, null);
-				this.type.addSuperClass(maxOneProp);		
+				this.type.addSuperClass(maxOneProp);
+				resolver.getSingleType().getSingleObjectProperty().addSubProperty((OntObjectProperty) prop);
 			}
 			return insertAndReturn(prop);
 		}

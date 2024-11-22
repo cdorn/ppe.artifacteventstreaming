@@ -14,6 +14,7 @@ import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntIndividual.Named;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.ontapi.model.OntProperty;
 import org.apache.jena.rdf.model.Bag;
 import org.apache.jena.rdf.model.InfModel;
 import org.apache.jena.rdf.model.Literal;
@@ -159,8 +160,27 @@ class OntologyModelTest {
 		
 		seq.add(art2);		
 		art1.addProperty(successorProp.asProperty(), seq);
-		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
+		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;		
+	}
+	
+	@Test
+	void testPropertyName() {
+		OntModel m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM );
+		OntClass artifactType = m.createOntClass(NS+"artifact");		
+		var listFactory = new ListResourceType(m);
+		var successorProp = listFactory.addObjectListProperty(artifactType, NS+"hasSuccessor", artifactType);
 		
+		artifactType.declaredProperties().forEach(prop -> System.out.println(prop.getLocalName()));
+		
+		assertTrue(artifactType.declaredProperties()			
+			.map(OntProperty::getLocalName)
+			.anyMatch(name -> name.equals("hasSuccessor")));
+		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;		
+		
+		Reasoner reasoner = ReasonerRegistry.getOWLReasoner();
+		reasoner.bindSchema(m);
+		InfModel infmodel = ModelFactory.createInfModel(reasoner, m);
+		Utils.printValidation(infmodel);
 		
 	}
 }

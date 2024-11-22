@@ -28,6 +28,7 @@ public class MapResourceType {
 	public static final String LITERAL_VALUE_PROPERTY_URI = MAP_NS+LITERAL_VALUE;
 	public static final String OBJECT_VALUE_PROPERTY_URI = MAP_NS+OBJECT_VALUE;
 	private static final String CONTAINER_PROPERTY_URI = MAP_NS+"containerRef";
+	private static final String MAP_REFERENCE_SUPERPROPERTY_URI = MAP_NS+"mapRef";
 	
 	@Getter
 	private final OntDataProperty keyProperty;
@@ -38,22 +39,22 @@ public class MapResourceType {
 	@Getter
 	private final OntObjectProperty containerProperty;
 	@Getter
+	private final OntObjectProperty mapReferenceSuperProperty;
+	
+	@Getter
 	private final OntClass mapEntryClass;
 	private final OntModel m;
 	
 	public MapResourceType(OntModel model) {		
 		this.m = model;
-		mapEntryClass = createMapEntryClass();
+		mapEntryClass = m.createOntClass(ENTRY_TYPE_URI);
 		keyProperty = createKeyProperty();
 		literalValueProperty = createLiteralValueProperty();
 		objectValueProperty = createObjectValueProperty();
-		containerProperty = createContainerProperty();
-			
-	}
-	
-	private OntClass createMapEntryClass() {
-		return m.createOntClass(ENTRY_TYPE_URI);
-	}
+		containerProperty = m.createObjectProperty(CONTAINER_PROPERTY_URI);
+		mapReferenceSuperProperty = m.createObjectProperty(MAP_REFERENCE_SUPERPROPERTY_URI);	
+		mapReferenceSuperProperty.addRange(mapEntryClass);
+	}		
 	
 	private OntDataProperty createKeyProperty() {
 		OntDataProperty keyProp = m.createDataProperty(KEY_PROPERTY);
@@ -74,17 +75,13 @@ public class MapResourceType {
 		return objectValueProp;
 	}
 	
-	private OntObjectProperty createContainerProperty() {
-		return m.createObjectProperty(CONTAINER_PROPERTY_URI);
-	}
-	
 	public static boolean isEntryProperty(OntRelationalProperty property) {
 		// better done via super/subproperty check
 		return property.getLocalName().endsWith(MapResourceType.LITERAL_VALUE) || property.getLocalName().endsWith(MapResourceType.OBJECT_VALUE);
 	}
 	
 	public boolean isMapEntrySubclass(OntObjectProperty.Named mapEntryProperty) {
-		return mapEntryProperty.ranges(true).anyMatch(rangeClass -> rangeClass.equals(mapEntryClass)
+		return  mapEntryProperty.ranges(true).anyMatch(rangeClass -> rangeClass.equals(mapEntryClass)
 				|| rangeClass.hasSuperClass(mapEntryClass, true));
 	}
 	
@@ -103,6 +100,7 @@ public class MapResourceType {
 			OntObjectProperty hasMap = model.createObjectProperty(propertyURI);
 			hasMap.addDomain(resource);
 			hasMap.addRange(mapType);
+			mapReferenceSuperProperty.addSubProperty(hasMap);			
 			return hasMap;
 		}
 		else 

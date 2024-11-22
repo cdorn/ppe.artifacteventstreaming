@@ -5,6 +5,7 @@ import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
+import org.apache.jena.rdf.model.Property;
 import org.apache.jena.riot.protobuf.wire.PB_RDF.RDF_Stream;
 import org.apache.jena.vocabulary.OWL;
 import org.apache.jena.vocabulary.OWL2;
@@ -31,12 +32,11 @@ public class RuleFactory {
 	public static final String ruleHasConsistentResultURI = uri+"ruleHasConsistentResult";
 	public static final String ruleContextElementURI = uri+"ruleContextElement";
 	
-	// usage index
-	public static final String elementInRuleUsageEntryURI = uri+"RuleUsage";
-	public static final String usingPropertyURI = uri+"usingProperty";
-	public static final String usingElementURI = uri+"usingElement";
-	
-	public static final String elementAsContextInRuleReferenceURI = uri+"isContextIn";
+	//both levels:
+	public static final String ruleIsEnabledURI = uri+"isEnabled";
+			
+	// to reference from instance to its use as context in rule evaluations, to know upon instance removal, which evaluations to remove
+	public static final String elementHasRuleScopeURI = uri+"hasRuleScope";
 	
 	
 	private final OntModel model;
@@ -52,13 +52,27 @@ public class RuleFactory {
 	@Getter private OntDataProperty evaluationHasConsistentResultProperty;
 	@Getter private OntObjectProperty contextElementProperty;
 	
+	@Getter private OntDataProperty isEnabledProperty;
+	
+	
+	// usage index
+	public static final String elementInRuleUsageEntryURI = uri+"RuleScopePart"; // type
+	public static final String usingPropertyURI = uri+"usingProperty";
+	public static final String usingElementURI = uri+"usingElement";
+	public static final String usedInRuleURI = uri+"usedInRule";
+	public static final String havingScopeURI = uri+"havingScope";
+	
 	// subclass of Bag
-	@Getter private OntClass usageEntry;
+	@Getter private OntClass ruleScopeCollection;
 	@Getter private OntObjectProperty usingPredicateProperty;
 	@Getter private OntObjectProperty usingElementProperty;
+	@Getter private OntObjectProperty usedInRuleProperty;
 	
-	// additional property on individual for which this rule is the context for
-	@Getter private OntObjectProperty elementIsContextForRule;
+	// used by rule to point to scopeUsageEntry
+	@Getter private OntObjectProperty havingScopePartProperty;
+	
+	// additional property on individual to point to scope
+	@Getter private OntObjectProperty hasRuleScope;
 	
 	public RuleFactory(OntModel model) {
 		super();
@@ -73,8 +87,28 @@ public class RuleFactory {
 		initRuleContextReferenceProperty();
 	}
 
-
-
+	private void initDefinitionType() {
+		definitionType = model.createOntClass(ruleDefinitionURI);
+		
+		expressionProperty = model.createDataProperty(ruleExpressionURI);
+		expressionProperty
+			.addDomain(definitionType)
+			.addRange(model.getDatatype(XSD.xstring));
+		definitionType.addSuperClass(model.createDataMaxCardinality(expressionProperty, 1, null));
+		
+		expressionErrorProperty = model.createDataProperty(ruleExpressionErrorURI);
+		expressionErrorProperty
+			.addDomain(definitionType)
+			.addRange(model.getDatatype(XSD.xstring));
+		definitionType.addSuperClass(model.createDataMaxCardinality(expressionErrorProperty, 1, null));
+		
+		contextTypeProperty = model.createObjectProperty(ruleContextTypeURI);
+		contextTypeProperty
+			.addDomain(definitionType)
+			.addRange(model.createOntClass(OWL2.Class.getURI())); // the concept of 'class' in OWL2, not the java .class 
+		definitionType.addSuperClass(model.createObjectMaxCardinality(contextTypeProperty, 1, null));
+	}
+	
 	private void initResultBaseType() {
 		resultBaseType = model.createOntClass(ruleEvaluationResultBaseTypeURI);
 		
@@ -100,55 +134,57 @@ public class RuleFactory {
 			.addDomain(resultBaseType)
 			.addRange(model.getOntClass(OWL2.Thing));  
 		resultBaseType.addSuperClass(model.createObjectMaxCardinality(contextElementProperty, 1, null));
-	}
-
-	private void initDefinitionType() {
-		definitionType = model.createOntClass(ruleDefinitionURI);
 		
-		expressionProperty = model.createDataProperty(ruleExpressionURI);
-		expressionProperty
-			.addDomain(definitionType)
-			.addRange(model.getDatatype(XSD.xstring));
-		definitionType.addSuperClass(model.createDataMaxCardinality(expressionProperty, 1, null));
-		
-		expressionErrorProperty = model.createDataProperty(ruleExpressionErrorURI);
-		expressionErrorProperty
-			.addDomain(definitionType)
-			.addRange(model.getDatatype(XSD.xstring));
-		definitionType.addSuperClass(model.createDataMaxCardinality(expressionErrorProperty, 1, null));
-		
-		contextTypeProperty = model.createObjectProperty(ruleContextTypeURI);
-		contextTypeProperty
-			.addDomain(definitionType)
-			.addRange(model.createOntClass(OWL2.Class.getURI())); // the concept of 'class' in OWL2, not the java .class 
-		definitionType.addSuperClass(model.createObjectMaxCardinality(contextTypeProperty, 1, null));
+		isEnabledProperty = model.createDataProperty(ruleIsEnabledURI);	
+		isEnabledProperty
+		.addDomain(definitionType)
+		.addDomain(resultBaseType)
+		.addRange(model.getDatatype(XSD.xboolean));
+		var max1 = model.createDataMaxCardinality(isEnabledProperty, 1, null);
+		definitionType.addSuperClass(max1);
+		resultBaseType.addSuperClass(max1);			
 	}
 	
-	private void initUsageType() {
-		var superClass = model.createOntClass(RDF.Bag.getURI());
-		usageEntry = model.createOntClass(elementInRuleUsageEntryURI);
-		usageEntry.addSuperClass(superClass);
+	private void initUsageType() {		
+		ruleScopeCollection = model.createOntClass(elementInRuleUsageEntryURI);		
 		
 		usingPredicateProperty = model.createObjectProperty(usingPropertyURI);
-		usingPredicateProperty.addDomain(usageEntry);
-		usingPredicateProperty.addRange(model.createOntClass(RDF.Property.getURI()));
-		usageEntry.addSuperClass(model.createObjectMaxCardinality(usingPredicateProperty, 1, null));
+		usingPredicateProperty
+			.addDomain(ruleScopeCollection)
+			.addRange(model.createOntClass(RDF.Property.getURI()));
+		ruleScopeCollection.addSuperClass(model.createObjectMaxCardinality(usingPredicateProperty, 1, null));
 		
-		usingElementProperty = model.createObjectProperty(usingPropertyURI);
-		usingElementProperty.addDomain(usageEntry);
-		usingElementProperty.addRange(model.createOntClass(OWL2.NamedIndividual.getURI()));
-		usageEntry.addSuperClass(model.createObjectMaxCardinality(usingElementProperty, 1, null));
+		usingElementProperty = model.createObjectProperty(usingElementURI);
+		usingElementProperty
+			.addDomain(ruleScopeCollection)
+			.addRange(model.createOntClass(OWL2.NamedIndividual.getURI()));
+		ruleScopeCollection.addSuperClass(model.createObjectMaxCardinality(usingElementProperty, 1, null));
+		
+		usedInRuleProperty = model.createObjectProperty(usedInRuleURI);
+		usedInRuleProperty
+			.addDomain(ruleScopeCollection)
+			.addRange(getResultBaseType());
+		
+		havingScopePartProperty = model.createObjectProperty(havingScopeURI);
+		havingScopePartProperty
+			.addDomain(resultBaseType)
+			.addRange(ruleScopeCollection);
+		
+		usedInRuleProperty.addInverseProperty(havingScopePartProperty);
 	}
 
 	private void initRuleContextReferenceProperty() {
-		elementIsContextForRule = model.createObjectProperty(elementAsContextInRuleReferenceURI);
-		elementIsContextForRule.addRange(resultBaseType);
-		elementIsContextForRule.addInverseProperty(contextElementProperty);
+		hasRuleScope = model.createObjectProperty(elementHasRuleScopeURI);
+		hasRuleScope.addRange(ruleScopeCollection);
+		
+		// usingElementProperty.addInverseProperty(hasRuleScope); //we dont want this as inverse, as if we remove instance, then this backlink would be gone as well.
 	}
 	
 	public RuleDefinitionBuilder createRuleDefinitionBuilder() {
 		return new RuleDefinitionBuilder(this);
 	}
+
+
 	
 	
 	

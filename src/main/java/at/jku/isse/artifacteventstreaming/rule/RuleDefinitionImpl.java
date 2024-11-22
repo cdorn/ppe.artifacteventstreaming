@@ -12,7 +12,7 @@ import at.jku.isse.designspace.rule.arl.parser.ArlType;
 import lombok.NonNull;
 
 
-public class RuleDefinitionImpl implements RuleDefinition {
+public class RuleDefinitionImpl implements RDFRuleDefinition {
 
 	private final OntIndividual ontObject;
 	private final RuleFactory factory;
@@ -28,6 +28,27 @@ public class RuleDefinitionImpl implements RuleDefinition {
 		setRuleExpression(expression);
 	}
 	
+	protected RuleDefinitionImpl(@NonNull OntIndividual ruleDefinition
+			, @NonNull RuleFactory factory) {
+			this.ontObject = ruleDefinition;
+			this.factory = factory;					
+			reloadContextAndExpression();
+	}
+	
+	protected void reloadContextAndExpression() {
+		var expression = getRuleExpression();
+		if (expression == null || expression.length() == 0) {
+			setExpressionError("Cannot load rule definition from Rule Definition "+ontObject.getURI()+" as it does not have a rule expression");				
+		} else {
+			var contextType = getRDFContextType();
+			if (contextType == null) {
+				setExpressionError("Cannot load rule definition from Rule Definition "+ontObject.getURI()+" as it does not reference a context type");
+			} else {
+				generateSyntaxTree(expression);
+			}
+		}
+	}
+	
 	private void setContextType(OntClass contextType) {
 		ontObject.removeAll(factory.getContextTypeProperty().asProperty())
 			.addProperty(factory.getContextTypeProperty().asProperty(), contextType);
@@ -37,18 +58,30 @@ public class RuleDefinitionImpl implements RuleDefinition {
 	public void setRuleExpression(@NonNull String expression) {
 		ontObject.removeAll(factory.getExpressionProperty().asProperty())
 		.addProperty(factory.getExpressionProperty().asProperty(), expression);
-		generateSyntaxTree(expression, getContextType());
+		var contextType = getRDFContextType();		
+		if (contextType == null) {
+			setExpressionError("Cannot load syntax tree for Rule Definition "+ontObject.getURI()+" as it does not reference a context type");
+		} else {
+			generateSyntaxTree(expression);
+		}
 	}
 	
-	private void generateSyntaxTree(@NonNull String expression, @NonNull OntClass context) {
-		ArlType contextType =  ArlType.get(ArlType.TypeKind.INSTANCE, ArlType.CollectionKind.SINGLE, context);	
+	@Override
+	public OntClass getRuleDefinition() {
+		return this.ontObject.as(OntClass.class);
+	}
+	
+	private void generateSyntaxTree(@NonNull String expression) {		
+		
+		ArlType contextType = this.getContextType(); 
 		ArlParser parser = new ArlParser();
         try {
             syntaxTree = new RootExpression((Expression) parser.parse(expression, contextType, null));
             setExpressionError("");
         }
         catch (ParsingException ex) {
-            syntaxTree = null;
+        	//ex.printStackTrace();
+        	syntaxTree = null;
         	setExpressionError(String.format("Parsing error in \"%s\": %s (Line=%d, Column=%d)", expression, ex.toString(), parser.getLine(), parser.getColumn()));
         }
         catch (Exception ex) {
@@ -56,7 +89,7 @@ public class RuleDefinitionImpl implements RuleDefinition {
             syntaxTree = null;
             setExpressionError(String.format("Error in \"%s\": %s (", expression, ex.toString()));
         }
-	}
+	}		
 	
 	@Override
 	public String getRuleExpression() {
@@ -76,13 +109,13 @@ public class RuleDefinitionImpl implements RuleDefinition {
 	}
 
 	@Override
-	public void setTitle(String description) {
+	public void setName(String description) {
 		ontObject.removeAll(RDFS.label)
 			.addLiteral(RDFS.label,description);
 	}
 
 	@Override
-	public String getTitle() {
+	public String getName() {
 		var stmt = ontObject.getProperty(RDFS.label);
 		return stmt != null ? stmt.getString() : null;
 	}
@@ -104,7 +137,7 @@ public class RuleDefinitionImpl implements RuleDefinition {
 	}
 
 	@Override
-	public OntClass getContextType() {
+	public OntClass getRDFContextType() {
 		var res = ontObject.getPropertyResourceValue(factory.getContextTypeProperty().asProperty());
 		if (res != null && res.canAs(OntClass.class)) {
 			return res.as(OntClass.class);
@@ -112,9 +145,40 @@ public class RuleDefinitionImpl implements RuleDefinition {
 			return null; // can only happen when type is removed but this rule not yet
 		}
 	}
-
+	
     @Override
     public Expression<Object> getSyntaxTree() {
         return this.syntaxTree;
     }
+    
+	@Override
+	public void delete() {
+		ontObject.removeProperties();				
+		syntaxTree = null;
+	}
+
+    // methods to match ARL specific interfaces
+	@Override
+	public String getRule() {
+		return getRuleExpression();
+	}
+
+	@Override
+	public void setRule(String rule) {
+		this.setRuleExpression(rule);
+	}
+
+	@Override
+	public ArlType getContextType() {
+		return ArlType.get(ArlType.TypeKind.INSTANCE, ArlType.CollectionKind.SINGLE, this.getRDFContextType());	
+	}
+
+	@Override
+	public String getRuleError() {
+		return getExpressionError();
+	}
+
+
+
+	
 }

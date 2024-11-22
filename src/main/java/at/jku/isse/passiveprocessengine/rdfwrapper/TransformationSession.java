@@ -71,9 +71,9 @@ public class TransformationSession {
 			if (delTypes.isEmpty() && node.canAs(OntIndividual.class)) {
 				var ontInd = node.as(OntIndividual.class);			
 				// instance or map (list/seq/bag is an ont individual)
-				if (resolver.getMapBase().isMapEntry(ontInd)) {		// a map entry was inserted or updated
+				if (resolver.getMapType().isMapEntry(ontInd)) {		// a map entry was inserted or updated
 					return processMapEntry(ontInd, stmts, false);
-				} else if (resolver.getListBase().isListContainer(ontInd)) { 	// list entry added/removed/reordered
+				} else if (resolver.getListType().isListContainer(ontInd)) { 	// list entry added/removed/reordered
 					return processListContainer(ontInd, stmts, false);
 				} else { 	// --> could also be adding a new list to the owner, or new mapentry to the owner, or removing from the owner
 					stmts = filterOutListOrMapOwnershipAdditions(stmts);
@@ -83,9 +83,9 @@ public class TransformationSession {
 			} else if (node.canAs(OntObject.class)){
 				var ontInd = node.as(OntObject.class);
 				// reomved instance or map (list/seq/bag is an ont individual)
-				if (resolver.getMapBase().wasMapEntry(delTypes)) { 		// a map entry was removed
+				if (resolver.getMapType().wasMapEntry(delTypes)) { 		// a map entry was removed
 					return processMapEntry(ontInd, stmts, true);
-				} else if (resolver.getListBase().wasListContainer(delTypes)) { // list removed
+				} else if (resolver.getListType().wasListContainer(delTypes)) { // list removed
 					return processListContainer(ontInd, stmts, true);
 				} else {
 					// here we can't filter out removal of deleted containment elements as their type is no longer accessible, 
@@ -111,7 +111,7 @@ public class TransformationSession {
 		if (obj.isLiteral()) return false;
 		if (obj.canAs(OntIndividual.class)) { // perhaps a mapEntry or list
 			var ind = obj.as(OntIndividual.class);
-			return resolver.getMapBase().isMapEntry(ind) || resolver.getListBase().isListContainer(ind);
+			return resolver.getMapType().isMapEntry(ind) || resolver.getListType().isListContainer(ind);
 		} // Seq is an OntInd
 		return false;
 	}
@@ -203,16 +203,16 @@ public class TransformationSession {
 	private boolean isMapValueProperty(Property property) {
 		if (property.canAs(OntProperty.class)) { 
 			var prop = property.as(OntProperty.class);
-			return resolver.getMapBase().getLiteralValueProperty().hasSubProperty(prop, true) 
-					|| resolver.getMapBase().getObjectValueProperty().hasSubProperty(prop, true);
+			return resolver.getMapType().getLiteralValueProperty().hasSubProperty(prop, true) 
+					|| resolver.getMapType().getObjectValueProperty().hasSubProperty(prop, true);
 		}
 		else return false;
 	}
 	
 	private Stream<Update> handleMapEntryChange(List<StatementWrapper> stmts, Property prop, RDFInstance changeSubject) {
-		var keyOpt = findFirstStatementAboutProperty(stmts, resolver.getMapBase().getKeyProperty().asProperty());
-		var litValueOpt = findFirstStatementAboutProperty(stmts, resolver.getMapBase().getLiteralValueProperty().asProperty());
-		var objValueOpt = findFirstStatementAboutProperty(stmts, resolver.getMapBase().getObjectValueProperty().asProperty());
+		var keyOpt = findFirstStatementAboutProperty(stmts, resolver.getMapType().getKeyProperty().asProperty());
+		var litValueOpt = findFirstStatementAboutProperty(stmts, resolver.getMapType().getLiteralValueProperty().asProperty());
+		var objValueOpt = findFirstStatementAboutProperty(stmts, resolver.getMapType().getObjectValueProperty().asProperty());
 		// we are not interested in back reference
 		if (keyOpt.isEmpty() || (litValueOpt.isEmpty() && objValueOpt.isEmpty())) {
 			log.error("MapEntry change has inconsistent statements, cannot generate change event");
@@ -227,25 +227,25 @@ public class TransformationSession {
 	}
 	
 	private Optional<Resource> getCurrentMapEntryOwner(OntIndividual mapEntry) {
-		return Optional.ofNullable(mapEntry.getPropertyResourceValue(resolver.getMapBase().getContainerProperty().asProperty()));
+		return Optional.ofNullable(mapEntry.getPropertyResourceValue(resolver.getMapType().getContainerProperty().asProperty()));
 	}
 	
 	private Optional<Resource> getFormerMapEntryOwner(List<StatementWrapper> stmts) {
 		return stmts.stream().filter(wrapper -> wrapper.op().equals(OP.REMOVE))
 			.map(StatementWrapper::stmt)
-			.filter(stmt -> stmt.getPredicate().equals(resolver.getMapBase().getContainerProperty().asProperty()))
+			.filter(stmt -> stmt.getPredicate().equals(resolver.getMapType().getContainerProperty().asProperty()))
 			.map(Statement::getResource)
 			.findAny();
 	}
 	
 	private Optional<Resource> getCurrentListyOwner(OntIndividual list) {
-		return Optional.ofNullable(list.getPropertyResourceValue(resolver.getListBase().getContainerProperty().asProperty()));
+		return Optional.ofNullable(list.getPropertyResourceValue(resolver.getListType().getContainerProperty().asProperty()));
 	}
 	
 	private Optional<Resource> getFormerListOwner(List<StatementWrapper> stmts) {
 		return stmts.stream().filter(wrapper -> wrapper.op().equals(OP.REMOVE))
 			.map(StatementWrapper::stmt)
-			.filter(stmt -> stmt.getPredicate().equals(resolver.getListBase().getContainerProperty().asProperty()))
+			.filter(stmt -> stmt.getPredicate().equals(resolver.getListType().getContainerProperty().asProperty()))
 			.map(Statement::getResource)
 			.findAny();
 	}
