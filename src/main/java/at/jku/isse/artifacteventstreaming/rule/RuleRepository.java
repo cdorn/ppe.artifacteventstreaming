@@ -54,6 +54,11 @@ public class RuleRepository {
 		return new RuleDefinitionRegistrar(factory, this);
 	}
 	
+	/**
+	 * @param def the RDFRuleDefinition to store/register, 
+	 * no rule evaluations will be conducted at this time, as typically the model events/statements resulting from creating the definition will be processed via the RuleTriggerObserver
+	 * if no such observer is running, then manual rule evaluation instances are created upon calling {@link #getRulesToEvaluateUponRuleDefinitionActivation(OntIndividual) }
+	 */
 	protected void registerRuleDefinition(@NonNull RDFRuleDefinition def) {
 		definitions.putIfAbsent(def.getRuleDefinition().getURI(), def);
 	}
@@ -74,6 +79,11 @@ public class RuleRepository {
 		return definitions.get(definitionUri);
 	}
 		
+	/**
+	 * @param def the rule evaluation objects to obtain for the given rule definition
+	 * @return for each instance/individual that matches the rule definition's context type, one rule evaluation object, from which the evaluation must be triggered.
+	 * this method does NOT trigger rule evaluation
+	 */
 	public Set<RuleEvaluationWrapperResource> getRulesToEvaluateUponRuleDefinitionActivation(@NonNull RDFRuleDefinition def) {
 		if (!def.hasExpressionError()) {
 			// find all instances of the rule context type --> create rule evaluations for every instance
@@ -91,21 +101,22 @@ public class RuleRepository {
 	
 	/**
 	 * @param def the RuleDefinition to no longer evaluate upon changes, 
-	 * @return all evaluation instances of that definition that now become stale and wont ever be reactivated
+	 * @return all evaluation instances of that definition that now are deleted and wont ever be reactivated
 	 */
 	public Set<RuleEvaluationWrapperResource> deactivateRulesToNoLongerUsedUponRuleDefinitionDeactivation(@NonNull RDFRuleDefinition def) {		
-		// set all affected rules to "stale", remove them, they will be recreated
+		// set all affected rules to "stale", essentially removing them, they will be recreated upon rule activation
 		var toRemove = def.getRuleDefinition().individuals()
 			.map(Resource::getId)
 			.map(evaluations::get)			
 			.filter(Objects::nonNull)						
 			.collect(Collectors.toSet());
+		// two step processing needed as otherwise concurrent modification in reasoner
 		return toRemove.stream()			
 			.map(eval -> { evaluations.remove(eval.getRuleEvalObj().getId()); return eval;}) // remove evalwrapper from cache
 			.map(eval -> { eval.delete(); return eval;}) // disable the eval wrapper
 			.map(RuleEvaluationWrapperResource.class::cast)
 			.collect(Collectors.toSet());
-		 // two step procesisng needed as otherwise concurrent modification in reasoner
+		
 	}
 	
 	/**
@@ -116,7 +127,7 @@ public class RuleRepository {
 		var old = definitions.remove(definitionURI);
 		if (old != null) {
 			// if this is called externally, then the rule definition is gone and the following method cannot access individuals thereof to delete,  			
-			//var affected = deactivateRulesToNoLongerUsedUponRuleDefinitionDeactivation(old);
+			// dsdd var affected = deactivateRulesToNoLongerUsedUponRuleDefinitionDeactivation(old);
 			// just ensure there is no local rule eval that is not externally known and remains dangling
 			var affected = getRuleEvaluationIdsByDefinitionURI(definitionURI);
 			var filtered = affected.stream()
