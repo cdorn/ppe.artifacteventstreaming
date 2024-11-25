@@ -87,7 +87,7 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 
 	private Stream<Resource> processAdditions(List<Statement> statements, Set<RuleEvaluationWrapperResource> rulesToReevaluate) {
 		return statements.stream()
-		.filter(stmt -> stmt.getPredicate().equals(RDF.type) || stmt.getPredicate().equals(RDFS.subClassOf) ) // typically signals either rule removal, or instance removal, or instance retyping
+		.filter(stmt -> stmt.getPredicate().equals(RDF.type) || stmt.getPredicate().equals(RDFS.subClassOf) ) // typically signals either rule definition, or instance creation, or instance retyping
 		.map(stmt -> processTypeAddition(stmt, rulesToReevaluate))
 		.filter(Objects::nonNull);
 	}

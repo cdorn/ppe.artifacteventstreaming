@@ -160,7 +160,7 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
         if (content.isEmpty() || foundProp == null) { //checking foundProp so that the linter stays quiet
         	return ArlType.CollectionKind.ANY;
         }
-        var first = content.getFirst();
+        var first = content.get(0);
         if (first.getObject().isLiteral()) { // must be a set or single
         	if (foundProp.canAs(OntRelationalProperty.class)) {
         		var ontProp = foundProp.as(OntRelationalProperty.class);
@@ -212,7 +212,7 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
         	return null;
             //  return null;//to avoid NPE on unexpected instances without an expected property
         }
-        var first = content.getFirst();
+        var first = content.get(0);
         if (first.getObject().isLiteral()) { // must be a set or single
         	return mapLiteralValues(content, foundProp);
         } else { //could be set, single, map, list
@@ -231,7 +231,7 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     	} else { // determine set or single
     		var ontProp = prop.as(OntRelationalProperty.class);
     		if (ontProp.hasSuperProperty(singleFactory.getSingleLiteralProperty(), false)) // single element
-    			return content.getFirst().getObject().asLiteral().getValue();
+    			return content.get(0).getObject().asLiteral().getValue();
     		else
     			return content.stream().map(lit -> lit.getObject().asLiteral().getValue()).collect(Collectors.toSet()); // we assume no mixing in sets
     	}
@@ -241,7 +241,7 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     	if (prop.canAs(OntRelationalProperty.class)) {
     		var ontProp = prop.as(OntRelationalProperty.class);
     		if (ontProp.hasSuperProperty(singleFactory.getSingleLiteralProperty(), false)) { // single element
-    			return content.getFirst().getObject().asResource();
+    			return content.get(0).getObject().asResource();
     		} else if (ontProp.hasSuperProperty(mapFactory.getMapReferenceSuperProperty(), false)) { // a map
     			// map is not really supported by the rule engine, lets do this anyway
     			Map<String, Object> map = new HashMap<>();
@@ -255,7 +255,7 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     				});
     			return map;
     		} else if (ontProp.hasSuperProperty(listFactory.getListReferenceSuperProperty(), false)) { // a list
-    			var list = content.getFirst().getObject().asResource().as(Seq.class);
+    			var list = content.get(0).getObject().asResource().as(Seq.class);
     			var iter = list.listProperties();
     			List<Object> result = new LinkedList<>();
     			while (iter.hasNext()) {
