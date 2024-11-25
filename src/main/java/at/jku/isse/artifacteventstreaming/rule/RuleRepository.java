@@ -93,15 +93,19 @@ public class RuleRepository {
 	 * @param def the RuleDefinition to no longer evaluate upon changes, 
 	 * @return all evaluation instances of that definition that now become stale and wont ever be reactivated
 	 */
-	public Set<RuleEvaluationWrapperResource> deactivateRulesToNoLongerUsedUponRuleDefinitionDeactivation(@NonNull RDFRuleDefinition def) {
+	public Set<RuleEvaluationWrapperResource> deactivateRulesToNoLongerUsedUponRuleDefinitionDeactivation(@NonNull RDFRuleDefinition def) {		
 		// set all affected rules to "stale", remove them, they will be recreated
-		return def.getRuleDefinition().individuals()
+		var toRemove = def.getRuleDefinition().individuals()
 			.map(Resource::getId)
 			.map(evaluations::get)			
-			.filter(Objects::nonNull)
-			.map(eval -> { eval.disable(); return eval;}) // disable the eval wrapper
-			.map(eval -> { evaluations.remove(eval.getRuleEvalObj().getId()); return eval; }) // remove evalwrapper from cache
-			.collect(Collectors.toSet());		
+			.filter(Objects::nonNull)						
+			.collect(Collectors.toSet());
+		return toRemove.stream()			
+			.map(eval -> { evaluations.remove(eval.getRuleEvalObj().getId()); return eval;}) // remove evalwrapper from cache
+			.map(eval -> { eval.delete(); return eval;}) // disable the eval wrapper
+			.map(RuleEvaluationWrapperResource.class::cast)
+			.collect(Collectors.toSet());
+		 // two step procesisng needed as otherwise concurrent modification in reasoner
 	}
 	
 	/**
@@ -251,7 +255,7 @@ public class RuleRepository {
 		return getAllRuleEvaluationsThatUse(subject);
 	}
 	
-	public Set<RuleEvaluationWrapperResource> getRulesAffectedByRemoval(Resource subject) {
+	public Set<RuleEvaluationWrapperResource> getRemovedRulesAffectedByInstanceRemoval(Resource subject) {
 		// see if that instance is used as context in a rule, with exactly that type as contextType -->
 		// if so then remove rule evaluation for that instance (incl scope updates)
 		Set<RuleEvaluationWrapperResource> evals = new HashSet<>();

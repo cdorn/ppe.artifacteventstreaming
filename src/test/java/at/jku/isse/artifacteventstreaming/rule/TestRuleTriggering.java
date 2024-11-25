@@ -29,7 +29,7 @@ class TestRuleTriggering extends TestRuleEvaluation {
 			 
 		observer = new RuleTriggerObserver("RuleTriggerObserver1", m, factory, repo); // we reuse the main model here as there is no branch involved anyway
 		register(m, aggr);
-		//m.register(aggr);		// when using inference, this does not register the listener at the right graph:	https://github.com/apache/jena/issues/2868
+		m.register(aggr);		// when using inference, this does not register the listener at the right graph:	https://github.com/apache/jena/issues/2868
 	}
 	
 	private void register(OntModel model, ModelChangedListener listener) {
@@ -98,4 +98,32 @@ class TestRuleTriggering extends TestRuleEvaluation {
 		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;				
 		assertEquals(0, getAllScopes().size());			
 	}
+	
+	@Test
+	void testExternalRemoveEval() throws RuleException {
+		var def = getBasicArtSubTypeWithSubRefOnLabelRule(1);
+		var defURI = def.getRuleDefinition().getURI();
+		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		observer.handleCommit(commit);				
+		// assert that rule evaluation is available and has been evaluated
+		var affected = repo.getRulesAffectedByChange(inst1, subProp.asProperty());
+		assertEquals(1, affected.size());
+		var ruleEval = affected.iterator().next();
+		assertEquals(Boolean.FALSE, ruleEval.getEvaluationResult());
+		
+		aggr.retrieveAddedStatements(); // to clear changes
+		aggr.retrieveRemovedStatements();
+		
+		// now when we remove that rule externally, see if it is detected
+		ruleEval.delete(); // we just delete one, the other local one remains and needs to be automatically deleted, checked below		 	
+		var commit2 = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		observer.handleCommit(commit2);
+		// the rule should now be gone
+		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
+		
+		affected = repo.getRulesAffectedByChange(inst1, subProp.asProperty());
+		assertEquals(0, affected.size());
+	}
+	
+
 }

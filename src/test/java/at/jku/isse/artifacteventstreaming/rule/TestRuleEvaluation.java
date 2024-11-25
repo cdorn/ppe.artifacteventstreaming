@@ -182,6 +182,34 @@ class TestRuleEvaluation extends TestRuleDefinitions {
 		assertEquals(2, affected.size());
 	}
 	
+	/*
+	 * 2 rule instantiation on same art -> one context scope per context, that lists both rules 
+	 * */
+	@Test 
+	void testRuleDefDeactivation() throws RuleException {
+		var ruleDef2 = getBasicArtSubTypeWithSubRefOnLabelRule(1);		
+		System.out.println(ruleDef2.getExpressionError());
+		assertFalse(ruleDef2.hasExpressionError());
+		assertNotNull(ruleDef2.getSyntaxTree());
+		
+		var rulesToEval = repo.getRulesAffectedByCreation(inst1);				
+		assertEquals(1, rulesToEval.size());
+		rulesToEval.forEach(rule -> rule.evaluate());		
+		rulesToEval = repo.getRulesAffectedByCreation(inst2);				
+		assertEquals(1, rulesToEval.size());
+		rulesToEval.forEach(rule -> rule.evaluate());
+		
+		var deactive = repo.deactivateRulesToNoLongerUsedUponRuleDefinitionDeactivation(ruleDef2);
+		assertEquals(2, deactive.size());
+		
+		var reeval = repo.getRulesToEvaluateUponRuleDefinitionActivation(ruleDef2);
+		reeval.forEach(rule -> rule.evaluate());
+		assertEquals(2, reeval.size());
+		var scopes = getScopes(inst1);
+		scopes.forEach(scope -> printScope(scope));
+		assertTrue(scopes.stream().allMatch(scope -> getEvalCountFromScope(scope) == 1));
+		//RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
+	}
 	
 	/*	 
 	 * art removal --> rules don't point to art anymore.  
@@ -194,7 +222,7 @@ class TestRuleEvaluation extends TestRuleDefinitions {
 		assertEquals(2, rulesToEval.size());
 		
 		inst1.removeProperties();			
-		var affectedRules = repo.getRulesAffectedByRemoval(inst1);						
+		var affectedRules = repo.getRemovedRulesAffectedByInstanceRemoval(inst1);						
 		assertEquals(2, affectedRules.size());
 		assertTrue(affectedRules.stream().allMatch(rule -> rule.isEnabled() == false));
 		

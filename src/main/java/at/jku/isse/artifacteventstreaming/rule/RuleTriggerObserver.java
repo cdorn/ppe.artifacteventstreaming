@@ -140,8 +140,8 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 			// to distinguish between complete removal and only retying, see if we can get an Ont individual from the uri
 			if (subject.getURI() != null) {// not an anonymous resource such as an ruleeval
 				var indiv = factory.getDefinitionType().getModel().getIndividual(subject.getURI());
-				if (indiv == null) {// completely removed or not an ontindividual
-					repo.getRulesAffectedByRemoval(stmt.getSubject());
+				if (indiv == null || isDefactoEmptyIndividual(indiv)) {// completely removed or not an ontindividual
+					repo.getRemovedRulesAffectedByInstanceRemoval(stmt.getSubject());
 					return subject;
 				} else {
 					repo.getRulesAffectedByTypeRemoval(indiv, typeUri);
@@ -149,6 +149,16 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 			}
 		}
 		return null;										
+	}
+	
+	private boolean isDefactoEmptyIndividual(OntIndividual indiv) {		
+		var iter = indiv.listProperties();
+		while(iter.hasNext()) {
+			if (!iter.next().getPredicate().equals(RDF.type)) {				
+				return false;
+			}
+		}
+		return true;
 	}
 	
 	private boolean isAboutRuleDefinitionType(Statement stmt) {
