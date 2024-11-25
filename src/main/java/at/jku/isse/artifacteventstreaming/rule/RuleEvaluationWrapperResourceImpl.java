@@ -1,6 +1,8 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
+import java.util.HashSet;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntIndividual;
@@ -22,13 +24,55 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	private final RuleEvaluation delegate;
 	private Object result = null;
 	
-	// either create from underlying ontclass or create new
-	
+	// either create new	
+	/**
+	 * @param factory for accessing properties
+	 * @param def type of rule
+	 * @param contextInstance for which instance to create the evaluation object wrapped by this class
+	 * @return a new evaluation object wrapper, ensuring that the evaluation and context element point to the same rule scope. 
+	 */
 	public static RuleEvaluationWrapperResourceImpl create(@NonNull RuleFactory factory, @NonNull RDFRuleDefinition def, @NonNull OntIndividual contextInstance) {
 		var evalObj = def.getRuleDefinition().createIndividual();		
+		addAddRuleEvaluationToNewOrExistingScope(contextInstance, evalObj, factory); // just to make sure that the context scope is set (no effect if already so)
 		return new RuleEvaluationWrapperResourceImpl(def, evalObj, contextInstance, factory);
 	}
 	
+	private static void addAddRuleEvaluationToNewOrExistingScope(OntIndividual subject, OntIndividual ruleEval, RuleFactory factory) {
+		OntIndividual scope = null;
+		var iter = subject.listProperties(factory.getHasRuleScope().asProperty());
+		while(iter.hasNext()) {
+			var stmt = iter.next();
+			var propStmt = stmt.getResource().getProperty(factory.getUsingPredicateProperty().asProperty());
+			if (propStmt == null ) {
+				//is this the scope collection to be used for this instance serving as context to rules
+				scope = stmt.getResource().as(OntIndividual.class);
+				iter.close();
+				break;
+			}
+		}
+		if (scope == null) {
+			scope = createScopeSkeleton(subject, factory);
+		}
+		scope.addProperty(factory.getUsedInRuleProperty().asNamed(), ruleEval); // if already there, then has no effect
+		// set pointer back from ruleEval to scope
+		ruleEval.addProperty(factory.getContextElementScopeProperty().asNamed(), scope);
+	}
+	
+	private static OntIndividual createScopeSkeleton(Resource subject, RuleFactory factory) {
+		var scope = factory.getRuleScopeCollection().createIndividual();
+		scope.addProperty(factory.getUsingElementProperty().asNamed(), subject);
+		subject.addProperty(factory.getHasRuleScope().asProperty(), scope);
+		return scope;
+	}
+	
+	// or create from underlying ontclass 
+	/**
+	 * @param ruleEvalObj pre-existing, that needs wrapping
+	 * @param factory to access properties 
+	 * @param ruleRepo to access existing definitions (or register new from ruleEvalObject reference
+	 * @return rule evaluation wrapper for the provided ont individual
+	 * @throws EvaluationException when ruleEvalObject is not a rule evaluation, or it does not point to context rule scope, or it does not point to a rule definition   
+	 */
 	public static RuleEvaluationWrapperResourceImpl loadFromModel(@NonNull OntIndividual ruleEvalObj, @NonNull RuleFactory factory, @NonNull RuleRepository ruleRepo) throws EvaluationException {
 		// check if an rule eval instance
 		var type = getRuleTypeClass(ruleEvalObj, factory); 							
@@ -51,28 +95,32 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	}
 	
 	private static OntIndividual getContextInstanceFrom(@NonNull OntIndividual ruleEvalObj, @NonNull RuleFactory factory) throws EvaluationException {
-		var stmt = ruleEvalObj.getProperty(factory.getContextElementProperty().asProperty());
-		if (stmt == null)
-			throw new EvaluationException(String.format("Cannot create ruleevaluation wrapper for entity %s as it doesn't reference a context instance element via %s", ruleEvalObj, factory.getContextElementProperty().getURI()));
-		if (stmt.getObject().isResource()) {
-			var res = stmt.getResource();
-			if (res.canAs(OntIndividual.class)) {
-				return res.as(OntIndividual.class);
-			} else {
-				throw new EvaluationException(String.format("Cannot create ruleevaluation wrapper for entity %s as its referenced context instance %s is not an ontindividual", ruleEvalObj.getURI(), res));
-			}			
+		var res = ruleEvalObj.getPropertyResourceValue(factory.getContextElementScopeProperty().asProperty()); //the rule scope, only one possible
+		if (res == null)
+			throw new EvaluationException(String.format("Cannot create ruleevaluation wrapper for entity %s as it doesn't reference a context instance rule scope element via %s", ruleEvalObj, factory.getContextElementScopeProperty().getURI()));
+		if (res.canAs(OntIndividual.class)) {
+				var indiv = res.as(OntIndividual.class);
+				var element = indiv.getPropertyResourceValue(factory.getUsingElementProperty().asProperty());
+				if (element == null || !element.canAs(OntIndividual.class)) {				
+					throw new EvaluationException(String.format("Cannot create ruleevaluation wrapper for entity %s as the referenced context instace rule scope element doesn't point to an OntIndividual via %s ", ruleEvalObj, factory.getUsingElementProperty().getURI()));		
+				} else {
+					return element.as(OntIndividual.class);
+				}
+				
 		} else {
-			throw new EvaluationException(String.format("Cannot create ruleevaluation wrapper for entity %s as it doesn't reference a context instance element via %s but a literal", ruleEvalObj, factory.getContextElementProperty().getURI()));
-		}
+			throw new EvaluationException(String.format("Cannot create ruleevaluation wrapper for entity %s as its referenced context instance rule scope %s is not an ontindividual", ruleEvalObj.getId(), res));
+		}					
 	}
 	
 	private static RDFRuleDefinition resolveDefinition(@NonNull OntClass ruleDef, @NonNull RuleRepository repo) throws EvaluationException {
 		var def = repo.findRuleDefinitionForResource(ruleDef);
 		if (def == null)
-			throw new EvaluationException(String.format("Cannot obtain rule definition for entity %s", ruleDef));
+			return repo.storeRuleDefinition(ruleDef.as(OntIndividual.class)); // we dynamically register the definition
 		else 
 			return def;
 	}
+	
+
 	
 	private RuleEvaluationWrapperResourceImpl(RDFRuleDefinition def, OntIndividual ruleEvalObj, OntIndividual contextInstance, RuleFactory factory ) {
 		super();
@@ -80,42 +128,16 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 		this.contextInstance = contextInstance;
 		this.factory = factory;
 		this.delegate = new RuleEvaluationImpl(def, contextInstance);
-		setEnabledIfNotStatusAvailable();
-		setContextIfNotSetYet(contextInstance);
-		addAddRuleEvaluationToNewOrExistingScope(contextInstance, ruleEvalObj); // just to make sure that the context scope is set (no effect if already so)
+		setEnabledIfNotStatusAvailable();		
+	
 	}
 	
 	private void setEnabledIfNotStatusAvailable() {
 		var stmt = ruleEvalObj.getProperty(factory.getIsEnabledProperty());
 		if (stmt == null) // not set, thus enable
 			setEnabledStatus(true);
-	}
+	}		
 	
-	private void setContextIfNotSetYet(OntIndividual context) {
-		var stmt = ruleEvalObj.getProperty(factory.getContextElementProperty().asProperty());
-		if (stmt == null) {
-			ruleEvalObj.addProperty(factory.getContextElementProperty().asNamed(), context);
-		}
-	}
-	
-	private void addAddRuleEvaluationToNewOrExistingScope(OntIndividual subject, OntIndividual ruleEval) {
-		OntIndividual scope = null;
-		var iter = subject.listProperties(factory.getHasRuleScope().asProperty());
-		while(iter.hasNext()) {
-			var stmt = iter.next();
-			var propStmt = stmt.getResource().getProperty(factory.getUsingPredicateProperty().asProperty());
-			if (propStmt == null ) {
-				//is this the scope collection to be used for this instance serving as context to rules
-				scope = stmt.getResource().as(OntIndividual.class);
-				iter.close();
-				break;
-			}
-		}
-		if (scope == null) {
-			scope = createScopeSkeleton(subject);
-		}
-		scope.addProperty(factory.getUsedInRuleProperty().asNamed(), ruleEval);		
-	}
 	
 	/**
 	 * If rule is disabled, return stale result, if any.
@@ -159,7 +181,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 		OntIndividual scope = findScope(subject,  property);						
 		if (scope == null) {
 			// ensure individual has scopeCollection			
-			scope = createScopeSkeleton(subject);
+			scope = createScopeSkeleton(subject, factory);
 			scope.addProperty(factory.getUsingPredicateProperty().asNamed(), property);
 			scope.addProperty(factory.getUsedInRuleProperty().asNamed(), ruleEval);
 			// now link up eval to scope part			
@@ -203,12 +225,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	
 
 	
-	private OntIndividual createScopeSkeleton(Resource subject) {
-		var scope = factory.getRuleScopeCollection().createIndividual();
-		scope.addProperty(factory.getUsingElementProperty().asNamed(), subject);
-		subject.addProperty(factory.getHasRuleScope().asProperty(), scope);
-		return scope;
-	}
+
 	
 	@Override
 	public boolean isConsistent() {
@@ -267,10 +284,19 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	public void delete() {
 		// remove from scope information of involved elements
 		var iter = ruleEvalObj.listProperties(factory.getHavingScopePartProperty().asProperty());
+		Set<OntIndividual> scopesToRemoveRuleFrom = new HashSet<>();
 		while(iter.hasNext()) {
 			var scope = iter.next().getResource().as(OntIndividual.class);
-			scope.remove(factory.getUsedInRuleProperty().asProperty(), ruleEvalObj);
+			scopesToRemoveRuleFrom.add(scope);			
 		}
+		// remove context instance scope
+		iter = ruleEvalObj.listProperties(factory.getContextElementScopeProperty().asProperty());
+		while(iter.hasNext()) { // should only be one, but to be on the save side
+			var scope = iter.next().getResource().as(OntIndividual.class);
+			scopesToRemoveRuleFrom.add(scope);
+		}
+		scopesToRemoveRuleFrom.forEach(scope -> scope.remove(factory.getUsedInRuleProperty().asProperty(), ruleEvalObj));
+		
 		//then remove self
 		this.ruleEvalObj.removeProperties();
 		delegate.delete();		

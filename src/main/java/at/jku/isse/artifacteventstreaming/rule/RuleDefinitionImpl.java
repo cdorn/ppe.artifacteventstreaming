@@ -80,7 +80,6 @@ public class RuleDefinitionImpl implements RDFRuleDefinition {
             setExpressionError("");
         }
         catch (ParsingException ex) {
-        	//ex.printStackTrace();
         	syntaxTree = null;
         	setExpressionError(String.format("Parsing error in \"%s\": %s (Line=%d, Column=%d)", expression, ex.toString(), parser.getLine(), parser.getColumn()));
         }
@@ -152,8 +151,8 @@ public class RuleDefinitionImpl implements RDFRuleDefinition {
     }
     
 	@Override
-	public void delete() {
-		ontObject.removeProperties();				
+	public void delete() {		
+		ontObject.removeProperties();
 		syntaxTree = null;
 	}
 

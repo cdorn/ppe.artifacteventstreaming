@@ -10,6 +10,8 @@ import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
+import org.apache.jena.query.Dataset;
+import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.vocabulary.XSD;
@@ -37,7 +39,10 @@ class TestRuleDefinitions {
 	
 	@BeforeEach
 	void setup() {
-		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM); //_RDFS_INF );
+		//THIS OntSpec is important: as without inference, then subproperties and subclass individuals are not correctly inferred
+		// but when using RDFS inference only, then we dont get individual change events due to some deep down graph listener registration problem 
+		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_RDFS_INF ); // needs deep setting of graph listener
+		//m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF ); 		
 		m.setNsPrefix("rules", RuleFactory.uri);
 		artType = m.createOntClass(baseURI+"artType");
 		artSubType = m.createOntClass(baseURI+"artSubType");
@@ -144,7 +149,7 @@ class TestRuleDefinitions {
 		assertEquals(def, repo.findRuleDefinitionForResource(def.getRuleDefinition()));
 		
 		def.delete();
-		var affected = repo.getRulesAffectedByDeletedRuleDefinition(uri);
+		var affected = repo.removeRulesAffectedByDeletedRuleDefinition(uri);
 		assertEquals(0, affected.size());
 		
 		var def2 = getNonRegisteredBasicRuleDefinition();		

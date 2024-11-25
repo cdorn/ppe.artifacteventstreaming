@@ -131,10 +131,10 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 		var typeUri = stmt.getResource().getURI();
 		var subject = stmt.getSubject();
 		if (isAboutRuleDefinitionType(stmt)) {
-			repo.getRulesAffectedByDeletedRuleDefinition(subject.getURI()); // nothing to do with the returned rules eval that are no longer accessible because all related statements are removed
+			repo.removeRulesAffectedByDeletedRuleDefinition(subject.getURI()); // nothing to do with the returned rules eval that are no longer accessible because all related statements are removed
 			return subject;
 		} else if (isAboutRuleEvaluationType(stmt)) { // 
-			repo.getRulesAffectedByDeletedRuleEvaluation(subject.getId()); // this is a side effect of a remote rule evaluation removal or rule type removal
+			repo.removeRulesAffectedByDeletedRuleEvaluation(subject.getId()); // this is a side effect of a remote rule evaluation removal or rule type removal
 			return subject;
 		} else { //we assume just any other resource			
 			// to distinguish between complete removal and only retying, see if we can get an Ont individual from the uri

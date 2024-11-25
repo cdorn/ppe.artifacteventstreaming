@@ -303,8 +303,8 @@ class TestRuleEvaluation extends TestRuleDefinitions {
 		var iterRule = scope.listProperties(factory.getUsedInRuleProperty().asProperty());
 		Set<String> evals = new HashSet<>();
 		while(iterRule.hasNext()) { //property
-			var ruleRes = iterRule.next().getResource().as(OntIndividual.class);
-			evals.add(ruleRes.getId().toString());
+			//var ruleRes = iterRule.next().getResource().as(OntIndividual.class);
+			evals.add(iterRule.next().getResource().getId().toString());
 		}
 		System.out.println(String.format("Scope: %s %s in rules: %s", inst.getLocalName(), property, evals.toString() ));
 	}

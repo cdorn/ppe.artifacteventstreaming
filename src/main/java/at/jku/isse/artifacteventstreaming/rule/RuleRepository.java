@@ -12,6 +12,7 @@ import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.rdf.model.AnonId;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.RDF;
 
 import at.jku.isse.designspace.rule.arl.exception.EvaluationException;
 import lombok.NonNull;
@@ -26,7 +27,7 @@ public class RuleRepository {
 	private final Map<String, RDFRuleDefinition> definitions = new HashMap<>();
 	private final Map<AnonId, RuleEvaluationWrapperResourceImpl> evaluations = new HashMap<>();
 	
-	public RuleRepository(RuleFactory factory) {
+	public RuleRepository(@NonNull RuleFactory factory) {
 		super();
 		this.factory = factory;
 		loadFromModel();
@@ -37,7 +38,7 @@ public class RuleRepository {
 	 */
 	private void loadFromModel() {		
 		factory.getDefinitionType().individuals().toList().stream().forEach(this::storeRuleDefinition);
-		factory.getResultBaseType().individuals().toList().stream().map(eval -> { // we need to have a list first as otherwise inference has concurrent modificatione exception
+		factory.getResultBaseType().individuals().toList().stream().map(eval -> { // we need to have a list first as otherwise inference has concurrent modification exception
 				try {
 					return RuleEvaluationWrapperResourceImpl.loadFromModel(eval, factory, this);
 				} catch (EvaluationException e) {
@@ -53,16 +54,16 @@ public class RuleRepository {
 		return new RuleDefinitionRegistrar(factory, this);
 	}
 	
-	protected void registerRuleDefinition(RDFRuleDefinition def) {
+	protected void registerRuleDefinition(@NonNull RDFRuleDefinition def) {
 		definitions.putIfAbsent(def.getRuleDefinition().getURI(), def);
 	}
 	
-	protected RDFRuleDefinition storeRuleDefinition(OntIndividual definition) {		
+	protected RDFRuleDefinition storeRuleDefinition(@NonNull OntIndividual definition) {		
 		return definitions.computeIfAbsent(definition.getURI(), k -> new RuleDefinitionImpl(definition, factory));	
 	}
 	
 	public void removeRuleDefinition(@NonNull String ruleDefinitionURI) {
-		getRulesAffectedByDeletedRuleDefinition(ruleDefinitionURI);
+		removeRulesAffectedByDeletedRuleDefinition(ruleDefinitionURI);
 	}
 	
 	public RDFRuleDefinition findRuleDefinitionForResource(@NonNull OntClass ruleDef) {
@@ -73,7 +74,7 @@ public class RuleRepository {
 		return definitions.get(definitionUri);
 	}
 		
-	public Set<RuleEvaluationWrapperResource> getRulesToEvaluateUponRuleDefinitionActivation(RDFRuleDefinition def) {
+	public Set<RuleEvaluationWrapperResource> getRulesToEvaluateUponRuleDefinitionActivation(@NonNull RDFRuleDefinition def) {
 		if (!def.hasExpressionError()) {
 			// find all instances of the rule context type --> create rule evaluations for every instance
 			var individuals = def.getRDFContextType().individuals().collect(Collectors.toSet());
@@ -92,7 +93,7 @@ public class RuleRepository {
 	 * @param def the RuleDefinition to no longer evaluate upon changes, 
 	 * @return all evaluation instances of that definition that now become stale and wont ever be reactivated
 	 */
-	public Set<RuleEvaluationWrapperResource> getRulesToNoLongerUsedUponRuleDefinitionDeactivation(RDFRuleDefinition def) {
+	public Set<RuleEvaluationWrapperResource> deactivateRulesToNoLongerUsedUponRuleDefinitionDeactivation(@NonNull RDFRuleDefinition def) {
 		// set all affected rules to "stale", remove them, they will be recreated
 		return def.getRuleDefinition().individuals()
 			.map(Resource::getId)
@@ -107,23 +108,47 @@ public class RuleRepository {
 	 * @param def the RuleDefinition to remove including all evaluation instances thereof 
 	 * @return all evaluation instances of that definition that now become stale and wont ever be reactivated because we remove their statements
 	 */
-	public Set<RuleEvaluationWrapperResource> getRulesAffectedByDeletedRuleDefinition(String definitionURI) {
+	public Set<RuleEvaluationWrapperResource> removeRulesAffectedByDeletedRuleDefinition(@NonNull String definitionURI) {
 		var old = definitions.remove(definitionURI);
 		if (old != null) {
-			var affected = getRulesToNoLongerUsedUponRuleDefinitionDeactivation(old);
-			affected.forEach(ruleEval -> ruleEval.delete());
+			// if this is called externally, then the rule definition is gone and the following method cannot access individuals thereof to delete,  			
+			//var affected = deactivateRulesToNoLongerUsedUponRuleDefinitionDeactivation(old);
+			// just ensure there is no local rule eval that is not externally known and remains dangling
+			var affected = getRuleEvaluationIdsByDefinitionURI(definitionURI);
+			var filtered = affected.stream()
+				.map(evaluations::remove) 
+				.filter(Objects::nonNull) // if locally not known, then ignore (we assume a consistent cache) 
+				.map(ruleEval -> { ruleEval.delete(); return ruleEval; })
+				.map(RuleEvaluationWrapperResource.class::cast)
+				.collect(Collectors.toSet());
 			old.delete();			
-			return affected;
-		} else {
+			return filtered;
+		} else {						
 			return Collections.emptySet();
 		}				
+	}
+	
+	/**
+	 * used upon deletion when definition type is already gone/no longer accessible
+	 * */
+	private Set<AnonId> getRuleEvaluationIdsByDefinitionURI(String definitionURI) {
+		Set<AnonId> evals = new HashSet<>();
+		var model = factory.getDefinitionType().getModel();		
+		var def = model.createResource(definitionURI);
+		var iter = model.listResourcesWithProperty(RDF.type, def);
+		while(iter.hasNext()) {
+			var res = iter.next();			
+			if (res.getId() != null)
+				evals.add(res.getId());
+		}
+		return evals;
 	}
 
 	/**	 
 	 * @param definition that changed
 	 * @return all the instances of the definition that now need re-evaluation
 	 */
-	public Set<RuleEvaluationWrapperResource> getRulesAffectedByRuleDefinitionExpressionChanged(OntIndividual definition) { //TODO trigger from observer
+	public Set<RuleEvaluationWrapperResource> getRulesAffectedByRuleDefinitionExpressionChanged(@NonNull OntIndividual definition) { //TODO trigger from observer
 		var defWrapper = definitions.get(definition.getURI());
 		if (defWrapper == null) {
 			storeRuleDefinition(definition);
@@ -145,17 +170,17 @@ public class RuleRepository {
 	 * @param definition to have an updated context type, causes deletion of old evaluations and recreation of new evaluations
 	 * @return only the new rule evaluations that need to be triggered/reevaluated
 	 */
-	public Set<RuleEvaluationWrapperResource> getRulesAffectedByRuleDefinitionContextTypeChanged(OntIndividual definition) {   //TODO trigger from observer
+	public Set<RuleEvaluationWrapperResource> getRulesAffectedByRuleDefinitionContextTypeChanged(@NonNull OntIndividual definition) {   //TODO trigger from observer
 		var def = definitions.get(definition.getURI());
 		if (def == null) {
 			storeRuleDefinition(definition);									
 		} else {
-			getRulesToNoLongerUsedUponRuleDefinitionDeactivation(def);			
+			deactivateRulesToNoLongerUsedUponRuleDefinitionDeactivation(def);			
 		}		
 		return getRulesToEvaluateUponRuleDefinitionActivation(def);
 	}
 	
-	public Set<RuleEvaluationWrapperResource> getRulesAffectedByCreation(OntIndividual newSubject) {
+	public Set<RuleEvaluationWrapperResource> getRulesAffectedByCreation(@NonNull OntIndividual newSubject) {
 		// check if it has any existing scope, return also those, as a pessimistic caution as we dont know what the type changes imply	
 		var reEval = getAllRuleEvaluationsThatUse(newSubject);			
 		// find definitions that have this as context		
@@ -173,7 +198,7 @@ public class RuleRepository {
 	 * @param subject for which to find any scope elements, then for any reference to rule evaluation fetch the wrapper (creating if necessary)
 	 * @return all rule evaluations this subject is used in.
 	 */
-	private Set<RuleEvaluationWrapperResource> getAllRuleEvaluationsThatUse(OntIndividual subject) {
+	private Set<RuleEvaluationWrapperResource> getAllRuleEvaluationsThatUse(@NonNull OntIndividual subject) {
 		Set<RuleEvaluationWrapperResource> evals = new HashSet<>();
 		var iter = subject.listProperties(factory.getHasRuleScope().asProperty());
 		while(iter.hasNext()) {
@@ -219,7 +244,7 @@ public class RuleRepository {
 		return evals;
 	}
 	
-	public Set<RuleEvaluationWrapperResource> getRulesAffectedByTypeRemoval(OntIndividual subject, String removedTypeURI) {
+	public Set<RuleEvaluationWrapperResource> getRulesAffectedByTypeRemoval(@NonNull OntIndividual subject, @NonNull String removedTypeURI) {
 		// retyping of an instance
 		// TODO look where the type info is used as property for casting or checking!!
 		// for now we reeval all
@@ -260,7 +285,8 @@ public class RuleRepository {
 		return evals;
 	}
 
-	public Set<RuleEvaluationWrapperResource> getRulesAffectedByDeletedRuleEvaluation(AnonId ruleEvalId) {
+	public Set<RuleEvaluationWrapperResource> removeRulesAffectedByDeletedRuleEvaluation(@NonNull AnonId ruleEvalId) {
+		log.debug("Handling removal of rule evaluation object: "+ruleEvalId.toString());
 		var eval = evaluations.remove(ruleEvalId);
 		if (eval == null) {
 			return Collections.emptySet(); // we no longer have this stored anyway

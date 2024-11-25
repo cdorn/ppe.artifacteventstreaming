@@ -50,13 +50,13 @@ public class RuleFactory {
 	@Getter private OntDataProperty evaluationErrorProperty;
 	@Getter private OntObjectProperty evaluationResultProperty;
 	@Getter private OntDataProperty evaluationHasConsistentResultProperty;
-	@Getter private OntObjectProperty contextElementProperty;
+	@Getter private OntObjectProperty contextElementScopeProperty;
 	
 	@Getter private OntDataProperty isEnabledProperty;
 	
 	
 	// usage index
-	public static final String elementInRuleUsageEntryURI = uri+"RuleScopePart"; // type
+	public static final String ruleScopePartURI = uri+"RuleScopePart"; // type
 	public static final String usingPropertyURI = uri+"usingProperty";
 	public static final String usingElementURI = uri+"usingElement";
 	public static final String usedInRuleURI = uri+"usedInRule";
@@ -81,15 +81,20 @@ public class RuleFactory {
 	}
 	
 	private void initTypes() {
-		initDefinitionType();
-		initResultBaseType();
-		initUsageType();
+		initOntClasses();		
+		initDefinitionTypeProperties();
+		initResultBaseTypeProperties();
+		initScopePartTypeProperties();
 		initRuleContextReferenceProperty();
 	}
-
-	private void initDefinitionType() {
+	
+	private void initOntClasses() {
 		definitionType = model.createOntClass(ruleDefinitionURI);
-		
+		resultBaseType = model.createOntClass(ruleEvaluationResultBaseTypeURI);
+		ruleScopeCollection = model.createOntClass(ruleScopePartURI);
+	}
+
+	private void initDefinitionTypeProperties() {		
 		expressionProperty = model.createDataProperty(ruleExpressionURI);
 		expressionProperty
 			.addDomain(definitionType)
@@ -109,9 +114,7 @@ public class RuleFactory {
 		definitionType.addSuperClass(model.createObjectMaxCardinality(contextTypeProperty, 1, null));
 	}
 	
-	private void initResultBaseType() {
-		resultBaseType = model.createOntClass(ruleEvaluationResultBaseTypeURI);
-		
+	private void initResultBaseTypeProperties() {				
 		evaluationResultProperty = model.createObjectProperty(ruleEvaluationResultURI);
 		evaluationResultProperty.addDomain(resultBaseType);
 		// no range as any type of object is allowed to be in the output/result of a rule
@@ -129,11 +132,16 @@ public class RuleFactory {
 			.addRange(model.getDatatype(XSD.xstring));
 		resultBaseType.addSuperClass(model.createDataMaxCardinality(evaluationErrorProperty, 1, null));
 		
-		contextElementProperty = model.createObjectProperty(ruleContextElementURI);
-		contextElementProperty
+		contextElementScopeProperty = model.createObjectProperty(ruleContextElementURI);
+		contextElementScopeProperty
 			.addDomain(resultBaseType)
-			.addRange(model.getOntClass(OWL2.Thing));  
-		resultBaseType.addSuperClass(model.createObjectMaxCardinality(contextElementProperty, 1, null));
+			.addRange(ruleScopeCollection);  
+		resultBaseType.addSuperClass(model.createObjectMaxCardinality(contextElementScopeProperty, 1, null));
+		
+		havingScopePartProperty = model.createObjectProperty(havingScopeURI);
+		havingScopePartProperty
+			.addDomain(resultBaseType)
+			.addRange(ruleScopeCollection);
 		
 		isEnabledProperty = model.createDataProperty(ruleIsEnabledURI);	
 		isEnabledProperty
@@ -145,9 +153,7 @@ public class RuleFactory {
 		resultBaseType.addSuperClass(max1);			
 	}
 	
-	private void initUsageType() {		
-		ruleScopeCollection = model.createOntClass(elementInRuleUsageEntryURI);		
-		
+	private void initScopePartTypeProperties() {						
 		usingPredicateProperty = model.createObjectProperty(usingPropertyURI);
 		usingPredicateProperty
 			.addDomain(ruleScopeCollection)
@@ -163,16 +169,14 @@ public class RuleFactory {
 		usedInRuleProperty = model.createObjectProperty(usedInRuleURI);
 		usedInRuleProperty
 			.addDomain(ruleScopeCollection)
-			.addRange(getResultBaseType());
-		
-		havingScopePartProperty = model.createObjectProperty(havingScopeURI);
-		havingScopePartProperty
-			.addDomain(resultBaseType)
-			.addRange(ruleScopeCollection);
+			.addRange(getResultBaseType());		
 		
 		usedInRuleProperty.addInverseProperty(havingScopePartProperty);
 	}
 
+	/**
+	 *  creates the reference property from instance/individual to rule scopes
+	 * */
 	private void initRuleContextReferenceProperty() {
 		hasRuleScope = model.createObjectProperty(elementHasRuleScopeURI);
 		hasRuleScope.addRange(ruleScopeCollection);
