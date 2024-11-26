@@ -127,7 +127,7 @@ public class RuleRepository {
 		var old = definitions.remove(definitionURI);
 		if (old != null) {
 			// if this is called externally, then the rule definition is gone and the following method cannot access individuals thereof to delete,  			
-			// dsdd var affected = deactivateRulesToNoLongerUsedUponRuleDefinitionDeactivation(old);
+			// var affected = deactivateRulesToNoLongerUsedUponRuleDefinitionDeactivation(old);
 			// just ensure there is no local rule eval that is not externally known and remains dangling
 			var affected = getRuleEvaluationIdsByDefinitionURI(definitionURI);
 			var filtered = affected.stream()
