@@ -126,7 +126,7 @@ class TestCommitHandling {
 		branch.appendOutgoingCommitDistributer(service);
 		
 		branch.enqueueIncomingCommit(commit);		
-		success = latch.await(1, TimeUnit.SECONDS);
+		success = latch.await(1, TimeUnit.SECONDS); //this sometimes fails 
 		assertFalse(success);
 		assertEquals(0, branch.getInQueue().size());
 		assertEquals(0, service.getReceivedCommits().size());

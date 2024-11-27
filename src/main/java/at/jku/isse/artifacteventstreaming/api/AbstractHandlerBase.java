@@ -27,7 +27,7 @@ public abstract class AbstractHandlerBase implements CommitHandler {
 			OntClass.Named handlerConfig = repoModel.getOntClass(AES.commitHandlerConfigType);
 			config = handlerConfig.createIndividual(AES.getURI()+this.getClass().getSimpleName()+"#"+serviceName);
 			config.addProperty(AES.isConfigForHandlerType, repoModel.createResource(getServiceTypeURI()));
-			config.addProperty(RDFS.label, serviceName);
+			config.addLabel(serviceName);
 		}
 		return config;
 	}

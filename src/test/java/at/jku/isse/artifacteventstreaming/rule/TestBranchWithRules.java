@@ -64,7 +64,7 @@ class TestBranchWithRules {
 		schema = new MockSchema(model); // create types for testing
 								
 		// setup rule service
-		RDFModelAccess modelAccess = new RDFModelAccess(model);
+		RDFModelAccess modelAccess = new RDFModelAccess(model); // used by parser, TODO: make modelAccess non-static
 		factory = new RuleFactory(model);
 		repo = new RuleRepository(factory);
 		observer = new RuleTriggerObserver("RuleTriggerObserver1", repoModel, factory, repo);

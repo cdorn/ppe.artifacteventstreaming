@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 class TestRuleEvaluation extends TestRuleDefinitions {
 
 	RuleRepository repo;
+	RuleRepositoryInspector inspector;
 	OntIndividual inst1;
 	OntIndividual inst2;
 	
@@ -29,6 +30,7 @@ class TestRuleEvaluation extends TestRuleDefinitions {
 	void setup() {
 		super.setup();
 		repo = new RuleRepository(factory);
+		inspector = new RuleRepositoryInspector(factory);
 		inst1 = artSubType.createIndividual(baseURI+"inst1");
 		inst2 = artSubType.createIndividual(baseURI+"inst2");
 		
@@ -105,8 +107,8 @@ class TestRuleEvaluation extends TestRuleDefinitions {
 		var evalWrapper = rulesToEval.iterator().next();
 		evalWrapper.evaluate();
 		System.out.println("All Scopes before addition:");
-		getAllScopes().forEach(scope -> printScope(scope));					
-		var evals = getEvalWrappersFromScopes(inst2, labelProp.getURI());
+		inspector.getAllScopes().forEach(scope -> inspector.printScope(scope));					
+		var evals = inspector.getEvalWrappersFromScopes(inst2, labelProp.getURI());
 		assertEquals(0, evals.size());
 		
 		// now lets add this to property
@@ -115,13 +117,13 @@ class TestRuleEvaluation extends TestRuleDefinitions {
 		assertEquals(1, rulesToEval.size());
 		evalWrapper = rulesToEval.iterator().next();
 		evalWrapper.evaluate();							
-		evals = getEvalWrappersFromScopes(inst2, labelProp.getURI());
+		evals = inspector.getEvalWrappersFromScopes(inst2, labelProp.getURI());
 		assertEquals(1, evals.size());
 		
 		
 		var ruleScopes = getScopesForRule(((RuleEvaluationWrapperResourceImpl) evalWrapper).getRuleEvalObj());
 		System.out.println("Rule 1 Scopes after addition:");
-		ruleScopes.forEach(scope -> printScope(scope));
+		ruleScopes.forEach(scope -> inspector.printScope(scope));
 		assertEquals(2, ruleScopes.size()); // 2 not 3 because rule does not point to Scope that is used to represent the context usage
 		
 		// now lets see which ones we would activate if we official add art2
@@ -145,11 +147,11 @@ class TestRuleEvaluation extends TestRuleDefinitions {
 		assertEquals(Boolean.FALSE, result);
 		assertEquals(inst1, evalWrapper.getContextInstance());
 		
-		var evalsOf2 = getEvalWrappersFromScopes(inst2, labelProp.getURI());
+		var evalsOf2 = inspector.getEvalWrappersFromScopes(inst2, labelProp.getURI());
 		assertEquals(0, evalsOf2.size());		
 		var ruleScopes = getScopesForRule(((RuleEvaluationWrapperResourceImpl) evalWrapper).getRuleEvalObj());
 		System.out.println("Rule 1 Scopes after addition:");
-		ruleScopes.forEach(scope -> printScope(scope));
+		ruleScopes.forEach(scope -> inspector.printScope(scope));
 		assertEquals(1, ruleScopes.size()); // 1 not 2 because rule does not point to Scope that is used to represent the context usage
 		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
 	}
@@ -169,13 +171,13 @@ class TestRuleEvaluation extends TestRuleDefinitions {
 		assertEquals(2, rulesToEval.size());
 		rulesToEval.forEach(rule -> rule.evaluate());		
 		
-		var scopes = getScopes(inst1);
-		scopes.forEach(scope -> printScope(scope));
+		var scopes = inspector.getScopes(inst1);
+		scopes.forEach(scope -> inspector.printScope(scope));
 		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;		
 		assertEquals(2, scopes.size());
-		assertTrue(scopes.stream().allMatch(scope -> getEvalCountFromScope(scope) == 2));
+		assertTrue(scopes.stream().allMatch(scope -> inspector.getEvalCountFromScope(scope) == 2));
 		
-		scopes = getScopes(inst1, subProp.getURI());		
+		scopes = inspector.getScopes(inst1, subProp.getURI());		
 		assertEquals(1, scopes.size());		
 		
 		var affected = repo.getRulesAffectedByTypeRemoval(inst1, artSubType.getURI());
@@ -205,9 +207,9 @@ class TestRuleEvaluation extends TestRuleDefinitions {
 		var reeval = repo.getRulesToEvaluateUponRuleDefinitionActivation(ruleDef2);
 		reeval.forEach(rule -> rule.evaluate());
 		assertEquals(2, reeval.size());
-		var scopes = getScopes(inst1);
-		scopes.forEach(scope -> printScope(scope));
-		assertTrue(scopes.stream().allMatch(scope -> getEvalCountFromScope(scope) == 1));
+		var scopes = inspector.getScopes(inst1);
+		scopes.forEach(scope -> inspector.printScope(scope));
+		assertTrue(scopes.stream().allMatch(scope -> inspector.getEvalCountFromScope(scope) == 1));
 		//RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
 	}
 	
@@ -226,10 +228,10 @@ class TestRuleEvaluation extends TestRuleDefinitions {
 		assertEquals(2, affectedRules.size());
 		assertTrue(affectedRules.stream().allMatch(rule -> rule.isEnabled() == false));
 		
-		var scopes = getScopes(inst1);
+		var scopes = inspector.getScopes(inst1);
 		assertEquals(0, scopes.size());
 		
-		var allScopes = getAllScopes();
+		var allScopes = inspector.getAllScopes();
 		assertEquals(0, allScopes.size());
 		
 	}
@@ -282,69 +284,5 @@ class TestRuleEvaluation extends TestRuleDefinitions {
 				.build();
 	}
 	
-	protected Set<OntIndividual> getAllScopes() {		
-		return factory.getRuleScopeCollection().individuals().collect(Collectors.toSet());
-	}
-	
-	protected Set<OntIndividual> getScopes(OntIndividual subject, String... limitedToProps){
-		var scopes = new HashSet<OntIndividual>();
-		List<String> props = Arrays.asList(limitedToProps);
-		var iter = subject.listProperties(factory.getHasRuleScope().asProperty());
-		while(iter.hasNext()) {
-			var stmt = iter.next();
-			var scope = stmt.getResource().as(OntIndividual.class);
-			if (!props.isEmpty()) { // only specific props are considered				
-				var property = scope.getPropertyResourceValue(factory.getUsingPredicateProperty().asProperty());
-				if (property == null || !props.contains(property.getURI()))
-					continue;	// early iteration abort and check next scope object
-			}
-			scopes.add(scope);
-		}
-		return scopes;
-	}
-	
-	protected int getEvalCountFromScope(OntIndividual scope) {
-		var evals = new HashSet<OntIndividual>();
-		var iterRule = scope.listProperties(factory.getUsedInRuleProperty().asProperty());
-		while(iterRule.hasNext()) { //property
-			var ruleRes = iterRule.next().getResource().as(OntIndividual.class);
-			evals.add(ruleRes);
-		}
-		return evals.size();
-	}
-	
-	protected Set<OntIndividual> getEvalWrappersFromScopes(OntIndividual subject, String... limitedToProps){
-		var evals = new HashSet<OntIndividual>();
-		List<String> props = Arrays.asList(limitedToProps);
-		var iter = subject.listProperties(factory.getHasRuleScope().asProperty());
-		while(iter.hasNext()) {
-			var stmt = iter.next();
-			var scope = stmt.getResource().as(OntIndividual.class);
-			if (!props.isEmpty()) { // only specific props are considered				
-				var property = scope.getPropertyResourceValue(factory.getUsingPredicateProperty().asProperty());
-				if (property == null || !props.contains(property.getURI()))
-					continue;	// early iteration abort and check next scope object
-			}
-			var iterRule = scope.listProperties(factory.getUsedInRuleProperty().asProperty());
-			while(iterRule.hasNext()) { //property
-				var ruleRes = iterRule.next().getResource().as(OntIndividual.class);
-				evals.add(ruleRes);
-			}
-		}
-		return evals;
-	}
-	
-	protected void printScope(OntIndividual scope) {
-		var inst = scope.getPropertyResourceValue(factory.getUsingElementProperty().asProperty());
-		var instName = inst != null ? inst.getLocalName() : "NULL_INSTANCE";
-		var property = scope.getPropertyResourceValue(factory.getUsingPredicateProperty().asProperty());
-		var propName = property != null ? property.getLocalName() : "NULL_PROPERTY";
-		var iterRule = scope.listProperties(factory.getUsedInRuleProperty().asProperty());
-		Set<String> evals = new HashSet<>();
-		while(iterRule.hasNext()) { //property
-			//var ruleRes = iterRule.next().getResource().as(OntIndividual.class);
-			evals.add(iterRule.next().getResource().getId().toString());
-		}
-		System.out.println(String.format("Scope: %s with property %s in rule evals: %s", instName, propName, evals.toString() ));
-	}
+
 }

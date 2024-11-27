@@ -72,7 +72,7 @@ class TestRuleTriggering extends TestRuleEvaluation {
 		
 		var deletedDef = repo.findRuleDefinitionForURI(defURI);
 		assertNull(deletedDef);	
-		assertTrue(getAllScopes().stream().allMatch(scope -> scope.getProperty(factory.getUsedInRuleProperty().asProperty())==null));
+		assertTrue(inspector.getAllScopes().stream().allMatch(scope -> scope.getProperty(factory.getUsedInRuleProperty().asProperty())==null));
 	}
 
 	@Test
@@ -124,10 +124,10 @@ class TestRuleTriggering extends TestRuleEvaluation {
 		// assert that rule evaluation is available and has been evaluated
 		var affected2 = repo.getRulesAffectedByChange(inst2, refProp.asProperty());
 		
-		var scopes = getScopes(inst2);
+		var scopes = inspector.getScopes(inst2);
 		//scopes.stream().forEach(scope -> printScope(scope));
 		assertEquals(2, scopes.size()); // one for each rule
-		assertTrue(scopes.stream().allMatch(scope -> getEvalCountFromScope(scope) == 1));				
+		assertTrue(scopes.stream().allMatch(scope -> inspector.getEvalCountFromScope(scope) == 1));				
 		assertEquals(1, affected2.size());
 		assertEquals(affected, affected2); // same eval objects		
 		
@@ -155,7 +155,7 @@ class TestRuleTriggering extends TestRuleEvaluation {
 		observer.handleCommit(commit2);
 		// the rule should now be gone
 		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;				
-		assertEquals(0, getAllScopes().size());			
+		assertEquals(0, inspector.getAllScopes().size());			
 	}
 	
 	@Test

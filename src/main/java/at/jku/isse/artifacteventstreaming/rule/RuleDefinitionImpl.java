@@ -178,7 +178,11 @@ public class RuleDefinitionImpl implements RDFRuleDefinition {
 		return getExpressionError();
 	}
 
-
+	@Override
+	public String toString() {
+		return "RuleDefinitionImpl [Name=" + getName() + ", CtxType=" + getContextType() + ", Expr=" + getRuleExpression() + ", ExpErr()="
+				+ getExpressionError() + ", Name=" + getName() + ", CtxType=" + getContextType() + "]";
+	}
 
 	
 }

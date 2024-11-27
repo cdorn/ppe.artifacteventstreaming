@@ -28,13 +28,14 @@ import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
 import at.jku.isse.designspace.rule.arl.evaluator.RuleEvaluation;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class RuleTriggerObserver extends AbstractHandlerBase implements IncrementalCommitHandler {
-
-	private final RuleFactory factory;
-	private final RuleRepository repo;
+	
+	@Getter private final RuleFactory factory;
+	@Getter private final RuleRepository repo;
 	private final LinkedList<RuleEvaluationListener> listeners = new LinkedList<>();
 	
 	public RuleTriggerObserver(String serviceName, OntModel repoModel, RuleFactory ruleFactory, RuleRepository ruleRepo) {
@@ -150,6 +151,8 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 	
 	private boolean isAboutRuleDefinitionType(Statement stmt) {
 		var typeUri = stmt.getResource().getURI();
+		if (typeUri == null) return false;
+		
 		return ((typeUri.equals(factory.getDefinitionType().getURI()) 
 			 && stmt.getPredicate().equals(RDF.type))
 				|| 
@@ -205,25 +208,22 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 			return;
 		
 		var subject = stmt.getSubject();
-		if (res.canAs(OntClass.class)) {
-			var ontClass = res.as(OntClass.class);			
-			if (ontClass.equals(factory.getDefinitionType()) || factory.getResultBaseType().hasSubClass(ontClass, true)) { // a new rule was created
-				var def = repo.storeRuleDefinition(subject.as(OntIndividual.class));				
+		if (subject.canAs(OntClass.class)) {
+			if (isAboutRuleDefinitionType(stmt)) { // a new rule was created
+				var def = repo.storeRuleDefinition(subject.as(OntObject.class));				
 				addRulesToMetadata(rulesToReevaluate, repo.getRulesToEvaluateUponRuleDefinitionActivation(def), stmt); 
 				createdResourceURIs.add(subject);
 				return;
-			} // else ignore any other type creation
-		} 
-		// regular individual  created
-		if (subject.canAs(OntIndividual.class)) {
-			// if a rule evaluation object created, ignore that 
-			var indiv = subject.as(OntIndividual.class);
-			if (indiv.hasOntClass(factory.getResultBaseType(), true)) {
+			} else { //other type creation ignored
+				return;
+			}
+		} else if (isAboutRuleEvaluationType(stmt)) {// if a rule evaluation object created, ignore that 
 				createdResourceURIs.add(subject);
 				return;
-			} else {					
+		} else 
+		// regular individual  created
+		if (subject.canAs(OntIndividual.class)) {
 				addRulesToMetadata(rulesToReevaluate, repo.getRulesAffectedByCreation(subject.as(OntIndividual.class)), stmt);
-			}
 		} // in any case, ignore further on				
 	}
 	

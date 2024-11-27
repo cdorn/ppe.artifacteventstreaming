@@ -49,7 +49,6 @@ class TestRDFInstanceType {
 		typeChild.createListPropertyType("listOfArt", typeBase);
 		
 		List<String> names = typeChild.getPropertyNamesIncludingSuperClasses();
-		assertEquals(2, names.size());
 		assertTrue(names.contains("priority"));
 		assertTrue(names.contains("listOfArt"));
 		

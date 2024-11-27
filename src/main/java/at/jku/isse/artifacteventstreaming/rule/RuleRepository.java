@@ -66,11 +66,13 @@ public class RuleRepository {
 	 * if no such observer is running, then manual rule evaluation instances are created upon calling {@link #getRulesToEvaluateUponRuleDefinitionActivation(OntIndividual) }
 	 */
 	protected void registerRuleDefinition(@NonNull RDFRuleDefinition def) {
-		definitions.putIfAbsent(def.getRuleDefinition().getURI(), def);
+		var key = def.getRuleDefinition().getURI();
+		definitions.putIfAbsent(key, def);
 	}
 	
-	protected RDFRuleDefinition storeRuleDefinition(@NonNull OntObject definition) {		
-		return definitions.computeIfAbsent(definition.getURI(), k -> new RuleDefinitionImpl(definition, factory));	
+	protected RDFRuleDefinition storeRuleDefinition(@NonNull OntObject definition) {	
+		var key = definition.getURI();
+		return definitions.computeIfAbsent(key, k -> new RuleDefinitionImpl(definition, factory));	
 	}
 	
 	public void removeRuleDefinition(@NonNull String ruleDefinitionURI) {
