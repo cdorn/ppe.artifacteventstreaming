@@ -2,6 +2,7 @@ package at.jku.isse.artifacteventstreaming.rule;
 
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntIndividual;
+import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.vocabulary.RDFS;
 
 import at.jku.isse.designspace.rule.arl.exception.ParsingException;
@@ -14,11 +15,11 @@ import lombok.NonNull;
 
 public class RuleDefinitionImpl implements RDFRuleDefinition {
 
-	private final OntIndividual ontObject;
+	private final OntObject ontObject;
 	private final RuleFactory factory;
 	private Expression<Object> syntaxTree;
 	
-	protected RuleDefinitionImpl(@NonNull OntIndividual ruleDefinition
+	protected RuleDefinitionImpl(@NonNull OntObject ruleDefinition
 			, @NonNull RuleFactory factory
 			, @NonNull String expression
 			, @NonNull OntClass contextType) {
@@ -28,7 +29,7 @@ public class RuleDefinitionImpl implements RDFRuleDefinition {
 		setRuleExpression(expression);
 	}
 	
-	protected RuleDefinitionImpl(@NonNull OntIndividual ruleDefinition
+	protected RuleDefinitionImpl(@NonNull OntObject ruleDefinition
 			, @NonNull RuleFactory factory) {
 			this.ontObject = ruleDefinition;
 			this.factory = factory;					
@@ -57,7 +58,7 @@ public class RuleDefinitionImpl implements RDFRuleDefinition {
 	@Override
 	public void setRuleExpression(@NonNull String expression) {
 		ontObject.removeAll(factory.getExpressionProperty().asProperty())
-		.addProperty(factory.getExpressionProperty().asProperty(), expression);
+				.addProperty(factory.getExpressionProperty().asProperty(), expression);
 		var contextType = getRDFContextType();		
 		if (contextType == null) {
 			setExpressionError("Cannot load syntax tree for Rule Definition "+ontObject.getURI()+" as it does not reference a context type");

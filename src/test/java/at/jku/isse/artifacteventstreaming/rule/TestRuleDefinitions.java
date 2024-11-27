@@ -44,6 +44,7 @@ class TestRuleDefinitions {
 		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_RDFS_INF ); // needs deep setting of graph listener
 		//m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF ); 		
 		m.setNsPrefix("rules", RuleFactory.uri);
+		m.setNsPrefix("test", baseURI.toString());
 		artType = m.createOntClass(baseURI+"artType");
 		artSubType = m.createOntClass(baseURI+"artSubType");
 		artSubType.addSuperClass(artType);

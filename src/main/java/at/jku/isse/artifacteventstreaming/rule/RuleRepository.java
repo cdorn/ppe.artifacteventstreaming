@@ -3,15 +3,21 @@ package at.jku.isse.artifacteventstreaming.rule;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntIndividual;
+import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.rdf.model.AnonId;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.OWL;
+import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 
 import at.jku.isse.designspace.rule.arl.exception.EvaluationException;
@@ -63,7 +69,7 @@ public class RuleRepository {
 		definitions.putIfAbsent(def.getRuleDefinition().getURI(), def);
 	}
 	
-	protected RDFRuleDefinition storeRuleDefinition(@NonNull OntIndividual definition) {		
+	protected RDFRuleDefinition storeRuleDefinition(@NonNull OntObject definition) {		
 		return definitions.computeIfAbsent(definition.getURI(), k -> new RuleDefinitionImpl(definition, factory));	
 	}
 	
@@ -158,53 +164,23 @@ public class RuleRepository {
 		}
 		return evals;
 	}
-
-	/**	 
-	 * @param definition that changed
-	 * @return all the instances of the definition that now need re-evaluation
-	 */
-	public Set<RuleEvaluationWrapperResource> getRulesAffectedByRuleDefinitionExpressionChanged(@NonNull OntIndividual definition) { //TODO trigger from observer
-		var defWrapper = definitions.get(definition.getURI());
-		if (defWrapper == null) {
-			storeRuleDefinition(definition);
-			return getRulesToEvaluateUponRuleDefinitionActivation(defWrapper);
-		} else {
-			((RuleDefinitionImpl) defWrapper).reloadContextAndExpression(); // ugly cast
-			if (!defWrapper.hasExpressionError()) {
-				// get all individuals from that type, and if not yet wrapped, do wrap, then return for evaluation
-				return defWrapper.getRuleDefinition().individuals()
-					.map(evalRes -> evaluations.computeIfAbsent(evalRes.getId(), k -> RuleEvaluationWrapperResourceImpl.create(factory, defWrapper, evalRes)))
-					.collect(Collectors.toSet());
-			} else {
-				return Collections.emptySet(); 
-			}
-		}		
-	}
-	
-	/**
-	 * @param definition to have an updated context type, causes deletion of old evaluations and recreation of new evaluations
-	 * @return only the new rule evaluations that need to be triggered/reevaluated
-	 */
-	public Set<RuleEvaluationWrapperResource> getRulesAffectedByRuleDefinitionContextTypeChanged(@NonNull OntIndividual definition) {   //TODO trigger from observer
-		var def = definitions.get(definition.getURI());
-		if (def == null) {
-			storeRuleDefinition(definition);									
-		} else {
-			deactivateRulesToNoLongerUsedUponRuleDefinitionDeactivation(def);			
-		}		
-		return getRulesToEvaluateUponRuleDefinitionActivation(def);
-	}
 	
 	public Set<RuleEvaluationWrapperResource> getRulesAffectedByCreation(@NonNull OntIndividual newSubject) {
 		// check if it has any existing scope, return also those, as a pessimistic caution as we dont know what the type changes imply	
 		var reEval = getAllRuleEvaluationsThatUse(newSubject);			
+		List <RuleEvaluationWrapperResourceImpl> ctxEval = getRuleEvaluationsWhereSubjectIsContext(newSubject).stream()
+				.map(eval -> getOrWrapAndRegister(eval))
+				.filter(Objects::nonNull)
+				.toList();
+		
 		// find definitions that have this as context		
 		var types = newSubject.classes(false).collect(Collectors.toSet());
 		reEval.addAll(
 				definitions.values().stream().filter(def -> types.contains(def.getRDFContextType()))
-			.map(def -> RuleEvaluationWrapperResourceImpl.create(factory, def, newSubject))	
-			.map(eval -> { evaluations.put(eval.getRuleEvalObj().getId(), eval); return eval;} )
-			.map(RuleEvaluationWrapperResource.class::cast).toList());			
+				.filter(def -> !isSubjectContextOfRule(def, ctxEval)) // filter out if this subject is already context of that rule, which can happen upon type changes
+				.map(def -> RuleEvaluationWrapperResourceImpl.create(factory, def, newSubject))	
+				.map(eval -> { evaluations.put(eval.getRuleEvalObj().getId(), eval); return eval;} )
+				.map(RuleEvaluationWrapperResource.class::cast).toList());			
 		//TODO: check for duplicate eval objects, should not happen under correct event handling, but better be on the safe side
 		return reEval;
 	}
@@ -234,6 +210,10 @@ public class RuleRepository {
 		return evals;
 	}
 	
+	private boolean isSubjectContextOfRule(RDFRuleDefinition def, List <RuleEvaluationWrapperResourceImpl> ctxEval) {
+		return ctxEval.stream().anyMatch(eval -> eval.getDefinition().equals(def));
+	}
+	
 	public Set<RuleEvaluationWrapperResource> getRulesAffectedByChange(OntIndividual changedSubject, Property predicate) {
 		// check which rules have this subject and predicate in the scope
 		Set<RuleEvaluationWrapperResource> evals = new HashSet<>();
@@ -260,10 +240,70 @@ public class RuleRepository {
 	}
 	
 	public Set<RuleEvaluationWrapperResource> getRulesAffectedByTypeRemoval(@NonNull OntIndividual subject, @NonNull String removedTypeURI) {
-		// retyping of an instance
-		// TODO look where the type info is used as property for casting or checking!!
+		// check if type is completely removed except for own/rdf types
+		if (!hasSomeSpecificType(subject)) { 
+			// we treat this as an instance removal as if there is no more type available, 
+			// then we can't make any guarantees or inferences about available properties, adding a type later will recreate the evaluation object
+			return getRemovedRulesAffectedByInstanceRemoval(subject);
+		}
+		// else check for retyping of an instance, then we need to remove the evaluation as well
+		// for each use as context, check if the rule context type still matches the remaining type information		
+		var removed = getRuleEvaluationsWhereSubjectIsContext(subject).stream()
+			.map(eval -> getOrWrapAndRegister(eval))
+			.filter(Objects::nonNull)
+			.filter(wrapper -> !isSubjectTypeMatchingRuleContext(wrapper, subject))
+			.map(wrapper -> { evaluations.remove(wrapper.getRuleEvalObj().getId()); wrapper.delete(); return wrapper; })
+			.collect(Collectors.toSet());				
+		
+		// TODO also look where the type info is used as property for casting or checking!!				
 		// for now we reeval all
 		return getAllRuleEvaluationsThatUse(subject);
+	}
+	
+	private boolean isSubjectTypeMatchingRuleContext(RuleEvaluationWrapperResourceImpl wrapper,
+			@NonNull OntIndividual subject) {
+		var ctxType = wrapper.getDefinition().getRDFContextType();
+		return subject.hasOntClass(ctxType, false);		
+	}
+
+	private boolean hasSomeSpecificType(OntIndividual subject) {		
+		return subject.classes(true)
+				.filter(clazz -> !clazz.getURI().equals(OWL2.NamedIndividual.getURI()))
+				.count() > 0;		
+	}
+	
+	private Set<OntIndividual> getRuleEvaluationsWhereSubjectIsContext(OntIndividual subject) {
+		var evals = new HashSet<OntIndividual>();
+		var iter = subject.listProperties(factory.getHasRuleScope().asProperty());
+		while(iter.hasNext()) {
+			var stmt = iter.next();
+			var scope = stmt.getResource().as(OntIndividual.class);			
+			var property = scope.getPropertyResourceValue(factory.getUsingPredicateProperty().asProperty());
+			if (property == null ) {								
+				var iterRule = scope.listProperties(factory.getUsedInRuleProperty().asProperty());
+				while(iterRule.hasNext()) { //property
+					var ruleRes = iterRule.next().getResource().as(OntIndividual.class);
+					evals.add(ruleRes);
+				}
+			}
+		}
+		return evals;
+	}
+	
+	private RuleEvaluationWrapperResourceImpl getOrWrapAndRegister(OntIndividual eval) {		 
+			var evalWrapper = evaluations.get(eval.getId());
+			if (evalWrapper == null) {
+				try {				
+					evalWrapper = RuleEvaluationWrapperResourceImpl.loadFromModel(eval, factory, this);
+					evaluations.put(eval.getId(), evalWrapper);
+					return evalWrapper;
+				} catch (EvaluationException e) {
+					log.warn("Error loading evaluation results from model, ignoring: "+e);
+					return null;
+				}
+			} else {
+				return evalWrapper;
+			}
 	}
 	
 	public Set<RuleEvaluationWrapperResource> getRemovedRulesAffectedByInstanceRemoval(Resource subject) {
@@ -288,8 +328,8 @@ public class RuleRepository {
 					if (evalObjWrapper == null) {
 						evalObjWrapper = RuleEvaluationWrapperResourceImpl.loadFromModel(evalObj, factory, this);
 						// not we dont add to index here, as we remove these anyway before returning
-					} 
-					evals.add(evalObjWrapper); 
+					} 					
+					evals.add(evalObjWrapper); //we delete evals further down 
 				}				
 			}			
 		}

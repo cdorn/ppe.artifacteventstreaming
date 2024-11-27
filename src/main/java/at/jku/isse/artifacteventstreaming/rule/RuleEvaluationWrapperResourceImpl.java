@@ -1,6 +1,8 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
+import java.util.AbstractMap;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -23,6 +25,8 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	private final OntIndividual contextInstance;
 	private final RuleEvaluation delegate;
 	private Object result = null;
+	@Getter
+	private RDFRuleDefinition definition;
 	
 	// either create new	
 	/**
@@ -127,6 +131,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 		this.ruleEvalObj = ruleEvalObj;
 		this.contextInstance = contextInstance;
 		this.factory = factory;
+		this.definition = def;
 		this.delegate = new RuleEvaluationImpl(def, contextInstance);
 		setEnabledIfNotStatusAvailable();		
 	
@@ -140,14 +145,15 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	
 	
 	/**
-	 * If rule is disabled, return stale result, if any.
+	 * If rule is disabled, returns null.
 	 * If evaluation has error, returns null
-	 * result itself is not persisted, just whether rule is consistent or not (or persisted as null if not applicable)
+	 * result itself is not persisted, just whether rule is consistent or not 
 	 */
 	@Override
-	public Object evaluate() {
-		if (!isEnabled()) return result;
+	public Entry<RuleEvaluation, Boolean> evaluate() {
+		if (!isEnabled()) return null;
 		
+		var priorConsistency = isConsistent();
 		result = delegate.evaluate();
 		var error = delegate.getError();
 		if (error != null) {			
@@ -163,7 +169,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 			}
 			updateRuleScope();
 		}				
-		return result;
+		return new AbstractMap.SimpleEntry<>(delegate, !Objects.equals(priorConsistency, isConsistent())); // returns if the outcome has changed;
 	}
 
 	private void updateRuleScope() {
@@ -255,6 +261,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 
 	@Override
 	public boolean isEnabled() {
+		if (ruleEvalObj == null) return false;
 		var stmt = ruleEvalObj.getProperty(factory.getIsEnabledProperty());
 		return stmt != null ? stmt.getBoolean() : Boolean.FALSE; //if not set, then assumed false, because when we delete, we wont have any statements, hence need to assume disabled
 	}

@@ -1,10 +1,14 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
+import java.util.Map.Entry;
+
 import org.apache.jena.ontapi.model.OntIndividual;
+
+import at.jku.isse.designspace.rule.arl.evaluator.RuleEvaluation;
 
 public interface RuleEvaluationWrapperResource {
 
-	public Object evaluate();
+	public Entry<RuleEvaluation, Boolean> evaluate();
 	public boolean isConsistent();	
 	public String getEvaluationError();
 	public Object getEvaluationResult();

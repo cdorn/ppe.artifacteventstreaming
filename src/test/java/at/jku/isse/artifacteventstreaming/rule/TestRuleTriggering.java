@@ -10,6 +10,7 @@ import org.apache.jena.rdf.model.impl.ModelCom;
 import org.apache.jena.reasoner.InfGraph;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
+import org.apache.jena.vocabulary.RDF;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -74,6 +75,64 @@ class TestRuleTriggering extends TestRuleEvaluation {
 		assertTrue(getAllScopes().stream().allMatch(scope -> scope.getProperty(factory.getUsedInRuleProperty().asProperty())==null));
 	}
 
+	@Test
+	void testCreateRuleWithInstanceCreatedLaterAndRemoved() throws RuleException {
+		var def = getBasicArtSubTypeWithSubRefOnLabelRule(1);
+		var defURI = def.getRuleDefinition().getURI();
+		aggr.retrieveAddedStatements(); // to clear changes
+		aggr.retrieveRemovedStatements();
+		
+		var inst3 = artSubType.createIndividual(baseURI+"inst3");
+		
+		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		observer.handleCommit(commit);				
+		// assert that rule evaluation is available and has been evaluated
+		var affected = repo.getRulesAffectedByChange(inst3, subProp.asProperty());
+		assertEquals(1, affected.size());
+		var ruleEval = affected.iterator().next();
+		assertEquals(Boolean.FALSE, ruleEval.getEvaluationResult());
+		
+		// remove subart type;
+		inst3.remove(RDF.type, artSubType);
+		commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		observer.handleCommit(commit);				
+		// assert that rule evaluation is no longer available 
+		affected = repo.getRulesAffectedByChange(inst3, subProp.asProperty());
+		assertEquals(0, affected.size());
+	}
+	
+	@Test
+	void testInstanceRetyping() throws RuleException {
+		var def = getBasicArtTypeWithRefOnLabelRule(1);		
+		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		observer.handleCommit(commit);
+		
+		var affected = repo.getRulesAffectedByChange(inst2, refProp.asProperty());
+		assertEquals(1, affected.size());
+		var ruleEval = affected.iterator().next();
+		assertEquals(Boolean.FALSE, ruleEval.getEvaluationResult());
+		aggr.retrieveAddedStatements(); // to clear changes
+		aggr.retrieveRemovedStatements();
+		
+		// remove subart type;
+		inst2.remove(RDF.type, artSubType);
+		inst2.addProperty(RDF.type, artType);
+		//inst2.classes(true).forEach(clazz -> System.out.println(clazz));
+				
+		commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit2", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		observer.handleCommit(commit);				
+		// assert that rule evaluation is available and has been evaluated
+		var affected2 = repo.getRulesAffectedByChange(inst2, refProp.asProperty());
+		
+		var scopes = getScopes(inst2);
+		//scopes.stream().forEach(scope -> printScope(scope));
+		assertEquals(2, scopes.size()); // one for each rule
+		assertTrue(scopes.stream().allMatch(scope -> getEvalCountFromScope(scope) == 1));				
+		assertEquals(1, affected2.size());
+		assertEquals(affected, affected2); // same eval objects		
+		
+	}
+	
 	// test: if inst is removed whether all scopes are gone
 	@Test
 	void testRemoveScopeUponDeletion() throws RuleException {
@@ -125,5 +184,28 @@ class TestRuleTriggering extends TestRuleEvaluation {
 		assertEquals(0, affected.size());
 	}
 	
-
+	@Test
+	void testRuleContextRetyping() throws RuleException {
+		var def = getBasicArtTypeWithRefOnLabelRule(1);		
+		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		observer.handleCommit(commit);
+		
+		var affected = repo.getRulesAffectedByChange(inst2, refProp.asProperty());
+		assertEquals(1, affected.size());
+		var ruleEval = affected.iterator().next();
+		assertEquals(Boolean.FALSE, ruleEval.getEvaluationResult());
+		aggr.retrieveAddedStatements(); // to clear changes
+		aggr.retrieveRemovedStatements();
+		
+		// change context type type;
+		def.setRuleExpression("self->isDefined()");
+							
+		commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit2", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		observer.handleCommit(commit);				
+		// assert that rule evaluation is available and has been evaluated
+		var affected2 = repo.getRulesAffectedByChange(inst2, refProp.asProperty());
+				
+		assertNotEquals(affected, affected2); // not the same eval objects		
+		
+	}
 }

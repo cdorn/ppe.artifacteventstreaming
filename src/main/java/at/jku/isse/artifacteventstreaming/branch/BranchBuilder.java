@@ -41,6 +41,7 @@ public class BranchBuilder {
 	private Dataset branchDataset;
 	private final Dataset repoDataset;
 	private OntModel repoModel;
+	private OntSpecification modelSpec = OntSpecification.OWL1_DL_MEM; // no inference by default
 	private List<CommitHandler> incomingCommitHandlers = new LinkedList<>();
 	private List<IncrementalCommitHandler> services = new LinkedList<>();
 	private Set<CommitHandler> outgoingCommitDistributers = new HashSet<>();
@@ -88,6 +89,12 @@ public class BranchBuilder {
 		return this;
 	}
 
+	public BranchBuilder setModelReasoner(@NonNull OntSpecification spec) {
+		this.modelSpec = spec;
+		return this;
+	}
+	
+	
 	/**
 	 * if not used, no commits will be merged into this branch
 	 */
@@ -134,7 +141,7 @@ public class BranchBuilder {
 		// we init the statekeeper before the branch to avoid triggering the services --> not anymore with separate startHandlers method
 		// stateKeeper.loadState(model); only upon setting up all services, not the duty of the builder
 		//branchDataset.begin();
-		OntModel model = OntModelFactory.createModel(branchDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		OntModel model = OntModelFactory.createModel(branchDataset.getDefaultModel().getGraph(), modelSpec);
 		if (stateKeeper == null) {
 			stateKeeper = new StateKeeperImpl(URI.create(branchURI), new InMemoryBranchStateCache(), new InMemoryEventStore());
 		}
@@ -161,16 +168,16 @@ public class BranchBuilder {
 		return branchResource;
 	}
 	
-	private static void addCoreConcepts(OntModel model) {
-		OntClass.Named repoType = model.createOntClass(AES.repositoryType);
-		OntClass.Named branchType = model.createOntClass(AES.branchType);
-		OntObjectProperty.Named partOfRepo = model.createObjectProperty(AES.partOfRepository.getURI());
+	private static void addCoreConcepts(OntModel repoModel) {
+		OntClass.Named repoType = repoModel.createOntClass(AES.repositoryType);
+		OntClass.Named branchType = repoModel.createOntClass(AES.branchType);
+		OntObjectProperty.Named partOfRepo = repoModel.createObjectProperty(AES.partOfRepository.getURI());
 		partOfRepo.addDomain(branchType);
 		partOfRepo.addRange(repoType);
 		partOfRepo.addLabel("part of repository");
 		
-		OntClass.Named handlerConfig = model.createOntClass(AES.commitHandlerConfigType);
-		OntDataProperty configForType = model.createDataProperty(AES.isConfigForHandlerType.getURI());
+		OntClass.Named handlerConfig = repoModel.createOntClass(AES.commitHandlerConfigType);
+		OntDataProperty configForType = repoModel.createDataProperty(AES.isConfigForHandlerType.getURI());
 		configForType.addDomain(handlerConfig);
 		configForType.addLabel("is configuration for handler of type");
 		configForType.addComment("Is used to enable lookup the right handler factory from which to re-create a handler with the configuration described in domain of this property. Config properties are specific for each handler type");

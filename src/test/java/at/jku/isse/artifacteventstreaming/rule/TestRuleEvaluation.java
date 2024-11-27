@@ -273,6 +273,15 @@ class TestRuleEvaluation extends TestRuleDefinitions {
 				.build();
 	}
 	
+	protected RDFRuleDefinition getBasicArtTypeWithRefOnLabelRule(int counter) throws RuleException {
+		return repo.getRuleBuilder()
+				.withContextType(artType)
+				.withDescription("Test2Rule"+counter)
+				.withRuleTitle("Test2RuleTitle"+counter)
+				.withRuleExpression("self.ref->exists(art | art.label = 'someLabel')")
+				.build();
+	}
+	
 	protected Set<OntIndividual> getAllScopes() {		
 		return factory.getRuleScopeCollection().individuals().collect(Collectors.toSet());
 	}
@@ -327,13 +336,15 @@ class TestRuleEvaluation extends TestRuleDefinitions {
 	
 	protected void printScope(OntIndividual scope) {
 		var inst = scope.getPropertyResourceValue(factory.getUsingElementProperty().asProperty());
+		var instName = inst != null ? inst.getLocalName() : "NULL_INSTANCE";
 		var property = scope.getPropertyResourceValue(factory.getUsingPredicateProperty().asProperty());
+		var propName = property != null ? property.getLocalName() : "NULL_PROPERTY";
 		var iterRule = scope.listProperties(factory.getUsedInRuleProperty().asProperty());
 		Set<String> evals = new HashSet<>();
 		while(iterRule.hasNext()) { //property
 			//var ruleRes = iterRule.next().getResource().as(OntIndividual.class);
 			evals.add(iterRule.next().getResource().getId().toString());
 		}
-		System.out.println(String.format("Scope: %s %s in rules: %s", inst.getLocalName(), property, evals.toString() ));
+		System.out.println(String.format("Scope: %s with property %s in rule evals: %s", instName, propName, evals.toString() ));
 	}
 }
