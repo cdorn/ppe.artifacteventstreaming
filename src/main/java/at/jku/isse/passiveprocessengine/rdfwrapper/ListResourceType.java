@@ -26,13 +26,14 @@ public class ListResourceType {
 	public static final String OBJECT_LIST_NAME = "#liObject";
 	public static final String LITERAL_LIST_NAME = "#liLiteral";	
 	public static final String LIST_TYPE_NAME = "#list";
-	private static final String CONTAINER_PROPERTY_URI = LIST_NS+"containerRef";
-	private static final String LIST_REFERENCE_SUPERPROPERTY_URI = LIST_NS+"listRef";
+	private static final String CONTAINER_PROPERTY_URI = LIST_NS+"containerOwnerRef";
+	private static final String LIST_REFERENCE_SUPERPROPERTY_URI = LIST_NS+"hasList";
 	public static final Resource LI = ResourceFactory.createResource(RDF.uri+"li");
-	
-	@Getter
+			
+
+	@Getter // pointing back to container owner
 	private final OntObjectProperty containerProperty;
-	@Getter
+	@Getter // pointing to container from owner
 	private final OntObjectProperty listReferenceSuperProperty;
 	@Getter
 	private final OntClass listClass;
@@ -42,7 +43,7 @@ public class ListResourceType {
 	public ListResourceType(OntModel model) {		
 		this.m = model;
 		listClass = createListBaseClass();	
-		containerProperty = createContainerProperty();
+		containerProperty = createContainerProperty();		
 		listReferenceSuperProperty = m.createObjectProperty(LIST_REFERENCE_SUPERPROPERTY_URI);
 		listReferenceSuperProperty.addRange(listClass);
 	}
@@ -83,7 +84,7 @@ public class ListResourceType {
 			ObjectAllValuesFrom restr = m.createObjectAllValuesFrom(liProp, valueType);
 			// add the restriction to the list type
 			listType.addSuperClass(restr);
-			
+			listReferenceSuperProperty.addSubProperty(prop);			
 			return prop;
 		} else 
 			return null; //as we cannot guarantee that the property that was identified is an OntObjectProperty		
@@ -112,7 +113,7 @@ public class ListResourceType {
 			DataAllValuesFrom restr = m.createDataAllValuesFrom(liProp, valueType);
 			// add the restriction to the list type
 			listType.addSuperClass(restr);
-			
+			listReferenceSuperProperty.addSubProperty(prop);	
 			return prop;
 		} else 
 			return null; //as we cannot guarantee that the property that was identified is an OntObjectProperty		

@@ -34,11 +34,11 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class RuleTriggerObserver extends AbstractHandlerBase implements IncrementalCommitHandler {
 	
-	@Getter private final RuleFactory factory;
+	@Getter private final RuleSchemaProvider factory;
 	@Getter private final RuleRepository repo;
 	private final LinkedList<RuleEvaluationListener> listeners = new LinkedList<>();
 	
-	public RuleTriggerObserver(String serviceName, OntModel repoModel, RuleFactory ruleFactory, RuleRepository ruleRepo) {
+	public RuleTriggerObserver(String serviceName, OntModel repoModel, RuleSchemaProvider ruleFactory, RuleRepository ruleRepo) {
 		super(serviceName, repoModel);
 		this.factory = ruleFactory;
 		this.repo = ruleRepo;
@@ -244,12 +244,12 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 		
 		additionScope.stream()
 			.filter(stmt -> !subjectsToIgnore.contains(stmt.getSubject()))
-			.filter(stmt -> !stmt.getPredicate().getURI().startsWith(RuleFactory.uri)) // not interested in changes to the rule housekeeping itself 
+			.filter(stmt -> !stmt.getPredicate().getURI().startsWith(RuleSchemaFactory.uri)) // not interested in changes to the rule housekeeping itself 
 			.filter(stmt -> stmt.getSubject().canAs(OntIndividual.class))
 			.forEach(stmt ->  addRulesToMetadata(rulesToReevaluate, repo.getRulesAffectedByChange(stmt.getSubject().as(OntIndividual.class), stmt.getPredicate()), stmt));
 		removalScope.stream()
 			.filter(stmt -> !subjectsToIgnore.contains(stmt.getSubject()))
-			.filter(stmt -> !stmt.getPredicate().getURI().startsWith(RuleFactory.uri)) // not interested in changes to the rule housekeeping itself
+			.filter(stmt -> !stmt.getPredicate().getURI().startsWith(RuleSchemaFactory.uri)) // not interested in changes to the rule housekeeping itself
 			.filter(stmt -> stmt.getSubject().canAs(OntIndividual.class))
 			.forEach(stmt ->  addRulesToMetadata(rulesToReevaluate, repo.getRulesAffectedByChange(stmt.getSubject().as(OntIndividual.class), stmt.getPredicate()), stmt));	
 	}

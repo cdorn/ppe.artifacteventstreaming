@@ -20,6 +20,7 @@ import at.jku.isse.passiveprocessengine.rdfwrapper.MapResourceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.SingleResourceType;
 
 class TestRDFPropertyType {
 
@@ -30,6 +31,7 @@ class TestRDFPropertyType {
 	static OntClass otherType;
 	static MapResourceType mapFactory;
 	static ListResourceType listFactory;
+	static SingleResourceType singleFactory;
 	
 	@BeforeEach
 	void setup() {
@@ -39,6 +41,7 @@ class TestRDFPropertyType {
 		resolver.getListBaseType();
 		mapFactory = resolver.getMapType();
 		listFactory = resolver.getListType();
+		singleFactory = resolver.getSingleType();
 		artifactType = ((RDFInstanceType) resolver.createNewInstanceType(NS+"artifact")).getType();	
 		otherType =  ((RDFInstanceType) resolver.createNewInstanceType(NS+"other")).getType();	
 		otherType.addProperty(RDFS.label, "other");
@@ -87,7 +90,8 @@ class TestRDFPropertyType {
 		prop.addRange(otherType);
 		prop.addDomain(artifactType);
 		var maxOneKey = m.createObjectMaxCardinality(prop, 1, null);
-		artifactType.addSuperClass(maxOneKey);		
+		artifactType.addSuperClass(maxOneKey);
+		singleFactory.getSingleObjectProperty().addSubProperty(prop);
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		artifactType.superClasses().forEach(superType -> System.out.println(superType));
@@ -139,6 +143,7 @@ class TestRDFPropertyType {
 		prop.addDomain(artifactType);
 		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
 		artifactType.addSuperClass(maxOneKey);		
+		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
@@ -190,6 +195,7 @@ class TestRDFPropertyType {
 		prop.addDomain(artifactType);
 		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
 		artifactType.addSuperClass(maxOneKey);		
+		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
@@ -204,6 +210,7 @@ class TestRDFPropertyType {
 		prop.addDomain(artifactType);
 		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
 		artifactType.addSuperClass(maxOneKey);		
+		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
@@ -217,8 +224,10 @@ class TestRDFPropertyType {
 		prop.addRange(m.getDatatype(XSD.xfloat));
 		prop.addDomain(artifactType);
 		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
-		artifactType.addSuperClass(maxOneKey);		
+		artifactType.addSuperClass(maxOneKey);
+		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+		
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
 		assertEquals(BuildInType.FLOAT.getName(), propType.getInstanceType().getName());
@@ -231,7 +240,8 @@ class TestRDFPropertyType {
 		prop.addRange(m.getDatatype(XSD.xdouble));
 		prop.addDomain(artifactType);
 		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
-		artifactType.addSuperClass(maxOneKey);		
+		artifactType.addSuperClass(maxOneKey);
+		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
@@ -246,6 +256,7 @@ class TestRDFPropertyType {
 		prop.addDomain(artifactType);
 		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
 		artifactType.addSuperClass(maxOneKey);		
+		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
@@ -260,6 +271,7 @@ class TestRDFPropertyType {
 		prop.addDomain(artifactType);
 		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
 		artifactType.addSuperClass(maxOneKey);		
+		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());

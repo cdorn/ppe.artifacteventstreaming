@@ -3,9 +3,12 @@ package at.jku.isse.artifacteventstreaming.rule;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.net.URI;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.ontapi.OntModelFactory;
@@ -41,7 +44,7 @@ class TestRulePropagationAcrossBranches {
 	
 	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/repoWithRule2");
 	
-	RuleTriggerObserverFactory observerFactory = new RuleTriggerObserverFactory();
+	RuleTriggerObserverFactory observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory());
 	CountDownLatch latch;
 	SyncForTestingService serviceOut;
 	OntModel model1;
@@ -85,8 +88,7 @@ class TestRulePropagationAcrossBranches {
 		branchSource.appendBranchInternalCommitService(observerSource); // register rule service with branch
 		// connect branches
 		branchSource.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(branchSource, branchDestination, new InMemoryBranchStateCache()));
-		
-		
+				
 		branchSource.startCommitHandlers(null);
 		branchDestination.startCommitHandlers(null);
 		branchSource.getDataset().begin();
@@ -95,7 +97,7 @@ class TestRulePropagationAcrossBranches {
 	
 	
 	@Test
-	void testRulePropagationToOtherBranch() throws Exception {
+	void testRulePropagationToOtherBranch() throws Exception {				
 		// get and activate a rule
 		var def = schema.getRegisteredRuleRequirementsSizeGT1(1, observerSource.getRepo());
 		branchSource.commitChanges("Init commit");
@@ -110,9 +112,14 @@ class TestRulePropagationAcrossBranches {
 		boolean success = latch.await(5000, TimeUnit.SECONDS);
 		assert(success);
 		
-
+		System.out.println("SCOPES IN SOURCE:");
+		var inspectorSource = new RuleRepositoryInspector(observerSource.getFactory());
+		inspectorSource.getAllScopes().forEach(scope -> inspectorSource.printScope(scope));
+		
+		System.out.println("SCOPES IN DEST:");
 		var inspector = new RuleRepositoryInspector(observerDest.getFactory());
 		inspector.getAllScopes().forEach(scope -> inspector.printScope(scope));
+		
 		assertEquals(2,	serviceOut.getReceivedCommits().size());
 		var outCommit = serviceOut.getReceivedCommits().get(1);
 		List<Statement> ruleResultStmts = outCommit.getAddedStatements().stream()
@@ -120,6 +127,31 @@ class TestRulePropagationAcrossBranches {
 				.toList();
 		assertEquals(3, ruleResultStmts.size());
 		
+		// currently model sizes are not equal, find out why:
+		Set<Statement> sourceStmts = new HashSet<>();
+		var iterSource = branchSource.getModel().listStatements();
+		while(iterSource.hasNext()) {
+			sourceStmts.add(iterSource.next());
+		}
+		Set<Statement> destStmts = new HashSet<>();
+		var iterDest = branchDestination.getModel().listStatements();
+		while(iterDest.hasNext()) {
+			destStmts.add(iterDest.next());
+		}
+		Set<Statement> missingInSource = destStmts.stream().filter(stmt -> !sourceStmts.contains(stmt)).collect(Collectors.toSet());
+		Set<Statement> missingInDest = sourceStmts.stream().filter(stmt -> !destStmts.contains(stmt)).collect(Collectors.toSet());
+		
+		System.out.println("MISSING IN SOURCE: "+missingInSource.size());	
+		//missingInSource.stream().forEach(stmt -> System.out.println(stmt));
+		System.out.println("MISSING IN DESTINATION: "+missingInDest.size());
+		//missingInDest.stream().forEach(stmt -> System.out.println(stmt));
+		
+		// var diffModel = branchDestination.getModel().difference(branchSource.getModel());
+		// RDFDataMgr.write(System.out, diffModel, Lang.TURTLE) ;
+		// restrictions are generated in each branch with different anonIDs hence we have more in destination and duplicated restriction classes
+		// fixed now
 	}
+	
+	
 
 }

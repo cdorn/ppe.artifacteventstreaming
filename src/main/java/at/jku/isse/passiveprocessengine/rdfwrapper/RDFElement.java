@@ -125,11 +125,11 @@ public class RDFElement {
 		}
 	}
 
-	protected String makePropertyURI(String property) {
-		if (!property.startsWith("http")) { //FIXME: proper uri check
-			return this.element.getURI()+"#"+property;
+	public String makePropertyURI(String propertyLocalName) {
+		if (!propertyLocalName.startsWith("http")) { //FIXME: proper uri check
+			return this.element.getURI()+"#"+propertyLocalName;
 		} else {
-			return property;
+			return propertyLocalName;
 		}
 	}
 	

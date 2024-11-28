@@ -176,7 +176,6 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	@Override
 	public PPEPropertyType getPropertyType(String uri) {
 		var optProp = type.asNamed().declaredProperties()
-			//.filter(prop -> prop.getLocalName().equals(uri)) //TODO eventually make this only based on URI not localName
 			.filter(prop -> prop.getURI().equals(uri)) 
 			.filter(OntRelationalProperty.class::isInstance)
 			.map(OntRelationalProperty.class::cast)

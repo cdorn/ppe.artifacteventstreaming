@@ -11,6 +11,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.jena.graph.Graph;
+import org.apache.jena.ontapi.UnionGraph;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
@@ -19,6 +21,8 @@ import org.apache.jena.rdf.model.NodeIterator;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Seq;
+import org.apache.jena.rdf.model.impl.ModelCom;
+import org.apache.jena.reasoner.InfGraph;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.Branch;
@@ -67,7 +71,17 @@ public class BranchImpl  implements Branch, Runnable {
 		this.inQueue = inQueue;
 		this.outQueue = outQueue;
 		this.crossBranchStreamer = new CrossBranchStreamer(branchResource.getURI(), stateKeeper, outQueue);
+		registerChangeListener(stmtAggregator);
+	}
+	
+	private void registerChangeListener(StatementAggregator stmtAggregator) {
 		model.register(stmtAggregator);
+		if (model instanceof InfGraph infG) {
+            Graph raw = infG.getRawGraph();
+            if (raw instanceof UnionGraph ugraph) {
+            	ugraph.getEventManager().register(((ModelCom)model).adapt(stmtAggregator));
+            }            
+        }        
 	}
 	
 	@Override

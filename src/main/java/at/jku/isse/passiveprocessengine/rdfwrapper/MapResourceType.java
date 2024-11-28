@@ -122,6 +122,7 @@ public class MapResourceType {
 			OntObjectProperty hasMap = model.createObjectProperty(propertyURI);
 			hasMap.addDomain(resource);
 			hasMap.addRange(mapType);
+			mapReferenceSuperProperty.addSubProperty(hasMap);	
 			return hasMap;
 		}
 		else 

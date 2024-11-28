@@ -28,12 +28,12 @@ import lombok.extern.slf4j.Slf4j;
 public class RuleRepository {
 	
 
-	private final RuleFactory factory;
+	private final RuleSchemaProvider factory;
 	
 	private final Map<String, RDFRuleDefinition> definitions = new HashMap<>();
 	private final Map<AnonId, RuleEvaluationWrapperResourceImpl> evaluations = new HashMap<>();
 	
-	public RuleRepository(@NonNull RuleFactory factory) {
+	public RuleRepository(@NonNull RuleSchemaProvider factory) {
 		super();
 		this.factory = factory;
 		loadFromModel();
@@ -72,7 +72,7 @@ public class RuleRepository {
 	
 	protected RDFRuleDefinition storeRuleDefinition(@NonNull OntObject definition) {	
 		var key = definition.getURI();
-		return definitions.computeIfAbsent(key, k -> new RuleDefinitionImpl(definition, factory));	
+		return definitions.computeIfAbsent(key, k -> new RDFRuleDefinitionImpl(definition, factory));	
 	}
 	
 	public void removeRuleDefinition(@NonNull String ruleDefinitionURI) {

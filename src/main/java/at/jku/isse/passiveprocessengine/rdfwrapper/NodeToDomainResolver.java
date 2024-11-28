@@ -187,7 +187,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository 
 	}
 
 	@Override
-	public PPEInstanceType createNewInstanceType(String arg0, PPEInstanceType... superClasses) {
+	public RDFInstanceType createNewInstanceType(String arg0, PPEInstanceType... superClasses) {
 		Named ontClass = model.createOntClass(arg0);
 		if (typeIndex.containsKey(ontClass))  {
 			return null; // already have this class definition, not creating another wrapper around

@@ -6,7 +6,8 @@ public class RuleDefinitionRegistrar extends RuleDefinitionBuilder{
 
 	private final RuleRepository repo;
 	
-	public RuleDefinitionRegistrar(@NonNull RuleFactory factory, @NonNull RuleRepository ruleRepo) {
+	public RuleDefinitionRegistrar(@NonNull RuleSchemaProvider factory
+			, @NonNull RuleRepository ruleRepo) {
 		super(factory);
 		this.repo = ruleRepo;
 	}

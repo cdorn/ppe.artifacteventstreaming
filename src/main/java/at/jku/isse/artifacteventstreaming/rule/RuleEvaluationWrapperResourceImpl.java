@@ -21,7 +21,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 
 	@Getter
 	private final OntIndividual ruleEvalObj;
-	private final RuleFactory factory;
+	private final RuleSchemaProvider factory;
 	private final OntIndividual contextInstance;
 	private final RuleEvaluation delegate;
 	private Object result = null;
@@ -35,13 +35,13 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	 * @param contextInstance for which instance to create the evaluation object wrapped by this class
 	 * @return a new evaluation object wrapper, ensuring that the evaluation and context element point to the same rule scope. 
 	 */
-	public static RuleEvaluationWrapperResourceImpl create(@NonNull RuleFactory factory, @NonNull RDFRuleDefinition def, @NonNull OntIndividual contextInstance) {
+	public static RuleEvaluationWrapperResourceImpl create(@NonNull RuleSchemaProvider factory, @NonNull RDFRuleDefinition def, @NonNull OntIndividual contextInstance) {
 		var evalObj = def.getRuleDefinition().createIndividual();		
 		addAddRuleEvaluationToNewOrExistingScope(contextInstance, evalObj, factory); // just to make sure that the context scope is set (no effect if already so)
 		return new RuleEvaluationWrapperResourceImpl(def, evalObj, contextInstance, factory);
 	}
 	
-	private static void addAddRuleEvaluationToNewOrExistingScope(OntIndividual subject, OntIndividual ruleEval, RuleFactory factory) {
+	private static void addAddRuleEvaluationToNewOrExistingScope(OntIndividual subject, OntIndividual ruleEval, RuleSchemaProvider factory) {
 		OntIndividual scope = null;
 		var iter = subject.listProperties(factory.getHasRuleScope().asProperty());
 		while(iter.hasNext()) {
@@ -62,7 +62,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 		ruleEval.addProperty(factory.getContextElementScopeProperty().asNamed(), scope);
 	}
 	
-	private static OntIndividual createScopeSkeleton(Resource subject, RuleFactory factory) {
+	private static OntIndividual createScopeSkeleton(Resource subject, RuleSchemaProvider factory) {
 		var scope = factory.getRuleScopeCollection().createIndividual();
 		scope.addProperty(factory.getUsingElementProperty().asNamed(), subject);
 		subject.addProperty(factory.getHasRuleScope().asProperty(), scope);
@@ -77,7 +77,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	 * @return rule evaluation wrapper for the provided ont individual
 	 * @throws EvaluationException when ruleEvalObject is not a rule evaluation, or it does not point to context rule scope, or it does not point to a rule definition   
 	 */
-	public static RuleEvaluationWrapperResourceImpl loadFromModel(@NonNull OntIndividual ruleEvalObj, @NonNull RuleFactory factory, @NonNull RuleRepository ruleRepo) throws EvaluationException {
+	public static RuleEvaluationWrapperResourceImpl loadFromModel(@NonNull OntIndividual ruleEvalObj, @NonNull RuleSchemaProvider factory, @NonNull RuleRepository ruleRepo) throws EvaluationException {
 		// check if an rule eval instance
 		var type = getRuleTypeClass(ruleEvalObj, factory); 							
 		// check if has context
@@ -88,7 +88,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 		return new RuleEvaluationWrapperResourceImpl(def, ruleEvalObj, ctx, factory);
 	}
 	
-	private static OntClass getRuleTypeClass(@NonNull OntIndividual ruleEvalObj, @NonNull RuleFactory factory) throws EvaluationException {
+	private static OntClass getRuleTypeClass(@NonNull OntIndividual ruleEvalObj, @NonNull RuleSchemaProvider factory) throws EvaluationException {
 		var result = ruleEvalObj.classes(true)
 				.filter(type -> factory.getResultBaseType().hasSubClass(type, false)).findAny(); // there should be only one
 		if (result.isEmpty()) {
@@ -98,7 +98,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 		}
 	}
 	
-	private static OntIndividual getContextInstanceFrom(@NonNull OntIndividual ruleEvalObj, @NonNull RuleFactory factory) throws EvaluationException {
+	private static OntIndividual getContextInstanceFrom(@NonNull OntIndividual ruleEvalObj, @NonNull RuleSchemaProvider factory) throws EvaluationException {
 		var res = ruleEvalObj.getPropertyResourceValue(factory.getContextElementScopeProperty().asProperty()); //the rule scope, only one possible
 		if (res == null)
 			throw new EvaluationException(String.format("Cannot create ruleevaluation wrapper for entity %s as it doesn't reference a context instance rule scope element via %s", ruleEvalObj, factory.getContextElementScopeProperty().getURI()));
@@ -126,7 +126,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	
 
 	
-	private RuleEvaluationWrapperResourceImpl(RDFRuleDefinition def, OntIndividual ruleEvalObj, OntIndividual contextInstance, RuleFactory factory ) {
+	private RuleEvaluationWrapperResourceImpl(RDFRuleDefinition def, OntIndividual ruleEvalObj, OntIndividual contextInstance, RuleSchemaProvider factory ) {
 		super();
 		this.ruleEvalObj = ruleEvalObj;
 		this.contextInstance = contextInstance;

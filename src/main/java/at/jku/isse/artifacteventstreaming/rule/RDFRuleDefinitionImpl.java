@@ -5,6 +5,7 @@ import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.vocabulary.RDFS;
 
+import at.jku.isse.designspace.rule.arl.evaluator.ModelAccess;
 import at.jku.isse.designspace.rule.arl.exception.ParsingException;
 import at.jku.isse.designspace.rule.arl.expressions.Expression;
 import at.jku.isse.designspace.rule.arl.expressions.RootExpression;
@@ -13,14 +14,14 @@ import at.jku.isse.designspace.rule.arl.parser.ArlType;
 import lombok.NonNull;
 
 
-public class RuleDefinitionImpl implements RDFRuleDefinition {
+public class RDFRuleDefinitionImpl implements RDFRuleDefinition {
 
 	private final OntObject ontObject;
-	private final RuleFactory factory;
-	private Expression<Object> syntaxTree;
+	private final RuleSchemaProvider factory;
+	private Expression<Object> syntaxTree;	
 	
-	protected RuleDefinitionImpl(@NonNull OntObject ruleDefinition
-			, @NonNull RuleFactory factory
+	protected RDFRuleDefinitionImpl(@NonNull OntObject ruleDefinition
+			, @NonNull RuleSchemaProvider factory
 			, @NonNull String expression
 			, @NonNull OntClass contextType) {
 		this.ontObject = ruleDefinition;
@@ -29,10 +30,10 @@ public class RuleDefinitionImpl implements RDFRuleDefinition {
 		setRuleExpression(expression);
 	}
 	
-	protected RuleDefinitionImpl(@NonNull OntObject ruleDefinition
-			, @NonNull RuleFactory factory) {
+	protected RDFRuleDefinitionImpl(@NonNull OntObject ruleDefinition
+			, @NonNull RuleSchemaProvider factory) {
 			this.ontObject = ruleDefinition;
-			this.factory = factory;					
+			this.factory = factory;				
 			reloadContextAndExpression();
 	}
 	
@@ -75,9 +76,9 @@ public class RuleDefinitionImpl implements RDFRuleDefinition {
 	private void generateSyntaxTree(@NonNull String expression) {		
 		
 		ArlType contextType = this.getContextType(); 
-		ArlParser parser = new ArlParser();
+		ArlParser parser = new ArlParser(factory.getModelAccess());
         try {
-            syntaxTree = new RootExpression((Expression) parser.parse(expression, contextType, null));
+            syntaxTree = new RootExpression((Expression) parser.parse(expression, contextType, null), factory.getModelAccess());
             setExpressionError("");
         }
         catch (ParsingException ex) {
@@ -170,7 +171,7 @@ public class RuleDefinitionImpl implements RDFRuleDefinition {
 
 	@Override
 	public ArlType getContextType() {
-		return ArlType.get(ArlType.TypeKind.INSTANCE, ArlType.CollectionKind.SINGLE, this.getRDFContextType());	
+		return ArlType.get(ArlType.TypeKind.INSTANCE, ArlType.CollectionKind.SINGLE, this.getRDFContextType(), factory.getModelAccess());	
 	}
 
 	@Override

@@ -2,6 +2,7 @@ package at.jku.isse.artifacteventstreaming.branch.serialization;
 
 import java.io.IOException;
 
+import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
 
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -29,15 +30,16 @@ public class StatementJsonSerializer extends StdSerializer<Statement> {
 	@Override
 	public void serialize(Statement value, JsonGenerator gen, SerializerProvider provider) throws IOException {
 		
+		String id = resourceToId(value.getSubject());
 		gen.writeStartObject();
-        gen.writeStringField(SUBJECT, value.getSubject().getURI());		
+        gen.writeStringField(SUBJECT, id);		
         gen.writeStringField(PREDICATE, value.getPredicate().getURI());
         if (value.getObject().isLiteral()) {
         	String datatypeURI = value.getObject().asLiteral().getDatatype().getURI();
         	 gen.writeStringField(DATATYPE, datatypeURI);
         	 gen.writeStringField(OBJECT, value.getObject().asLiteral().getLexicalForm());
         } else {
-        	gen.writeStringField(OBJECT, value.getObject().asResource().getURI());
+        	gen.writeStringField(OBJECT, resourceToId(value.getObject().asResource()));
         }                		
         gen.writeEndObject();
 	}
@@ -48,13 +50,7 @@ public class StatementJsonSerializer extends StdSerializer<Statement> {
 		mapper.registerModule(module);
 	}
 	
-
-//	public static void toJson(Commit commit) {
-//		ObjectMapper jsonMapper = new JsonMapper().registerModule(null);
-//	}
-
-
-
-	
-	
+	private String resourceToId(Resource res) {
+		return res.getURI() != null ? res.getURI() : res.getId().toString();
+	}
 }

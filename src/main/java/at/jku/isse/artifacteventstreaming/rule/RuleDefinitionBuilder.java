@@ -5,13 +5,14 @@ import java.util.UUID;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntModel;
 
+import at.jku.isse.designspace.rule.arl.evaluator.ModelAccess;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class RuleDefinitionBuilder {
 
-	private final RuleFactory factory;
+	private final RuleSchemaProvider factory;
 	
 	private OntClass contextType;
 	private String ruleExpression;
@@ -51,7 +52,7 @@ public class RuleDefinitionBuilder {
 			throw new RuleException("Rule expression cannot remain empty");
 		
 		if (ruleURI == null) {
-			ruleURI = RuleFactory.uri+UUID.randomUUID();
+			ruleURI = RuleSchemaFactory.uri+UUID.randomUUID();
 		}
 		// we create the evaluation type and add as super type the rule definition
 		
@@ -60,7 +61,7 @@ public class RuleDefinitionBuilder {
 		ruleEvalType.addSuperClass(factory.getResultBaseType());
 		// then treat this as a instance of definition
 		var ruleDef = factory.getDefinitionType().getModel().createIndividual(ruleURI);
-		RuleDefinitionImpl rule = new RuleDefinitionImpl(ruleDef, factory, ruleExpression, contextType);
+		RDFRuleDefinitionImpl rule = new RDFRuleDefinitionImpl(ruleDef, factory, ruleExpression, contextType);
 		if (description != null)
 			rule.setDescription(description);
 		if (title != null)

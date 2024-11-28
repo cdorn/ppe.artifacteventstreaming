@@ -22,8 +22,8 @@ class TestRDFInstanceType {
 	public static String NS = "http://at.jku.isse.test#";
 	static OntModel m;
 	static NodeToDomainResolver resolver;
-	PPEInstanceType typeBase;
-	PPEInstanceType typeChild;
+	RDFInstanceType typeBase;
+	RDFInstanceType typeChild;
 	
 	@BeforeEach
 	void setup() {
@@ -52,20 +52,20 @@ class TestRDFInstanceType {
 		assertTrue(names.contains("priority"));
 		assertTrue(names.contains("listOfArt"));
 		
-		PPEPropertyType listProp = typeChild.getPropertyType("listOfArt");
+		PPEPropertyType listProp = typeChild.getPropertyType(typeChild.makePropertyURI("listOfArt"));
 		assertNotEquals(null, listProp);
 		assertEquals(typeBase, listProp.getInstanceType());
-		assertTrue(typeChild.hasPropertyType("priority"));
-		PPEPropertyType nonExistantProp = typeChild.getPropertyType("sdfdsfdsf");
+		assertTrue(typeChild.hasPropertyType(typeBase.makePropertyURI("priority")));
+		PPEPropertyType nonExistantProp = typeChild.getPropertyType(typeBase.makePropertyURI("sdfdsfdsf"));
 		assertNull(nonExistantProp);
 		
 		assertEquals(typeChild.getInstanceType(), BuildInType.METATYPE);
 		assertEquals(null, typeBase.getParentType());
 		
 		
-		var prop = resolver.getMapType().addObjectMapProperty(((RDFInstanceType) typeBase).getType(), NS+"hasMap", ((RDFInstanceType) typeChild).getType());
+		var prop = resolver.getMapType().addObjectMapProperty(typeBase.getType(), NS+"hasMap", typeChild.getType());
 		assertNotEquals(null, prop);
-		var propType = typeBase.getPropertyType("hasMap");
+		var propType = typeBase.getPropertyType(NS+"hasMap");
 		assertEquals(typeChild, propType.getInstanceType());
 	}
 	

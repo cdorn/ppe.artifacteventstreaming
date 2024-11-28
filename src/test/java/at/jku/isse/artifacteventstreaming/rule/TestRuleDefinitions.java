@@ -27,10 +27,12 @@ class TestRuleDefinitions {
 
 	public static URI baseURI = URI.create("http://at.jku.isse.artifacteventstreaming/test/rules#");
 	
+	public static RuleSchemaFactory ruleSchemaFactory = new RuleSchemaFactory();
+	
 	OntModel m;
 	OntClass artType;
 	OntClass artSubType;
-	RuleFactory factory;
+	RuleSchemaProvider factory;
 	OntObjectProperty refProp;
 	OntObjectProperty subProp;
 	OntDataProperty priorityProp;
@@ -43,7 +45,7 @@ class TestRuleDefinitions {
 		// but when using RDFS inference only, then we dont get individual change events due to some deep down graph listener registration problem 
 		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_RDFS_INF ); // needs deep setting of graph listener
 		//m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF ); 		
-		m.setNsPrefix("rules", RuleFactory.uri);
+		m.setNsPrefix("rules", RuleSchemaFactory.uri);
 		m.setNsPrefix("test", baseURI.toString());
 		artType = m.createOntClass(baseURI+"artType");
 		artSubType = m.createOntClass(baseURI+"artSubType");
@@ -59,7 +61,7 @@ class TestRuleDefinitions {
 		labelProp = SchemaUtils.createSingleDataPropertyType(baseURI+"label", artType, m.getDatatype(XSD.xstring));
 		priorityProp = SchemaUtils.createSingleDataPropertyType(baseURI+"label", artType, m.getDatatype(XSD.xint)); 
 		
-		factory = new RuleFactory(m);
+		factory = new RuleSchemaProvider(m, ruleSchemaFactory);
 		modelAccess = new RDFModelAccess(m);
 	}
 	

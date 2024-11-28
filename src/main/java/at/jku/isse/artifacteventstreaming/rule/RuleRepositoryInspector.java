@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class RuleRepositoryInspector {
 
-	private final RuleFactory factory;
+	private final RuleSchemaProvider factory;
 	
 	protected Set<OntIndividual> getAllScopes() {		
 		return factory.getRuleScopeCollection().individuals().collect(Collectors.toSet());

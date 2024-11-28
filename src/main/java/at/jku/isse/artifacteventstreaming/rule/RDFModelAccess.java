@@ -50,8 +50,7 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     	this.model = model;
     	listFactory = new ListResourceType(model);
     	mapFactory = new MapResourceType(model);
-    	singleFactory = new SingleResourceType(model);
-        ModelAccess.instance = this;
+    	singleFactory = new SingleResourceType(model);        
     }
     
     private OntProperty resolveToProperty(OntClass ontClass, String propertyName) {
@@ -61,8 +60,8 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     }
 
     public Set<Resource> instancesOfArlType(ArlType type) {
-        if (type.nativeType == null) return new HashSet<>();
-        return ((OntClass)type.nativeType).individuals().collect(Collectors.toSet());
+        if (type.getNativeType() == null) return new HashSet<>();
+        return ((OntClass)type.getNativeType()).individuals().collect(Collectors.toSet());
     }
 
     public ArlType arlTypeByQualifiedName(String name) {
@@ -74,20 +73,20 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     		.filter(ontClass -> ontClass.getLocalName().equals(name))
     		.findAny().orElse(null);
     	}        
-        return ArlType.get(ArlType.TypeKind.INSTANCE, ArlType.CollectionKind.SINGLE, type);
+        return ArlType.get(ArlType.TypeKind.INSTANCE, ArlType.CollectionKind.SINGLE, type, this);
     }
 
     @Override
     public boolean arlIsKindOf(ArlType typeA, ArlType typeB) {
-        OntClass instanceTypeA = (OntClass) typeA.nativeType;
-        OntClass instanceTypeB = (OntClass) typeB.nativeType;
+        OntClass instanceTypeA = (OntClass) typeA.getNativeType();
+        OntClass instanceTypeB = (OntClass) typeB.getNativeType();
         return instanceTypeA.hasSuperClass(instanceTypeB, false);
     }
 
     public ArlType arlSuperTypeOfType(ArlType type) {
    //not used anywhere but part of interface, hence we keep it here for now
-    	if (type.nativeType == null) throw new EvaluationException("supertype needs a native type");
-        var superType = ((OntClass)type.nativeType).superClasses()
+    	if (type.getNativeType() == null) throw new EvaluationException("supertype needs a native type");
+        var superType = ((OntClass)type.getNativeType()).superClasses()
         		.filter(superClass -> !(superClass instanceof CardinalityRestriction))
 				.filter(superClass -> !(superClass instanceof ValueRestriction))
 				.findFirst();
@@ -95,14 +94,14 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
         if (superType.isEmpty())
             return null;
         else {
-            return ArlType.get(ArlType.TypeKind.INSTANCE, ArlType.CollectionKind.SINGLE, superType.get());
+            return ArlType.get(ArlType.TypeKind.INSTANCE, ArlType.CollectionKind.SINGLE, superType.get(), this);
         }
     }
 
     //needed to obtain the arl type of an instance
     public Set<ArlType> arlTypeOfInstance(Resource element) {
        return getTypeOfInstance(element)
-        			.map(ontClass -> ArlType.get(ArlType.TypeKind.INSTANCE, ArlType.CollectionKind.SINGLE, ontClass))
+        			.map(ontClass -> ArlType.get(ArlType.TypeKind.INSTANCE, ArlType.CollectionKind.SINGLE, ontClass, this))
         			.collect(Collectors.toSet());        
     }
     
@@ -126,16 +125,16 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
         	if (res.isEmpty()) {
         		throw new ParsingException("type '%s' has untyped property '%s'", type, property);
         	} 
-        	var entry = RDFPropertyType.determineValueTypeAndCardinality(ontProp, mapFactory.getMapEntryClass(), listFactory.getListClass());
-        	return ArlType.get(typeKind(entry.getKey()), collectionKind(entry.getValue()), entry.getKey());
+        	var entry = RDFPropertyType.determineValueTypeAndCardinality(ontProp, mapFactory, listFactory, singleFactory);
+        	return ArlType.get(typeKind(entry.getKey()), collectionKind(entry.getValue()), entry.getKey(), this);
         }
     }
     
     public ArlType arlTypeOfProperty(ArlType type, final String property) {
-        if (!(type.nativeType instanceof OntClass)) {
+        if (!(type.getNativeType() instanceof OntClass)) {
         	throw new EvaluationException("supertype needs a native type of OntClass");
         }
-        return getArlTypeOfProperty((OntClass) type.nativeType, property);
+        return getArlTypeOfProperty((OntClass) type.getNativeType(), property);
        
     }
     

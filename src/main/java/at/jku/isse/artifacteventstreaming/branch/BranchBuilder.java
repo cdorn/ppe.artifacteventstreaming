@@ -41,7 +41,7 @@ public class BranchBuilder {
 	private Dataset branchDataset;
 	private final Dataset repoDataset;
 	private OntModel repoModel;
-	private OntSpecification modelSpec = OntSpecification.OWL1_DL_MEM; // no inference by default
+	private OntSpecification modelSpec = OntSpecification.OWL2_DL_MEM; // no inference by default
 	private List<CommitHandler> incomingCommitHandlers = new LinkedList<>();
 	private List<IncrementalCommitHandler> services = new LinkedList<>();
 	private Set<CommitHandler> outgoingCommitDistributers = new HashSet<>();
