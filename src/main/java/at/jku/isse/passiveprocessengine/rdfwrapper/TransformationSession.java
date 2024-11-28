@@ -1,7 +1,6 @@
 package at.jku.isse.passiveprocessengine.rdfwrapper;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -13,6 +12,7 @@ import java.util.stream.Stream;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
+import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntProperty;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
@@ -37,7 +37,7 @@ public class TransformationSession {
 	protected List<Update> process() {
 		 Map<RDFNode, List<StatementWrapper>> opsPerInst = collectPerInstance(commit);
 		 return opsPerInst.entrySet().stream()
-			.flatMap(entry -> dispatchType(entry.getKey(), entry.getValue()))
+			.flatMap(entry -> processPerInstance(entry.getKey(), entry.getValue()))
 			.toList();	
 	}
 	
@@ -45,16 +45,14 @@ public class TransformationSession {
 		// we keep the keys (i.e,instances and affected property) in order of their manipulation (.e.g, creating an instance before adding it somewhere else)				
 		Map<RDFNode, List<StatementWrapper>> opsPerInst = new LinkedHashMap<>(); 
 		// we can't map to instances right now, as the subject of a list manipulation is the listresource and not the individual/owner of the list 
-		commit.getAddedStatements().stream().forEach(stmt -> {
-			opsPerInst.computeIfAbsent(stmt.getSubject(), k -> new LinkedList<>()).add(new StatementWrapper(stmt, OP.ADD));
-		});
-		commit.getRemovedStatements().stream().forEach(stmt -> {
-			opsPerInst.computeIfAbsent(stmt.getSubject(), k -> new LinkedList<>()).add(new StatementWrapper(stmt, OP.REMOVE));
-		});
+		commit.getAddedStatements().stream().forEach(stmt -> 
+			opsPerInst.computeIfAbsent(stmt.getSubject(), k -> new LinkedList<>()).add(new StatementWrapper(stmt, OP.ADD)));
+		commit.getRemovedStatements().stream().forEach(stmt -> 
+			opsPerInst.computeIfAbsent(stmt.getSubject(), k -> new LinkedList<>()).add(new StatementWrapper(stmt, OP.REMOVE)));
 		return opsPerInst;
 	}
 	
-	private Stream<Update> dispatchType(RDFNode node, List<StatementWrapper> stmts) {
+	private Stream<Update> processPerInstance(RDFNode node, List<StatementWrapper> stmts) {
 		// ideally we dont need to access schema to do the transformation
 				// the branch's statement aggregator guarantees that there are no statements without effect 
 				// (i.e., adding and removing a statement cancel each other and thus both statement are removed) 
@@ -69,34 +67,42 @@ public class TransformationSession {
 			// Removal of an entry or list, etc results in no more type information, hence need to check for deletion statement amongst the list
 			List<Resource> delTypes = getAnyTypeDeletion(stmts).toList();
 			if (delTypes.isEmpty() && node.canAs(OntIndividual.class)) {
-				var ontInd = node.as(OntIndividual.class);			
-				// instance or map (list/seq/bag is an ont individual)
-				if (resolver.getMapType().isMapEntry(ontInd)) {		// a map entry was inserted or updated
-					return processMapEntry(ontInd, stmts, false);
-				} else if (resolver.getListType().isListContainer(ontInd)) { 	// list entry added/removed/reordered
-					return processListContainer(ontInd, stmts, false);
-				} else { 	// --> could also be adding a new list to the owner, or new mapentry to the owner, or removing from the owner
-					stmts = filterOutListOrMapOwnershipAdditions(stmts);
-				// else something (e.g., single value) added/removed from individual, might be a set
-					return processIndividual(ontInd, stmts);
-				}
+				return processStatementsOfResourcesWithoutTypeDeletions(node, stmts);
 			} else if (node.canAs(OntObject.class)){
-				var ontInd = node.as(OntObject.class);
-				// reomved instance or map (list/seq/bag is an ont individual)
-				if (resolver.getMapType().wasMapEntry(delTypes)) { 		// a map entry was removed
-					return processMapEntry(ontInd, stmts, true);
-				} else if (resolver.getListType().wasListContainer(delTypes)) { // list removed
-					return processListContainer(ontInd, stmts, true);
-				} else {
-					// here we can't filter out removal of deleted containment elements as their type is no longer accessible, 
-					// we would have to find them in the overall statement collection
-				// else something (e.g., single value) added/removed from individual, might be a set
-					return processIndividual(ontInd, stmts);
-				}
+				return processStatementsOfResourcesWithTypeDeletions(node, stmts, delTypes);
 			} else {
 			//untyped 
 				return processUntypedSubject(node, stmts);												
 			}
+		}
+	}
+	
+	private Stream<Update> processStatementsOfResourcesWithoutTypeDeletions(RDFNode node, List<StatementWrapper> stmts) {
+		var ontInd = node.as(OntIndividual.class);			
+		// instance or map (list/seq/bag is an ont individual)
+		if (resolver.getMapType().isMapEntry(ontInd)) {		// a map entry was inserted or updated
+			return processMapEntry(ontInd, stmts, false);
+		} else if (resolver.getListType().isListContainer(ontInd)) { 	// list entry added/removed/reordered
+			return processListContainer(ontInd, stmts, false);
+		} else { 	// --> could also be adding a new list to the owner, or new mapentry to the owner, or removing from the owner
+			stmts = filterOutListOrMapOwnershipAdditions(stmts);
+		// else something (e.g., single value) added/removed from individual, might be a set
+			return processIndividual(ontInd, stmts);
+		}
+	}
+	
+	private Stream<Update> processStatementsOfResourcesWithTypeDeletions(RDFNode node, List<StatementWrapper> stmts, List<Resource> delTypes) {
+		var ontInd = node.as(OntObject.class);
+		// reomved instance or map (list/seq/bag is an ont individual)
+		if (resolver.getMapType().wasMapEntry(delTypes)) { 		// a map entry was removed
+			return processMapEntry(ontInd, stmts, true);
+		} else if (resolver.getListType().wasListContainer(delTypes)) { // list removed
+			return processListContainer(ontInd, stmts, true);
+		} else {
+			// here we can't filter out removal of deleted containment elements as their type is no longer accessible, 
+			// we would have to find them in the overall statement collection
+		// else something (e.g., single value) added/removed from individual, might be a set
+			return processIndividual(ontInd, stmts);
 		}
 	}
 	
@@ -283,29 +289,51 @@ public class TransformationSession {
 		}
 		// something (e.g., or single value) added/removed from individual
 		return stmts.stream().map(wrapper -> {
-			//FIXME for now we treat all as a set
 			var value = resolver.convertFromRDF(wrapper.stmt().getObject());
 			if (value == null) return null;
 			var prop = wrapper.stmt().getPredicate();
-			if (wrapper.op().equals(OP.ADD)) {
-				return (Update)new PropertyChange.Add(prop.getLocalName(), changeSubject, value);
+			if (isSingleProperty(wrapper.stmt())) {
+				if (wrapper.op().equals(OP.ADD)) {
+					return new PropertyChange.Set(prop.getLocalName(), changeSubject, value);
+				} else {
+					return null; // we can never unset a property as Apache Jena disallows null values, hence there is always a new value added, 
+								//unless the resource is removed, but we dont have instance delete events for now
+				}
 			} else {
-				return (Update)new PropertyChange.Remove(prop.getLocalName(), changeSubject, value);
+				if (wrapper.op().equals(OP.ADD)) {
+					return (Update)new PropertyChange.Add(prop.getLocalName(), changeSubject, value);
+				} else {
+					return (Update)new PropertyChange.Remove(prop.getLocalName(), changeSubject, value);
+				}
 			}
 		}).filter(Objects::nonNull);
 	}
 	
-	private Stream<Update> processUntypedSubject(RDFNode inst, List<StatementWrapper> stmts) {
-		stmts.stream().forEach(wrapper -> {
-		// inserting a list element may lead to a lot of list changes as all the indexes are updates (i.e., removed and added+1)
-			var prop = wrapper.stmt().getPredicate();
-			int ordinal = prop.getOrdinal();
-			if (ordinal != 0) { // then a 'li', we have a list, 
-			// now get the parent/owner of the list
-			
+	private boolean isSingleProperty(Statement stmt) {
+		if (stmt.getPredicate().canAs(OntObjectProperty.class)) {
+			var ontProp = stmt.getPredicate().as(OntObjectProperty.class);
+			if (stmt.getObject().isLiteral() && resolver.getSingleType().getSingleLiteralProperty().hasSubProperty(ontProp, false)|| 
+					!stmt.getObject().isLiteral() && resolver.getSingleType().getSingleObjectProperty().hasSubProperty(ontProp, false)) {
+				return true;
+			} else {
+				return false;
+			}
+		} else { // if not an ont object property, then cannot be a single property
+			return false;
 		}
-		});
-		return Stream.empty();
+	}
+	
+	private Stream<Update> processUntypedSubject(RDFNode inst, List<StatementWrapper> stmts) {
+//		stmts.stream().forEach(wrapper -> {
+//		// inserting a list element may lead to a lot of list changes as all the indexes are updates (i.e., removed and added+1)
+//			var prop = wrapper.stmt().getPredicate();
+//			int ordinal = prop.getOrdinal();
+//			if (ordinal != 0) { // then a 'li', we have a list, 
+//			// now get the parent/owner of the list
+//			
+//		}
+//		});
+		return Stream.empty(); //TODO: for now we ignore untyped changes
 	}
 	
 	

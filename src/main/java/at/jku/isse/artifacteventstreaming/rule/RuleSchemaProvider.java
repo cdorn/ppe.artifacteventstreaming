@@ -93,7 +93,7 @@ public class RuleSchemaProvider {
 		return new RuleDefinitionBuilder(this);
 	}
 
-	protected RDFModelAccess getModelAccess() {
+	public RDFModelAccess getModelAccess() {
 		return modelAccess;
 	}
 	

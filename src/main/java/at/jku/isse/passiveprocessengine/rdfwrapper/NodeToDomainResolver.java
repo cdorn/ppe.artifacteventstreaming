@@ -40,7 +40,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository {
+public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository, AbstractionMapper {
 
 	public NodeToDomainResolver(OntModel model) {
 		super();
@@ -312,6 +312,14 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository 
 		} else { // a literal
 			return getModel().createTypedLiteral(e);
 		}
+	}
+
+	@Override
+	public OntClass mapProcessDomainInstanceTypeToOntClass(PPEInstanceType ppeType) {
+		if (ppeType instanceof RDFInstanceType rdfType) {
+			return rdfType.getType();
+		}
+		else throw new RuntimeException("Expected RDFInstanceType but received "+ppeType.getClass().toString());
 	}
 	
 	

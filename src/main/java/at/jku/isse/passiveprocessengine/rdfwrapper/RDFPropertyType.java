@@ -223,8 +223,8 @@ public class RDFPropertyType implements PPEPropertyType {
 
 	@Override
 	public boolean isAssignable(Object arg0) {
-		// TODO FIXME Auto-generated method stub
-		return true;
+		throw new RuntimeException("Not implemented"); // lets fail fast
+		//return true;
 	}
 
 

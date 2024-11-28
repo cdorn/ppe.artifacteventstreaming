@@ -140,7 +140,6 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 				var maxOneProp = this.element.getModel().createDataMaxCardinality((OntDataProperty) prop, 1, null);
 				this.type.addSuperClass(maxOneProp);		
 				resolver.getSingleType().getSingleLiteralProperty().addSubProperty((OntDataProperty) prop);
-				//prop.addProperty(RDFS.subPropertyOf, resolver.getSingleType().getSingleLiteralProperty());
 			} else {
 				var maxOneProp = this.element.getModel().createObjectMaxCardinality((OntObjectProperty) prop, 1, null);
 				this.type.addSuperClass(maxOneProp);
