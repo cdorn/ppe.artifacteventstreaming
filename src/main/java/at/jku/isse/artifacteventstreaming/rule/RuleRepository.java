@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -21,6 +22,7 @@ import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 
 import at.jku.isse.designspace.rule.arl.exception.EvaluationException;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
@@ -31,7 +33,7 @@ public class RuleRepository {
 	private final RuleSchemaProvider factory;
 	
 	private final Map<String, RDFRuleDefinition> definitions = new HashMap<>();
-	private final Map<AnonId, RuleEvaluationWrapperResourceImpl> evaluations = new HashMap<>();
+	@Getter private final EvaluationsCache evaluations = new EvaluationsCache();
 	
 	public RuleRepository(@NonNull RuleSchemaProvider factory) {
 		super();
@@ -353,5 +355,42 @@ public class RuleRepository {
 		}
 	}
 
+	static class EvaluationsCache{
+		
+		private final Map<AnonId, RuleEvaluationWrapperResourceImpl> evaluations = new HashMap<>();
+		private final Map<String, RuleEvaluationWrapperResourceImpl> indexByCtxAndDef = new HashMap<>();
 
+		private RuleEvaluationWrapperResourceImpl remove(@NonNull AnonId ruleEvalId) {
+			var eval = evaluations.remove(ruleEvalId);
+			if (eval != null) { // also remove from secondary index
+				var key = makeKeyFrom(eval.getContextInstance(), eval.getDefinition());
+				indexByCtxAndDef.remove(key);
+			}
+			return eval;
+		}
+
+		private boolean containsKey(AnonId id) {
+			return evaluations.containsKey(id);
+		}
+
+		private RuleEvaluationWrapperResourceImpl get(AnonId id) {
+			return evaluations.get(id);
+		}
+
+		private void put(AnonId id, RuleEvaluationWrapperResourceImpl evalWrapper) {
+			evaluations.put(id, evalWrapper);
+			// also add to secondary index
+			var key = makeKeyFrom(evalWrapper.getContextInstance(), evalWrapper.getDefinition());
+			indexByCtxAndDef.put(key, evalWrapper);
+		}
+		
+		public Optional<RuleEvaluationWrapperResource> findEvaluation(@NonNull OntObject contextInstance, @NonNull RDFRuleDefinition def) {
+			return Optional.ofNullable(indexByCtxAndDef.get(makeKeyFrom(contextInstance, def)));
+		}
+		
+		private String makeKeyFrom(OntObject contextInstance, RDFRuleDefinition def) {
+			var ctxId = contextInstance.isAnon() ? contextInstance.getId().toString() : contextInstance.getURI();
+			return ctxId+def.getRuleDefinition().getURI();
+		}
+	}
 }

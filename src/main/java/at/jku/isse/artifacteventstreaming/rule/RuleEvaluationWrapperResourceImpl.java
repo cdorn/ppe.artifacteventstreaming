@@ -14,6 +14,7 @@ import org.apache.jena.rdf.model.Resource;
 import at.jku.isse.designspace.rule.arl.evaluator.RuleEvaluation;
 import at.jku.isse.designspace.rule.arl.evaluator.RuleEvaluationImpl;
 import at.jku.isse.designspace.rule.arl.exception.EvaluationException;
+import at.jku.isse.designspace.rule.arl.repair.RepairNode;
 import lombok.Getter;
 import lombok.NonNull;
 
@@ -315,6 +316,17 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 		return "RuleEvaluation [ruleDefinition="+delegate.getRuleDefinition().getName() +" contextInstance=" + contextInstance.getURI()
 				+ ", isConsistent()=" + isConsistent() + ", getEvaluationError()=" + getEvaluationError()
 				+ ", isEnabled()=" + isEnabled() + "]";
+	}
+
+	@Override
+	public RepairNode getRepairTree() {
+		if (this.isEnabled() && this.delegate != null && this.delegate.getError() == null) {
+			if (this.delegate.getEvaluationTree() == null) {
+				this.evaluate();
+			}
+			return delegate.getRepairTree();
+		}
+		return null;
 	}
 
 

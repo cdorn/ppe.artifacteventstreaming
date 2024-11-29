@@ -281,7 +281,8 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     }
 
     public ArlType.TypeKind typeKind(OntObject type) {
-        if (Objects.equals(type.getURI(), XSD.integer.getURI())) return ArlType.TypeKind.INTEGER;
+        if (Objects.equals(type.getURI(), XSD.xint.getURI())) return ArlType.TypeKind.INTEGER;
+        if (Objects.equals(type.getURI(), XSD.xlong.getURI())) return ArlType.TypeKind.INTEGER;
         if (Objects.equals(type.getURI(), XSD.xfloat.getURI())) return ArlType.TypeKind.REAL;
         if (Objects.equals(type.getURI(), XSD.xboolean.getURI())) return ArlType.TypeKind.BOOLEAN;
         if (Objects.equals(type.getURI(), XSD.xstring.getURI())) return ArlType.TypeKind.STRING;

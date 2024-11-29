@@ -33,7 +33,6 @@ class TestRuleEvaluation extends TestRuleDefinitions {
 		inspector = new RuleRepositoryInspector(factory);
 		inst1 = artSubType.createIndividual(baseURI+"inst1");
 		inst2 = artSubType.createIndividual(baseURI+"inst2");
-		
 	}
 	
 	

@@ -17,6 +17,8 @@ import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.google.errorprone.annotations.Var;
+
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
@@ -30,7 +32,7 @@ import at.jku.isse.passiveprocessengine.rdfwrapper.MapWrapper;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import lombok.Getter;
 
-public class TestCommitToChangeEvents {
+class TestCommitToChangeEvents {
 
 	static String NS = "http://at.jku.isse.test#";
 	static OntModel m;
@@ -39,6 +41,8 @@ public class TestCommitToChangeEvents {
 	PPEInstanceType typeChild;
 	PPEPropertyType mapOfArt;
 	PPEPropertyType listOfString;
+	PPEPropertyType setOfBaseArt;
+	PPEPropertyType parent;
 	StatementAggregator aggr;
 	PPEChangeListener listener;
 	CommitChangeEventTransformer transformer;
@@ -60,6 +64,8 @@ public class TestCommitToChangeEvents {
 		typeChild = resolver.createNewInstanceType(NS+"issue", typeBase);
 		mapOfArt = typeChild.createMapPropertyType("mapOfArt", BuildInType.STRING, typeBase);
 		listOfString = typeChild.createListPropertyType("listOfString", BuildInType.STRING);
+		setOfBaseArt = typeChild.createSetPropertyType("setOfBaseArt", typeBase);
+		parent = typeBase.createSinglePropertyType("parent", typeBase);
 	}
 	
 	private Commit generateCommit() {
@@ -119,6 +125,54 @@ public class TestCommitToChangeEvents {
 		
 	}
 	
+	@Test
+	void useSet() {
+		var art1 = resolver.createInstance(NS+"art1", typeChild);
+		var art2 = resolver.createInstance(NS+"art2", typeChild);
+		var art3 = resolver.createInstance(NS+"art3", typeChild);
+		transformer.handleCommit(generateCommit());
+		listener.printCurrentUpdates();
+		
+		var set = art1.getTypedProperty(setOfBaseArt.getId(), Set.class);
+		set.add(art2);
+		transformer.handleCommit(generateCommit());
+		listener.printCurrentUpdates();
+		assertEquals(1, listener.getLatestUpdates().size());
+		assertEquals(art2, listener.getLatestUpdates().get(0).getValue());
+		
+		set.add(art3);
+		transformer.handleCommit(generateCommit());
+		listener.printCurrentUpdates();
+		assertEquals(1, listener.getLatestUpdates().size());
+		assertEquals(art3, listener.getLatestUpdates().get(0).getValue());
+		
+		set.clear();
+		transformer.handleCommit(generateCommit());
+		listener.printCurrentUpdates();
+		assertEquals(2, listener.getLatestUpdates().size()); // removal of both entries
+	}
+	
+	@Test
+	void useSingle() {
+		var art1 = resolver.createInstance(NS+"art1", typeChild);
+		var art2 = resolver.createInstance(NS+"art2", typeChild);
+		var art3 = resolver.createInstance(NS+"art3", typeChild);
+		transformer.handleCommit(generateCommit());
+		listener.printCurrentUpdates();
+		
+		art1.setSingleProperty(parent.getId(), art2);
+		transformer.handleCommit(generateCommit());
+		listener.printCurrentUpdates();
+		assertEquals(1, listener.getLatestUpdates().size());
+		assertEquals(art2, listener.getLatestUpdates().get(0).getValue());
+		
+
+		art1.setSingleProperty(parent.getId(), art3);
+		transformer.handleCommit(generateCommit());
+		listener.printCurrentUpdates();
+		assertEquals(1, listener.getLatestUpdates().size());
+		assertEquals(art3, listener.getLatestUpdates().get(0).getValue());
+	}
 	
 	static class PPEChangeListener implements ProcessInstanceChangeListener {
 

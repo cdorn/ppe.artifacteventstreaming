@@ -179,7 +179,7 @@ public class TransformationSession {
 		// adding of a key + value + ownerreference (i.e., first insert)
 		// removal of a key + value + ownerreference (key/value removal)
 		RDFInstance changeSubject = (RDFInstance) resolver.resolveToRDFElement(owner);
-		var commonProps = isDeletion? findFormerPropertiesBetween(owner, mapEntry) : findCurrentPropertiesBetween(owner, (OntIndividual) mapEntry);
+		var commonProps = isDeletion? findFormerPropertiesBetween(owner, mapEntry) : findCurrentPropertiesBetween(owner, mapEntry);
 		if (commonProps.size() != 1) {
 			log.error(String.format("Cannot unambiguously determine map entry property to use between %s and %s, found %s", owner.getURI(), id, commonProps.size()));
 			return Stream.empty();
@@ -312,12 +312,8 @@ public class TransformationSession {
 	private boolean isSingleProperty(Statement stmt) {
 		if (stmt.getPredicate().canAs(OntObjectProperty.class)) {
 			var ontProp = stmt.getPredicate().as(OntObjectProperty.class);
-			if (stmt.getObject().isLiteral() && resolver.getSingleType().getSingleLiteralProperty().hasSubProperty(ontProp, false)|| 
-					!stmt.getObject().isLiteral() && resolver.getSingleType().getSingleObjectProperty().hasSubProperty(ontProp, false)) {
-				return true;
-			} else {
-				return false;
-			}
+			return (stmt.getObject().isLiteral() && resolver.getSingleType().getSingleLiteralProperty().hasSubProperty(ontProp, false)|| 
+					!stmt.getObject().isLiteral() && resolver.getSingleType().getSingleObjectProperty().hasSubProperty(ontProp, false));
 		} else { // if not an ont object property, then cannot be a single property
 			return false;
 		}

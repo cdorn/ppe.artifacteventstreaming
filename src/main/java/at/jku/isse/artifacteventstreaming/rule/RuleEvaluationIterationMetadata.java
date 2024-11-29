@@ -8,7 +8,6 @@ import java.util.Set;
 import org.apache.jena.rdf.model.Statement;
 
 import at.jku.isse.designspace.rule.arl.evaluator.RuleEvaluation;
-import at.jku.isse.designspace.rule.model.Rule;
 import lombok.Data;
 
 /**

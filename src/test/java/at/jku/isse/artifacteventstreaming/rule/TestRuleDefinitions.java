@@ -59,7 +59,7 @@ class TestRuleDefinitions {
 		subProp.addDomain(artSubType);
 		
 		labelProp = SchemaUtils.createSingleDataPropertyType(baseURI+"label", artType, m.getDatatype(XSD.xstring));
-		priorityProp = SchemaUtils.createSingleDataPropertyType(baseURI+"label", artType, m.getDatatype(XSD.xint)); 
+		priorityProp = SchemaUtils.createSingleDataPropertyType(baseURI+"priority", artType, m.getDatatype(XSD.xlong)); 
 		
 		factory = new RuleSchemaProvider(m, ruleSchemaFactory);
 		modelAccess = new RDFModelAccess(m);
