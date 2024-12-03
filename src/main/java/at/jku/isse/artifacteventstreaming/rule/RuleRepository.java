@@ -344,6 +344,7 @@ public class RuleRepository {
 		return evals;
 	}
 
+
 	public Set<RuleEvaluationWrapperResource> removeRulesAffectedByDeletedRuleEvaluation(@NonNull AnonId ruleEvalId) {
 		log.debug("Handling removal of rule evaluation object: "+ruleEvalId.toString());
 		var eval = evaluations.remove(ruleEvalId);
@@ -355,7 +356,7 @@ public class RuleRepository {
 		}
 	}
 
-	static class EvaluationsCache{
+	public static class EvaluationsCache{
 		
 		private final Map<AnonId, RuleEvaluationWrapperResourceImpl> evaluations = new HashMap<>();
 		private final Map<String, RuleEvaluationWrapperResourceImpl> indexByCtxAndDef = new HashMap<>();
@@ -373,7 +374,7 @@ public class RuleRepository {
 			return evaluations.containsKey(id);
 		}
 
-		private RuleEvaluationWrapperResourceImpl get(AnonId id) {
+		public RuleEvaluationWrapperResourceImpl get(AnonId id) {
 			return evaluations.get(id);
 		}
 
@@ -393,4 +394,6 @@ public class RuleRepository {
 			return ctxId+def.getRuleDefinition().getURI();
 		}
 	}
+
+
 }

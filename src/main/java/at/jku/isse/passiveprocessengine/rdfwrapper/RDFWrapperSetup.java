@@ -1,5 +1,19 @@
 package at.jku.isse.passiveprocessengine.rdfwrapper;
 
+import java.net.URI;
+
+import org.apache.jena.ontapi.OntModelFactory;
+import org.apache.jena.ontapi.OntSpecification;
+import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.query.Dataset;
+import org.apache.jena.query.DatasetFactory;
+
+import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
+import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
+import at.jku.isse.artifacteventstreaming.rule.RepairService;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
+import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserver;
+import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
 import at.jku.isse.designspace.artifactconnector.core.repository.CoreTypeFactory;
 import at.jku.isse.passiveprocessengine.core.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.core.DesignspaceTestSetup;
@@ -13,6 +27,8 @@ import lombok.Getter;
 @Getter
 public class RDFWrapperSetup implements DesignspaceTestSetup {
 
+	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/rdfwrapper");
+	
 	private InstanceRepository instanceRepository;
 	private SchemaRegistry schemaRegistry;
 	private RepairTreeProvider repairTreeProvider;
@@ -20,15 +36,30 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 	private ChangeEventTransformer changeEventTransformer;
 	private CoreTypeFactory coreTypeFactory;
 	
+	private final RuleTriggerObserverFactory observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory());
+	
 	@Override
 	public void setup() {
-		NodeToDomainResolver resolver = new NodeToDomainResolver(null);
-		schemaRegistry = resolver;
-		instanceRepository = resolver;
-		
-		repairTreeProvider = new RDFRepairTreeProvider(null, resolver, null); 
-		RuleDefinitionService ruleDef;
-		coreTypeFactory = new CoreTypeFactory(resolver, ruleDef);
+		Dataset repoDataset = DatasetFactory.createTxnMem();
+		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		try {
+			var branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
+					.setModelReasoner(OntSpecification.OWL2_DL_MEM_RDFS_INF)		
+					.setBranchLocalName("main")
+					.build();		
+			var model1 = branch.getModel();
+			var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);
+			var repairService = new RepairService(model1, observer.getRepo());
+			RuleEnabledResolver resolver = new RuleEnabledResolver(model1, repairService, observer);
+			instanceRepository = resolver;
+			schemaRegistry = resolver;
+			repairTreeProvider = new RDFRepairTreeProvider(repairService, resolver, observer); 
+			ruleEvaluationService = resolver;
+			changeEventTransformer = null;
+			coreTypeFactory = new CoreTypeFactory(resolver, resolver);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Override

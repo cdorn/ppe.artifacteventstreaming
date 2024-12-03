@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.jena.ontapi.model.OntIndividual;
+import org.apache.jena.ontapi.model.OntObject;
 
 import lombok.RequiredArgsConstructor;
 
@@ -46,7 +47,7 @@ public class RuleRepositoryInspector {
 		return evals.size();
 	}
 	
-	protected Set<OntIndividual> getEvalWrappersFromScopes(OntIndividual subject, String... limitedToProps){
+	public Set<OntIndividual> getEvalWrappersFromScopes(OntIndividual subject, String... limitedToProps){
 		var evals = new HashSet<OntIndividual>();
 		List<String> props = Arrays.asList(limitedToProps);
 		var iter = subject.listProperties(factory.getHasRuleScope().asProperty());

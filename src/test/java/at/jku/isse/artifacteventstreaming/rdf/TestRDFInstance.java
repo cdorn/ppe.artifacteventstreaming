@@ -49,6 +49,7 @@ public class TestRDFInstance {
 	@BeforeEach
 	void setup() {
 		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM );
+		m.setNsPrefix("test", NS);
 		resolver = new NodeToDomainResolver(m);
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
