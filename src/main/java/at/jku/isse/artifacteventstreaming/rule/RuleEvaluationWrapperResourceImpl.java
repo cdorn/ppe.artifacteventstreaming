@@ -24,6 +24,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	private final OntIndividual ruleEvalObj;
 	private final RuleSchemaProvider factory;
 	private final OntIndividual contextInstance;
+	@Getter
 	private final RuleEvaluation delegate;
 	private Object result = null;
 	@Getter

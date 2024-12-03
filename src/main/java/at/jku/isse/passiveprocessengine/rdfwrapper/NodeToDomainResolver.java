@@ -7,6 +7,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.management.RuntimeErrorException;
+
 import org.apache.commons.codec.Resources;
 import org.apache.jena.datatypes.RDFDatatype;
 import org.apache.jena.ontapi.model.OntClass;
@@ -49,7 +51,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		singleType = new SingleResourceType(model);
 	}
 
-	private final OntModel model;
+	protected final OntModel model;
 	@Getter
 	private MapResourceType mapType;
 	@Getter
@@ -57,8 +59,8 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	@Getter
 	private SingleResourceType singleType;
 	
-	private final Map<OntClass, RDFInstanceType> typeIndex = new HashMap<>();	
-	private final Map<OntIndividual, RDFInstance> instanceIndex = new HashMap<>();
+	protected final Map<OntClass, RDFInstanceType> typeIndex = new HashMap<>();	
+	protected final Map<OntIndividual, RDFInstance> instanceIndex = new HashMap<>();
 	
 	
 	
@@ -153,8 +155,9 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	@Override
 	@Deprecated
 	public PPEInstanceType getType(Class<? extends InstanceWrapper> arg0) {
-		// FIXME remove this from abstraction layer, so ugly, not worth it
-		return null;
+		// FIXME remove this from abstraction layer, so ugly, not worth it		
+		// return null;
+		throw new RuntimeException("Depricated");
 	}
 
 	/**
@@ -179,6 +182,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	@Deprecated
 	public void registerType(Class<? extends InstanceWrapper> arg0, PPEInstanceType arg1) {
 		// FIXME remove this from abstraction layer, so ugly, not worth it
+		throw new RuntimeException("Depricated");
 	}
 
 	@Override
@@ -225,22 +229,24 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		return typeIndex.values().stream().collect(Collectors.toSet());
 	}
 
-	public void removeTypeCascading(RDFInstanceType type) {
+	public void removeTypeCascading(RDFInstanceType type) {				
 		type.getType().subClasses().forEach(typeIndex::remove); // we just update the index, properties are deleted by the RDFInstanceType objects
-		typeIndex.remove(type.getType());
+		typeIndex.remove(type.getType());		
 		// TODO: but we need to also remove instances of these types
+		throw new RuntimeException("Not fully implemented");
 	}
 	
 	@Override
 	public RuleDefinition getRuleByNameAndContext(String arg0, PPEInstanceType arg1) {
 		// TODO Auto-generated method stub
-		return null;
+		//return null;
+		throw new RuntimeException("Not implemented yet");
 	}
 
 	@Override
 	public void concludeTransaction() {
-		// TODO Auto-generated method stub
-		
+		// TODO we need a branch here, probably also a startTransaction method
+		throw new RuntimeException("Not implemented yet");
 	}
 
 	@Override

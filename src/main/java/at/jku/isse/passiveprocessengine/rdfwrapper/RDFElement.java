@@ -35,7 +35,10 @@ public class RDFElement {
 	private boolean isDeleted = false; // in case someone holds on to wrapper object
 
 	public String getId() {
-		return element.getURI();
+		if (element.isAnon())
+			return element.getId().toString();
+		else
+			return element.getURI();
 	}
 
 	public String getName() {

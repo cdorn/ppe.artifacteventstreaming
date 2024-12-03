@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -110,8 +112,7 @@ class TestRDFListWrapper extends TestRDFInstance {
 		
 		art1.add(listOfString.getId(), "Test");
 		var stringList = art1.getTypedProperty(listOfString.getId(), ListWrapper.class);
-		assertTrue(stringList.contains("Test"));
-		
+		assertTrue(stringList.contains("Test"));		
 	}
 	
 	@Test
