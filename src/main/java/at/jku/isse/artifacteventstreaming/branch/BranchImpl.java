@@ -390,11 +390,11 @@ public class BranchImpl  implements Branch, Runnable {
 				
 			}
 			rounds++;
-			//continue while new changes happen and max 10 rounds to avoid infinite loops
-		} while ((perIterationAdds > 0 || perIterationsRemovals > 0) && rounds < 10);
+			//continue while new changes happen and max 100 rounds to avoid infinite loops
+		} while ((perIterationAdds > 0 || perIterationsRemovals > 0) && rounds < 100);
 		
-		if ((perIterationAdds > 0 || perIterationsRemovals > 0) && rounds >= 10) {
-			log.warn(String.format("Service loop for commit '%s' reached maximum iteration count of 10 while still new statements available", commit.getCommitMessage()));
+		if ((perIterationAdds > 0 || perIterationsRemovals > 0) && rounds >= 100) {
+			log.warn(String.format("Service loop for commit '%s' reached maximum iteration count of 100 while still new statements available", commit.getCommitMessage()));
 		}
 		commit.removeEffectlessStatements(baseAdds, baseRemoves);
 		if (commit.isEmpty()) {

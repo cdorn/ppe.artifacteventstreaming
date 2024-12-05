@@ -23,6 +23,8 @@ public class SimpleService extends CommitLoggingService {
 	
 	final boolean doNegToPos;
 	Set<Statement> seenStatements = new HashSet<>();
+	int maxIter = 10;
+	int currentIter = 0;
 	
 	public SimpleService(String serviceName, boolean doNegToPos, OntModel branchModel
 			) {
@@ -44,6 +46,12 @@ public class SimpleService extends CommitLoggingService {
 		List<Statement> additions = commit.getAddedStatements();
 		if (indexOfNewAddition >= additions.size()) {
 			log.debug("no added statements");
+			return;
+		}
+		
+		if (currentIter >= 10) {
+			log.debug(serviceName +" reached maximum iterations, resetting");
+			currentIter = 0;
 			return;
 		}
 		
@@ -72,6 +80,7 @@ public class SimpleService extends CommitLoggingService {
 			seenStatements.add(stmt);
 			indexOfNewAddition++;
 		} while (indexOfNewAddition < additions.size());
+		currentIter++;
 	}
 
 	@Override

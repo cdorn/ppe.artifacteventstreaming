@@ -6,14 +6,9 @@ import java.io.FileOutputStream;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.query.Dataset;
 import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
-import org.apache.jena.tdb2.TDB2Factory;
-
-import com.apicatalog.jsonld.uri.Path;
 
 import lombok.extern.slf4j.Slf4j;
 

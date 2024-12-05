@@ -31,6 +31,7 @@ import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.AllUndoService;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.LongRunningNoOpLocalService;
+import at.jku.isse.passiveprocessengine.rdf.trialcode.MockLazyLoadingService;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SimpleService;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
 
@@ -97,6 +98,58 @@ class TestCommitHandling {
 		assertNull(nullCommit);
 	}
 
+	@Test
+	void testLoopControl() throws Exception {
+		Dataset repoDataset = DatasetFactory.createTxnMem();
+		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
+				.build();
+		OntModel model = branch.getModel();
+		branch.appendBranchInternalCommitService(new MockLazyLoadingService("Loader", true, repoModel, model, 3));
+		branch.appendBranchInternalCommitService(new MockLazyLoadingService("LoopController", false, repoModel, model, 4));
+		branch.startCommitHandlers(null);
+		
+		branch.getDataset().begin();
+		Resource testResource = model.createResource(repoURI+"#art1");
+		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
+		model.remove(testResource, RDFS.label, model.createTypedLiteral(2));
+		model.remove(testResource, RDFS.label, model.createTypedLiteral(2));
+		Commit commit = branch.commitChanges("TestCommit");
+		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
+		assertEquals(2, model.size());
+		assertEquals(1, commit.getAddedStatements().size());
+		assertEquals(2, commit.getRemovedStatements().size());
+	}
+	
+	@Test
+	void testTrueChanges() throws Exception {
+		Dataset repoDataset = DatasetFactory.createTxnMem();
+		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
+				.build();
+		branch.startCommitHandlers(null);
+		OntModel model = branch.getModel();
+		
+		branch.getDataset().begin();
+		Resource testResource = model.createResource(repoURI+"#art1");
+		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
+		model.remove(testResource, RDFS.label, model.createTypedLiteral(2)); // this should not result in an event, as there is no change to the model
+		model.remove(testResource, RDFS.label, model.createTypedLiteral(2));
+		Commit commit = branch.commitChanges("TestCommit");
+		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
+		assertEquals(1, model.size());
+		assertEquals(1, commit.getAddedStatements().size());
+	//	assertEquals(0, commit.getRemovedStatements().size());
+		
+		branch.getDataset().begin();
+		model.add(testResource, RDFS.label, model.createTypedLiteral(1)); // this should not result in an event, as there is no change to the model
+		Commit commit2 = branch.commitChanges("TestCommit2");
+		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
+		assertEquals(1, model.size());
+		assertEquals(0, commit2.getAddedStatements().size());
+		assertEquals(0, commit2.getRemovedStatements().size());
+	}
+	
 	@Test
 	void testLoopDetection() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
