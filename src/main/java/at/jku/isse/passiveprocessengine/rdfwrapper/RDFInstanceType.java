@@ -86,7 +86,7 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 				return insertAndReturn(prop);
 			}
 		} else {
-			var prop = resolver.getMapType().addObjectMapProperty(this.type, makePropertyURI(arg0), ((RDFInstanceType) valueType).getType());
+			var prop = resolver.getMapType().addObjectMapProperty(this.type, makePropertyURI(arg0), (OntClass) resolver.resolveTypeToClassOrDatarange(valueType));
 			if (prop == null) { 
 				return null;
 			} else {
@@ -117,7 +117,7 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 			if (this.element.getModel().getObjectProperty(propUri) != null)
 				return null;
 			var prop = this.element.getModel().createObjectProperty(propUri);
-			prop.addRange(((RDFInstanceType) arg1).getType());
+			prop.addRange((OntClass) resolver.resolveTypeToClassOrDatarange(arg1));
 			prop.addDomain(this.type);	
 			return prop;
 		}
@@ -174,11 +174,20 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 
 	@Override
 	public PPEPropertyType getPropertyType(String uri) {
-		var optProp = type.asNamed().declaredProperties()
-			.filter(prop -> prop.getURI().equals(uri)) 
-			.filter(OntRelationalProperty.class::isInstance)
-			.map(OntRelationalProperty.class::cast)
-			.findFirst();
+		Optional<OntRelationalProperty> optProp = null;
+		if (NodeToDomainResolver.isValidURL(uri)) {
+			optProp = type.asNamed().declaredProperties()
+					.filter(prop -> prop.getURI().equals(uri)) 
+					.filter(OntRelationalProperty.class::isInstance)
+					.map(OntRelationalProperty.class::cast)
+					.findFirst();	
+		} else {
+			optProp = type.asNamed().declaredProperties()
+					.filter(prop -> prop.getLocalName().equals(uri)) 
+					.filter(OntRelationalProperty.class::isInstance)
+					.map(OntRelationalProperty.class::cast)
+					.findFirst();
+		}				
 		return optProp.map(prop -> propWrappers.computeIfAbsent( prop, k -> new RDFPropertyType((OntRelationalProperty) k, resolver))).orElse(null) ;
 	}
 

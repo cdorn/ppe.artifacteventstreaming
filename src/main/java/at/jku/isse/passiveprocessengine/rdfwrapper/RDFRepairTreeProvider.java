@@ -5,11 +5,12 @@ import at.jku.isse.artifacteventstreaming.rule.RuleEvaluationWrapperResourceImpl
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserver;
 import at.jku.isse.passiveprocessengine.core.PPEExecutedRepairListener;
 import at.jku.isse.passiveprocessengine.core.RepairTreeProvider;
+import at.jku.isse.passiveprocessengine.core.RuleAnalysisService;
 import at.jku.isse.passiveprocessengine.core.RuleResult;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-public class RDFRepairTreeProvider implements RepairTreeProvider {
+public class RDFRepairTreeProvider implements RepairTreeProvider, RuleAnalysisService {
 
 	final RepairService repairService;
 	final AbstractionMapper mapper;
@@ -36,6 +37,11 @@ public class RDFRepairTreeProvider implements RepairTreeProvider {
 	@Override
 	public void register(PPEExecutedRepairListener listener) {
 		throw new RuntimeException("NotSupported");
+	}
+
+	@Override
+	public OverrideAnalysisSession createSession() {
+		throw new RuntimeException("Not Supported");
 	}
 
 }

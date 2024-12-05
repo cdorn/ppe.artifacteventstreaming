@@ -129,8 +129,8 @@ public class RDFElement {
 	}
 
 	public String makePropertyURI(String propertyLocalName) {
-		if (!propertyLocalName.startsWith("http")) { //FIXME: proper uri check
-			return this.element.getURI()+"#"+propertyLocalName;
+		if (!NodeToDomainResolver.isValidURL(propertyLocalName)) {		
+			return this.element.getNameSpace()+propertyLocalName;
 		} else {
 			return propertyLocalName;
 		}
@@ -164,9 +164,12 @@ public class RDFElement {
 	
 	protected Optional<RDFPropertyType> resolveToPropertyType(String property) {
 		property = makePropertyURI(property);
-		RDFInstanceType type = (RDFInstanceType) getInstanceType();
-		if (type != null) {
-			return Optional.ofNullable( (RDFPropertyType) type.getPropertyType(property));
+		
+		if (this instanceof RDFInstanceType rdfType)
+			return Optional.ofNullable( (RDFPropertyType) rdfType.getPropertyType(property));		
+		var ppeType = getInstanceType();		
+		if (ppeType != null) {						
+			return Optional.ofNullable( (RDFPropertyType) ppeType.getPropertyType(property));
 		} else
 			return Optional.empty();
 	}

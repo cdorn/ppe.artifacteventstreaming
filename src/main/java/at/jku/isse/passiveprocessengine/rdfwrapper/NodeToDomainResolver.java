@@ -1,5 +1,6 @@
 package at.jku.isse.passiveprocessengine.rdfwrapper;
 
+import java.net.URI;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,12 +17,13 @@ import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
 
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.InstanceRepository;
-import at.jku.isse.passiveprocessengine.core.InstanceWrapper;
 import at.jku.isse.passiveprocessengine.core.PPEInstance;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
 import at.jku.isse.passiveprocessengine.core.RuleDefinition;
@@ -33,10 +35,14 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository, AbstractionMapper {
 
+	public static String BASE_NS = "http://isse.jku.at/artifactstreaming/rdfwrapper#";
+	
 	public NodeToDomainResolver(OntModel model) {
 		super();
 		this.model = model;
 		init();		
+		mapType = new MapResourceType(model); //TODO make these from ontology
+		listType = new ListResourceType(model);
 		singleType = new SingleResourceType(model);
 	}
 
@@ -87,6 +93,10 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 			}
 			
 		} else if (node instanceof OntClass ontClass) {
+			if (ontClass.getURI().equals(RuleSchemaFactory.ruleDefinitionURI))
+				return BuildInType.RULE;
+			if (ontClass.getURI().equals(OWL2.Class.getURI()))
+				return BuildInType.METATYPE;
 			return typeIndex.get(ontClass);
 		} else if (node.canAs(OntClass.class)) {
 			return typeIndex.get(node.as(OntClass.class));
@@ -95,17 +105,11 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		return null;
 	}
 	
-	public OntClass getMapEntryBaseType() {
-		if (mapType == null) {
-			mapType = new MapResourceType(model);			
-		}
+	public OntClass getMapEntryBaseType() {		
 		return mapType.getMapEntryClass();
 	}	
 
 	public OntClass getListBaseType() {
-		if (listType == null) {
-			listType = new ListResourceType(model);
-		}
 		return listType.getListClass();
 	}
 	
@@ -133,21 +137,27 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	public OntObject resolveTypeToClassOrDatarange(PPEInstanceType type) {
 		if (BuildInType.isAtomicType(type))
 			return resolveAtomicInstanceType(type);
-		else
-			return ((RDFInstanceType)type).getType();
+		else {
+			if (type.equals(BuildInType.RULE)) {
+				return  model.getOntClass(RuleSchemaFactory.ruleDefinitionURI);
+			} else if (type.equals(BuildInType.METATYPE)) {
+				return model.createOntClass(OWL2.Class.getURI());
+			} else
+				return ((RDFInstanceType)type).getType();
+		}
 	}
 
-	/**
-	 * @deprecated
-	 * use @findNonDeletedInstanceTypeByFQN instead
-	 */
-	@Override
-	@Deprecated
-	public PPEInstanceType getType(Class<? extends InstanceWrapper> arg0) {
-		// FIXME remove this from abstraction layer, so ugly, not worth it		
-		// return null;
-		throw new RuntimeException("Depricated");
-	}
+//	/**
+//	 * @deprecated
+//	 * use @findNonDeletedInstanceTypeByFQN instead
+//	 */
+//	@Override
+//	@Deprecated
+//	public PPEInstanceType getType(Class<? extends InstanceWrapper> arg0) {
+//		// FIXME remove this from abstraction layer, so ugly, not worth it		
+//		// return null;
+//		throw new RuntimeException("Depricated");
+//	}
 
 	/**
 	 * @deprecated
@@ -162,25 +172,28 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		.orElse(null);
 	}
 
-	/**
-	 * @deprecated
-	 * use @registerTypeByName instead
-	 * 
-	 */
-	@Override
-	@Deprecated
-	public void registerType(Class<? extends InstanceWrapper> arg0, PPEInstanceType arg1) {
-		// FIXME remove this from abstraction layer, so ugly, not worth it
-		throw new RuntimeException("Depricated");
-	}
+//	/**
+//	 * @deprecated
+//	 * use @registerTypeByName instead
+//	 * 
+//	 */
+//	@Override
+//	@Deprecated
+//	public void registerType(Class<? extends InstanceWrapper> arg0, PPEInstanceType arg1) {
+//		// FIXME remove this from abstraction layer, so ugly, not worth it
+//		throw new RuntimeException("Depricated");
+//	}
+
+//	@Override
+//	public void registerTypeByName(PPEInstanceType arg0) {
+//		typeIndex.putIfAbsent(((RDFInstanceType) arg0).getType(), (RDFInstanceType) arg0);
+//	}
 
 	@Override
-	public void registerTypeByName(PPEInstanceType arg0) {
-		typeIndex.putIfAbsent(((RDFInstanceType) arg0).getType(), (RDFInstanceType) arg0);
-	}
-
-	@Override
-	public RDFInstanceType createNewInstanceType(String arg0, PPEInstanceType... superClasses) {
+	public RDFInstanceType createNewInstanceType(String arg0, PPEInstanceType... superClasses) {		
+		if (!isValidURL(arg0)) {
+			arg0 = BASE_NS+arg0;
+		}		
 		Named ontClass = model.createOntClass(arg0);
 		if (typeIndex.containsKey(ontClass))  {
 			return null; // already have this class definition, not creating another wrapper around
@@ -188,6 +201,9 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 			var type = new RDFInstanceType(ontClass, this);
 			typeIndex.put(ontClass, type);
 			for (var superClass : superClasses) {
+				if (superClass == null) {
+					log.warn("provided null superclass, ignoring");
+				}
 				if ( !BuildInType.isAtomicType(superClass)) {
 					ontClass.addSuperClass(((RDFInstanceType) superClass).getType());
 				}
@@ -204,7 +220,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 
 	@Override
 	public Optional<PPEInstanceType> findNonDeletedInstanceTypeByFQN(String arg0) {
-		Named ontClass = model.createOntClass(arg0);
+		Named ontClass = model.getOntClass(arg0);
 		return Optional.ofNullable(typeIndex.get(ontClass));
 	}
 
@@ -240,6 +256,9 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 
 	@Override
 	public PPEInstance createInstance(@NonNull String id, @NonNull PPEInstanceType arg1) {
+		if (!isValidURL(id)) {
+			id = BASE_NS+id;
+		}		
 		if (arg1 instanceof RDFInstanceType type) {
 			var individual = model.createIndividual(id, type.getType());
 			return instanceIndex.computeIfAbsent(individual, k -> new RDFInstance(k, this));
@@ -304,7 +323,11 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	protected 	RDFNode convertToRDF(Object e) {
 		if (e instanceof RDFElement rdfEl) {
 			return rdfEl.getElement();
-		} else { // a literal
+		} else if (e.equals(BuildInType.RULE)) { 
+			 return model.getOntClass(RuleSchemaFactory.ruleDefinitionURI);
+		} else if (e.equals(BuildInType.METATYPE)) {
+			 return model.getOntClass(OWL2.Class.getURI());
+		}else { // a literal
 			return getModel().createTypedLiteral(e);
 		}
 	}
@@ -317,5 +340,13 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		else throw new RuntimeException("Expected RDFInstanceType but received "+ppeType.getClass().toString());
 	}
 	
-	
+	public static boolean isValidURL(String url)  {
+	    try {
+	        var uri = new URI(url);	    
+	        uri.toURL();
+	        return true;	   
+	    } catch (Exception e) {
+	        return false;
+	    }
+	}
 }

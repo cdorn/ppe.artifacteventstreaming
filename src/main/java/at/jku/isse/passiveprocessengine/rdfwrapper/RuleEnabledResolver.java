@@ -9,12 +9,11 @@ import java.util.stream.Collectors;
 
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.ontapi.model.OntObject;
-
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleException;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserver;
 import at.jku.isse.designspace.rule.arl.evaluator.EvaluationNode;
 import at.jku.isse.designspace.rule.arl.evaluator.RuleDefinitionImpl;
@@ -28,26 +27,27 @@ import at.jku.isse.passiveprocessengine.core.PPEInstance;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
 import at.jku.isse.passiveprocessengine.core.RuleDefinition;
 import at.jku.isse.passiveprocessengine.core.RuleEvaluationService;
-import at.jku.isse.passiveprocessengine.core.RuleEvaluationService.ResultEntry;
 
 public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEvaluationService {
 
 	final RepairService repairService;
-	final RuleTriggerObserver observer;
+	final RuleSchemaProvider ruleSchema;
+	final RuleRepository repo;
 	final RuleRepositoryInspector inspector;
 	
-	public RuleEnabledResolver(OntModel model, RepairService repairService, RuleTriggerObserver observer) {
+	public RuleEnabledResolver(OntModel model, RepairService repairService, RuleSchemaProvider ruleSchema, RuleRepository repo) {
 		super(model);
 		this.repairService = repairService;
-		this.observer = observer;
-		this.inspector = new RuleRepositoryInspector(observer.getFactory());
+		this.ruleSchema = ruleSchema;
+		this.repo = repo;
+		this.inspector = new RuleRepositoryInspector(ruleSchema);
 	}
 
 	@Override
 	public RuleDefinition createInstance(PPEInstanceType type, String ruleName, String ruleExpression) {
 		OntClass ctxType = (OntClass) resolveTypeToClassOrDatarange(type);
 		try {
-			var ruleDef = observer.getRepo().getRuleBuilder()
+			var ruleDef = repo.getRuleBuilder()
 				.withContextType(ctxType)
 				.withRuleExpression(ruleExpression)
 				.withRuleTitle(ruleName)
@@ -117,8 +117,8 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 		var contextType = (OntClass)resolveTypeToClassOrDatarange(type);
 		if (contextType == null)
 			throw new Exception("PPEInstanceType not found:" +type);
-		ArlType arlType =  ArlType.get(ArlType.TypeKind.INSTANCE, ArlType.CollectionKind.SINGLE, contextType, observer.getFactory().getModelAccess());		
-		RuleDefinitionImpl ruleDefImpl = new RuleDefinitionImpl("", constraint, arlType, observer.getFactory().getModelAccess());
+		ArlType arlType =  ArlType.get(ArlType.TypeKind.INSTANCE, ArlType.CollectionKind.SINGLE, contextType, ruleSchema.getModelAccess());		
+		RuleDefinitionImpl ruleDefImpl = new RuleDefinitionImpl("", constraint, arlType, ruleSchema.getModelAccess());
 		if (ruleDefImpl.getRuleError() != null) {
 			throw new Exception(ruleDefImpl.getRuleError());
 		}
@@ -129,7 +129,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 	public Set<ResultEntry> getEvaluationResults(RuleDefinition rule) throws Exception {
 		if (rule instanceof RDFPPERuleDefinitionWrapper wrapper) {
 			var def = wrapper.getRuleDef().getRuleDefinition();
-			var evals =  observer.getRepo().getEvaluations();
+			var evals =  repo.getEvaluations();
 			return def.individuals()
 				.map(eval -> evals.get(eval.getId()))
 				.filter(Objects::nonNull)
@@ -153,7 +153,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 		if (instance instanceof RDFInstance rdfEl) {
 			Map<RuleDefinition, Set<ResultEntry>> resultMap = new HashMap<>();
 			var indiv = rdfEl.getInstance();
-			var evals =  observer.getRepo().getEvaluations();
+			var evals =  repo.getEvaluations();
 			inspector.getEvalWrappersFromScopes(indiv).stream()
 				.map(evalObj -> evals.get(evalObj.getId()))
 				.forEach(evalWrapper -> {

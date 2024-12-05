@@ -12,14 +12,13 @@ import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
-import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserver;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
 import at.jku.isse.designspace.artifactconnector.core.repository.CoreTypeFactory;
 import at.jku.isse.passiveprocessengine.core.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.core.DesignspaceTestSetup;
 import at.jku.isse.passiveprocessengine.core.InstanceRepository;
 import at.jku.isse.passiveprocessengine.core.RepairTreeProvider;
-import at.jku.isse.passiveprocessengine.core.RuleDefinitionService;
 import at.jku.isse.passiveprocessengine.core.RuleEvaluationService;
 import at.jku.isse.passiveprocessengine.core.SchemaRegistry;
 import lombok.Getter;
@@ -35,6 +34,7 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 	protected RuleEvaluationService ruleEvaluationService;
 	private ChangeEventTransformer changeEventTransformer;
 	private CoreTypeFactory coreTypeFactory;
+	private RuleSchemaProvider ruleSchemaProvider;
 	
 	private final RuleTriggerObserverFactory observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory());
 	
@@ -50,13 +50,19 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 			var model1 = branch.getModel();
 			var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);
 			var repairService = new RepairService(model1, observer.getRepo());
-			RuleEnabledResolver resolver = new RuleEnabledResolver(model1, repairService, observer);
+			RuleEnabledResolver resolver = new RuleEnabledResolver(model1, repairService, observer.getFactory(), observer.getRepo());
+			var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver);
+			branch.appendBranchInternalCommitService(observer);
+			branch.appendBranchInternalCommitService(changeTransformer);
+			branch.startCommitHandlers(null);
+			
 			instanceRepository = resolver;
 			schemaRegistry = resolver;
-			repairTreeProvider = new RDFRepairTreeProvider(repairService, resolver, observer); 
+			repairTreeProvider = new RDFRepairTreeProvider(repairService, resolver, observer); 			
 			ruleEvaluationService = resolver;
-			changeEventTransformer = null;
+			changeEventTransformer = changeTransformer;
 			coreTypeFactory = new CoreTypeFactory(resolver, resolver);
+			ruleSchemaProvider = observer.getFactory();
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -64,8 +70,7 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 
 	@Override
 	public void tearDown() {
-		// TODO Auto-generated method stub
-
+		// nothing to tear down, we just recreate everything upon a new setup call.
 	}
 
 

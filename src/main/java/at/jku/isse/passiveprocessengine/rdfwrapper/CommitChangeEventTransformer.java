@@ -4,12 +4,13 @@ import org.apache.jena.ontapi.model.OntModel;
 import at.jku.isse.artifacteventstreaming.api.AbstractHandlerBase;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
+import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
 import at.jku.isse.passiveprocessengine.core.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.core.ProcessInstanceChangeListener;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class CommitChangeEventTransformer extends AbstractHandlerBase implements ChangeEventTransformer, CommitHandler {
+public class CommitChangeEventTransformer extends AbstractHandlerBase implements ChangeEventTransformer, IncrementalCommitHandler {
 
 	private final NodeToDomainResolver resolver;
 	private ProcessInstanceChangeListener eventSink;
@@ -27,13 +28,20 @@ public class CommitChangeEventTransformer extends AbstractHandlerBase implements
 	
 	@Override
 	public void registerWithWorkspace(ProcessInstanceChangeListener eventSink) {
-		this.eventSink = eventSink;
-		
+		this.eventSink = eventSink;		
 	}
 
 	@Override
 	public void handleCommit(Commit commit) {
-		var session = new TransformationSession(commit, resolver);
+		handleCommitFromOffset(commit, 0, 0);
+	}
+
+	@Override
+	public void handleCommitFromOffset(Commit commit, int indexOfNewAddition, int indexOfNewRemoval) {
+		var addSize = commit.getAddedStatements().size();
+		var remSize = commit.getRemovedStatements().size();
+		var session = new TransformationSession(commit.getAddedStatements().subList(indexOfNewAddition, addSize)
+				, commit.getRemovedStatements().subList(indexOfNewRemoval, remSize), resolver);
 		eventSink.handleUpdates(session.process());
 	}
 

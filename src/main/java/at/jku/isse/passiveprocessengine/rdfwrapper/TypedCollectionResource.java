@@ -28,7 +28,7 @@ public abstract class TypedCollectionResource {
 	
 	protected boolean isAssignable(RDFNode node) {
 		if (this.literalType != null &&  // with have a literal type, but value is neither a literal, nor a compatible literal
-				(!node.isLiteral() || !literalType.isValidValue(node)) ) 	{
+				(!node.isLiteral() || !literalType.isValidValue(node.asLiteral().getValue())) ) 	{
 			return false;
 		} 
 		if (this.objectType != null) {
@@ -39,6 +39,8 @@ public abstract class TypedCollectionResource {
 				return false;
 			}
 			var ontInd = node.asResource().as(OntIndividual.class);
+			if (ontInd.getURI().equals(objectType.getURI()))
+				return true;			
 			var superClasses = RDFElement.getSuperTypesAndSuperclasses(ontInd); 
 			if (superClasses.stream().noneMatch(clazz -> clazz.equals(this.objectType))) {// not a valid subclass
 				return false;

@@ -1,6 +1,7 @@
 package at.jku.isse.artifacteventstreaming.branch.serialization;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.apache.jena.rdf.model.AnonId;
@@ -23,7 +24,7 @@ public class StatementJsonDeserializer extends StdDeserializer<Statement> {
 	 */
 	private static final long serialVersionUID = 1L;
 
-	private final Model model = ModelFactory.createDefaultModel();
+	private final transient Model model = ModelFactory.createDefaultModel();
 	
 	protected StatementJsonDeserializer(Class<Statement> t) {
 		super(t);			
@@ -62,9 +63,10 @@ public class StatementJsonDeserializer extends StdDeserializer<Statement> {
 	
 	boolean isValidURL(String url)  {
 	    try {
-	        new URI(url);	    		    
-	        return true;	   
-	    } catch (URISyntaxException e) {
+	    	 var uri = new URI(url);	    
+		     uri.toURL();
+		     return true;	   
+	    } catch (URISyntaxException | MalformedURLException e) {
 	        return false;
 	    }
 	}

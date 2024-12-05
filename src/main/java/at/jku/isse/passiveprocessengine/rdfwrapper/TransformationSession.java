@@ -29,25 +29,26 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class TransformationSession {
-	
-	private final Commit commit;
+		
+	private final List<Statement> addedStatements;
+	private final List<Statement> removedStatements;
 	private final NodeToDomainResolver resolver;
 	
 	
 	protected List<Update> process() {
-		 Map<RDFNode, List<StatementWrapper>> opsPerInst = collectPerInstance(commit);
+		 Map<RDFNode, List<StatementWrapper>> opsPerInst = collectPerInstance(addedStatements, removedStatements);
 		 return opsPerInst.entrySet().stream()
 			.flatMap(entry -> processPerInstance(entry.getKey(), entry.getValue()))
 			.toList();	
 	}
 	
-	private Map<RDFNode, List<StatementWrapper>> collectPerInstance(Commit commit) {
+	private Map<RDFNode, List<StatementWrapper>> collectPerInstance(List<Statement> addedStatements, List<Statement> removedStatements) {
 		// we keep the keys (i.e,instances and affected property) in order of their manipulation (.e.g, creating an instance before adding it somewhere else)				
 		Map<RDFNode, List<StatementWrapper>> opsPerInst = new LinkedHashMap<>(); 
 		// we can't map to instances right now, as the subject of a list manipulation is the listresource and not the individual/owner of the list 
-		commit.getAddedStatements().stream().forEach(stmt -> 
+		addedStatements.stream().forEach(stmt -> 
 			opsPerInst.computeIfAbsent(stmt.getSubject(), k -> new LinkedList<>()).add(new StatementWrapper(stmt, OP.ADD)));
-		commit.getRemovedStatements().stream().forEach(stmt -> 
+		removedStatements.stream().forEach(stmt -> 
 			opsPerInst.computeIfAbsent(stmt.getSubject(), k -> new LinkedList<>()).add(new StatementWrapper(stmt, OP.REMOVE)));
 		return opsPerInst;
 	}
@@ -267,7 +268,7 @@ public class TransformationSession {
 	}
 	
 	private List<Property> findFormerPropertiesBetween(Resource subject, Resource object) {
-		return commit.getRemovedStatements().stream()
+		return removedStatements.stream()
 			.filter(stmt -> stmt.getSubject().equals(subject) && stmt.getObject().equals(object))
 			.map(Statement::getPredicate)
 			.toList();
