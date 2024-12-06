@@ -1,5 +1,6 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -14,7 +15,7 @@ import at.jku.isse.artifacteventstreaming.replay.ReplayEntry.OPTYPE;
 
 public class ReplayEntryCollectorFromCommits implements ReplayEntryCollector {
 
-	private List<Commit> commitsInChronologicalOrder;
+	private List<Commit> commitsInChronologicalOrder = new LinkedList<>();
 	
 	
 	public void addCommit(Commit commit) {
@@ -33,9 +34,9 @@ public class ReplayEntryCollectorFromCommits implements ReplayEntryCollector {
 	private Stream<ReplayEntry> flattenCommit(Commit commit, Map<Resource, Set<Property>> replayScope) {
 		return Stream.concat(
 				commit.getAddedStatements().stream()
-				.filter(stmt -> replayScope.keySet().contains(stmt.getResource()))
+				.filter(stmt -> replayScope.keySet().contains(stmt.getSubject()))
 				.map(stmt -> {
-					var props = replayScope.get(stmt.getResource());
+					var props = replayScope.get(stmt.getSubject());
 					if (props.contains(stmt.getPredicate())) {
 						return new ReplayEntry(OPTYPE.ADD, stmt, commit.getCommitId(), commit.getTimeStamp());
 					} else {
@@ -45,9 +46,9 @@ public class ReplayEntryCollectorFromCommits implements ReplayEntryCollector {
 				.filter(Objects::nonNull) 
 			,
 				commit.getRemovedStatements().stream()
-				.filter(stmt -> replayScope.keySet().contains(stmt.getResource()))
+				.filter(stmt -> replayScope.keySet().contains(stmt.getSubject()))
 				.map(stmt -> {
-					var props = replayScope.get(stmt.getResource());
+					var props = replayScope.get(stmt.getSubject());
 					if (props.contains(stmt.getPredicate())) {
 						return new ReplayEntry(OPTYPE.REMOVE, stmt, commit.getCommitId(), commit.getTimeStamp());
 					} else {
@@ -59,7 +60,7 @@ public class ReplayEntryCollectorFromCommits implements ReplayEntryCollector {
 	}
 
 	@Override
-	public Object getPartialReplayEntries(long fromTimeStampIncl, Map<Resource, Set<Property>> replayScope) {
+	public List<ReplayEntry> getPartialReplayEntries(long fromTimeStampIncl, Map<Resource, Set<Property>> replayScope) {
 		return commitsInChronologicalOrder.stream()
 				.filter(commit -> commit.getTimeStamp() >= fromTimeStampIncl)
 				.flatMap(commit -> flattenCommit(commit, replayScope))

@@ -75,17 +75,7 @@ public class BranchImpl  implements Branch, Runnable {
 		this.outQueue = outQueue;
 		this.timeStampProvider = timeStampProvider;
 		this.crossBranchStreamer = new CrossBranchStreamer(branchResource.getURI(), stateKeeper, outQueue);
-		registerChangeListener(stmtAggregator);
-	}
-	
-	private void registerChangeListener(StatementAggregator stmtAggregator) {
-		model.register(stmtAggregator);
-		if (model instanceof InfGraph infG) {
-            Graph raw = infG.getRawGraph();
-            if (raw instanceof UnionGraph ugraph) {
-            	ugraph.getEventManager().register(((ModelCom)model).adapt(stmtAggregator));
-            }            
-        }        
+		stmtAggregator.registerWithModel(model);
 	}
 	
 	@Override

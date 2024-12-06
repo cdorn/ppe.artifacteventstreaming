@@ -29,22 +29,8 @@ class TestRuleTriggering extends TestRuleEvaluation {
 		aggr = new StatementAggregator();
 			 
 		observer = new RuleTriggerObserver("RuleTriggerObserver1", m, factory, repo); // we reuse the main model here as there is no branch involved anyway
-		register(m, aggr);
-		m.register(aggr);		// when using inference, this does not register the listener at the right graph:	https://github.com/apache/jena/issues/2868
-	}
-	
-	private void register(OntModel model, ModelChangedListener listener) {
-		var given = model.getGraph();
-		if (given instanceof InfGraph infG) {
-            Graph raw = infG.getRawGraph();
-            if (raw instanceof UnionGraph ugraph) {
-            	ugraph.getEventManager().register(((ModelCom)model).adapt(listener));
-            }            
-        }
-        if (given instanceof UnionGraph ugraph) {
-        	ugraph.getEventManager().register(((ModelCom)model).adapt(listener));
-        }
-	}
+		aggr.registerWithModel(m);
+		}
 	
 	
 	@Test

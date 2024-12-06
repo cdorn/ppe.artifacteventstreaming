@@ -4,8 +4,13 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.jena.graph.Graph;
+import org.apache.jena.ontapi.UnionGraph;
+import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.rdf.listeners.StatementListener;
 import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.rdf.model.impl.ModelCom;
+import org.apache.jena.reasoner.InfGraph;
 
 import lombok.RequiredArgsConstructor;
 
@@ -64,5 +69,16 @@ public class StatementAggregator extends StatementListener {
 		var set = removedStatements.stream().collect(Collectors.toSet());
 		removedStatements.clear();
 		return set;
+	}
+	
+	public void registerWithModel(OntModel model) {
+		// when using inference, this does not register the listener at the right graph:	https://github.com/apache/jena/issues/2868
+		model.register(this);
+		if (model instanceof InfGraph infG) {
+            Graph raw = infG.getRawGraph();
+            if (raw instanceof UnionGraph ugraph) {
+            	ugraph.getEventManager().register(((ModelCom)model).adapt(this));
+            }            
+        }   
 	}
 }

@@ -11,7 +11,7 @@ public interface ReplayEntryCollector {
 
 	List<ReplayEntry> getReplayEntriesInChronologicalOrder(Map<Resource, Set<Property>> replayScope);
 
-	Object getPartialReplayEntries(long fromTimeStampIncl, Map<Resource, Set<Property>> replayScope);
+	List<ReplayEntry> getPartialReplayEntries(long fromTimeStampIncl, Map<Resource, Set<Property>> replayScope);
 	
 	
 }

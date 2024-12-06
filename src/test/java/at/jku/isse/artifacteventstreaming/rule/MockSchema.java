@@ -30,7 +30,7 @@ public class MockSchema {
 		
 		keyProperty = SchemaUtils.createSingleDataPropertyType(TEST_SCHEMA_URI+"key", issueType, model.getDatatype(XSD.xstring));
 		stateProperty = SchemaUtils.createSingleDataPropertyType(TEST_SCHEMA_URI+"state", issueType, model.getDatatype(XSD.xstring));
-		priorityProperty = SchemaUtils.createSingleDataPropertyType(TEST_SCHEMA_URI+"state", issueType, model.getDatatype(XSD.xint));
+		priorityProperty = SchemaUtils.createSingleDataPropertyType(TEST_SCHEMA_URI+"priority", issueType, model.getDatatype(XSD.xint));
 		
 		requirementsProperty = SchemaUtils.createBaseObjectPropertyType(TEST_SCHEMA_URI+"requirements", issueType, issueType);  
 		bugsProperty = SchemaUtils.createBaseObjectPropertyType(TEST_SCHEMA_URI+"bugs", issueType, issueType);
