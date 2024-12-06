@@ -31,4 +31,6 @@ public interface Commit {
 
 	void removeEffectlessStatements(int baseAdds, int baseRemoves);
 
+	long getTimeStamp();
+
 }

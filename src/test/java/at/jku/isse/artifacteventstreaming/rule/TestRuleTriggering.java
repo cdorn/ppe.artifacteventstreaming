@@ -51,7 +51,7 @@ class TestRuleTriggering extends TestRuleEvaluation {
 	void testCreateRuleWithPreexistingInstance() throws RuleException {
 		var def = getBasicArtSubTypeWithSubRefOnLabelRule(1);
 		var defURI = def.getRuleDefinition().getURI();
-		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
 		observer.handleCommit(commit);				
 		// assert that rule evaluation is available and has been evaluated
 		var affected = repo.getRulesAffectedByChange(inst1, subProp.asProperty());
@@ -65,7 +65,7 @@ class TestRuleTriggering extends TestRuleEvaluation {
 		// now when we remove that rule externally, see if it is detected
 		ruleEval.delete(); // we just delete one, the other local one remains and needs to be automatically deleted, checked below
 		def.delete(); 		
-		var commit2 = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		var commit2 = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
 		observer.handleCommit(commit2);
 		// the rule should now be gone
 		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
@@ -84,7 +84,7 @@ class TestRuleTriggering extends TestRuleEvaluation {
 		
 		var inst3 = artSubType.createIndividual(baseURI+"inst3");
 		
-		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
 		observer.handleCommit(commit);				
 		// assert that rule evaluation is available and has been evaluated
 		var affected = repo.getRulesAffectedByChange(inst3, subProp.asProperty());
@@ -94,7 +94,7 @@ class TestRuleTriggering extends TestRuleEvaluation {
 		
 		// remove subart type;
 		inst3.remove(RDF.type, artSubType);
-		commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
 		observer.handleCommit(commit);				
 		// assert that rule evaluation is no longer available 
 		affected = repo.getRulesAffectedByChange(inst3, subProp.asProperty());
@@ -104,7 +104,7 @@ class TestRuleTriggering extends TestRuleEvaluation {
 	@Test
 	void testInstanceRetyping() throws RuleException {
 		var def = getBasicArtTypeWithRefOnLabelRule(1);		
-		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
 		observer.handleCommit(commit);
 		
 		var affected = repo.getRulesAffectedByChange(inst2, refProp.asProperty());
@@ -119,7 +119,7 @@ class TestRuleTriggering extends TestRuleEvaluation {
 		inst2.addProperty(RDF.type, artType);
 		//inst2.classes(true).forEach(clazz -> System.out.println(clazz));
 				
-		commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit2", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit2", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
 		observer.handleCommit(commit);				
 		// assert that rule evaluation is available and has been evaluated
 		var affected2 = repo.getRulesAffectedByChange(inst2, refProp.asProperty());
@@ -138,7 +138,7 @@ class TestRuleTriggering extends TestRuleEvaluation {
 	void testRemoveScopeUponDeletion() throws RuleException {
 		var def = getBasicArtSubTypeWithSubRefOnLabelRule(1);
 		var defURI = def.getRuleDefinition().getURI();
-		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
 		observer.handleCommit(commit);				
 		// assert that rule evaluation is available and has been evaluated
 		var affected = repo.getRulesAffectedByChange(inst1, subProp.asProperty());
@@ -151,7 +151,7 @@ class TestRuleTriggering extends TestRuleEvaluation {
 		
 		inst1.removeProperties();
 		inst2.removeProperties();
-		var commit2 = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		var commit2 = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
 		observer.handleCommit(commit2);
 		// the rule should now be gone
 		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;				
@@ -162,7 +162,7 @@ class TestRuleTriggering extends TestRuleEvaluation {
 	void testExternalRemoveEval() throws RuleException {
 		var def = getBasicArtSubTypeWithSubRefOnLabelRule(1);
 		var defURI = def.getRuleDefinition().getURI();
-		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
 		observer.handleCommit(commit);				
 		// assert that rule evaluation is available and has been evaluated
 		var affected = repo.getRulesAffectedByChange(inst1, subProp.asProperty());
@@ -175,7 +175,7 @@ class TestRuleTriggering extends TestRuleEvaluation {
 		
 		// now when we remove that rule externally, see if it is detected
 		ruleEval.delete(); // we just delete one, the other local one remains and needs to be automatically deleted, checked below		 	
-		var commit2 = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		var commit2 = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
 		observer.handleCommit(commit2);
 		// the rule should now be gone
 		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
@@ -187,7 +187,7 @@ class TestRuleTriggering extends TestRuleEvaluation {
 	@Test
 	void testRuleContextRetyping() throws RuleException {
 		var def = getBasicArtTypeWithRefOnLabelRule(1);		
-		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
 		observer.handleCommit(commit);
 		
 		var affected = repo.getRulesAffectedByChange(inst2, refProp.asProperty());
@@ -200,7 +200,7 @@ class TestRuleTriggering extends TestRuleEvaluation {
 		// change context type type;
 		def.setRuleExpression("self->isDefined()");
 							
-		commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit2", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit2", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
 		observer.handleCommit(commit);				
 		// assert that rule evaluation is available and has been evaluated
 		var affected2 = repo.getRulesAffectedByChange(inst2, refProp.asProperty());

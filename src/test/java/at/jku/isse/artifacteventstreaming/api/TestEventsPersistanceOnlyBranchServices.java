@@ -78,7 +78,7 @@ class TestEventsPersistanceOnlyBranchServices {
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		
-		Commit commit = new StatementCommitImpl("", "", "");
+		Commit commit = new StatementCommitImpl("", "", "", 0);
 		commit.appendAddedStatements(Set.of(model.createStatement(testResource, RDFS.seeAlso, testResource)));
 		
 		String json = jsonMapper.writeValueAsString(commit);
@@ -179,9 +179,9 @@ class TestEventsPersistanceOnlyBranchServices {
 	@Test
 	void testEventStoreBackedReadCommits() throws Exception {
 		PerBranchEventStore eventStore = factory.getEventStore(repoURI.toString());
-		var c1 = new StatementCommitImpl("b1", "msg1", null);
-		var c2 = new StatementCommitImpl("b1", "msg2", c1.getCommitId());
-		var c3 = new StatementCommitImpl("b1", "msg3", c2.getCommitId());
+		var c1 = new StatementCommitImpl("b1", "msg1", null, 0);
+		var c2 = new StatementCommitImpl("b1", "msg2", c1.getCommitId(), 0);
+		var c3 = new StatementCommitImpl("b1", "msg3", c2.getCommitId(), 0);
 		var cde1 = new CommitDeliveryEvent(c1.getCommitId(), c1, "b1", "b2");
 		var cde2 = new CommitDeliveryEvent(c2.getCommitId(), c2, "b1", "b2");
 		var cde3 = new CommitDeliveryEvent(c3.getCommitId(), c3, "b1", "b2");

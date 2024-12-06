@@ -205,7 +205,7 @@ class TestCommitHandling {
 		Commit commit = branch.commitChanges("TestCommit");
 		
 		
-		Commit again = new StatementCommitImpl("blabl", "commitcopy", ""
+		Commit again = new StatementCommitImpl("blabl", "commitcopy", "", 0
 				, new HashSet<>(commit.getAddedStatements())
 				, new HashSet<>(commit.getRemovedStatements()));
 		branch.enqueueIncomingCommit(again);
@@ -300,9 +300,9 @@ class TestCommitHandling {
 	
 	@Test
 	void testCommitComparison() {
-		StatementCommitImpl commit1 = new StatementCommitImpl("", "", "", "", Collections.emptySet(), Collections.emptySet());
-		StatementCommitImpl commit2 = new StatementCommitImpl("", "", "", "", Collections.emptySet(), Collections.emptySet());
-		StatementCommitImpl commit3 = new StatementCommitImpl("", "1", "", "", Collections.emptySet(), Collections.emptySet());
+		StatementCommitImpl commit1 = new StatementCommitImpl("", "", "", "", 0, Collections.emptySet(), Collections.emptySet());
+		StatementCommitImpl commit2 = new StatementCommitImpl("", "", "", "", 0, Collections.emptySet(), Collections.emptySet());
+		StatementCommitImpl commit3 = new StatementCommitImpl("", "1", "", "", 0, Collections.emptySet(), Collections.emptySet());
 		assertEquals(commit1, commit2);
 		assertNotEquals(commit1, commit3);
 				

@@ -89,6 +89,7 @@ public class CrossBranchStreamer implements Runnable {
 				, cloneSource.getCommitId()
 				, cloneSource.getCommitMessage()
 				, cloneSource.getPrecedingCommitId()
+				, cloneSource.getTimeStamp()
 				, new LinkedHashSet<>(cloneSource.getAddedStatements())
 				, new LinkedHashSet<>(cloneSource.getRemovedStatements()));
 		return clone;

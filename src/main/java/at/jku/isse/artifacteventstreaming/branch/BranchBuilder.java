@@ -28,6 +28,7 @@ import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
+import at.jku.isse.artifacteventstreaming.api.TimeStampProvider;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryEventStore;
 import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
@@ -45,6 +46,7 @@ public class BranchBuilder {
 	private List<CommitHandler> incomingCommitHandlers = new LinkedList<>();
 	private List<IncrementalCommitHandler> services = new LinkedList<>();
 	private Set<CommitHandler> outgoingCommitDistributers = new HashSet<>();
+	private TimeStampProvider timeStampProvider;
 	
 	public BranchBuilder(@NonNull URI repositoryURI, @NonNull Dataset repoDataset, @NonNull OntModel repoModel) {
 		this.repositoryURI = repositoryURI;
@@ -94,6 +96,13 @@ public class BranchBuilder {
 		return this;
 	}
 	
+	/**
+	 * if not used, then default system time is used as timestamp
+	 * */
+	public BranchBuilder setTimeStampProvider(@NonNull TimeStampProvider timeStampProvider) {
+		this.timeStampProvider = timeStampProvider;
+		return this;
+	}
 	
 	/**
 	 * if not used, no commits will be merged into this branch
@@ -145,7 +154,10 @@ public class BranchBuilder {
 		if (stateKeeper == null) {
 			stateKeeper = new StateKeeperImpl(URI.create(branchURI), new InMemoryBranchStateCache(), new InMemoryEventStore());
 		}
-		BranchImpl branch = new BranchImpl(branchDataset, model, branchResource, stateKeeper, inQueue, outQueue);
+		if (timeStampProvider == null) {
+			timeStampProvider = new SystemTimeStampProvider();
+		}
+		BranchImpl branch = new BranchImpl(branchDataset, model, branchResource, stateKeeper, inQueue, outQueue, timeStampProvider);
 		addCommitHandlers(branch);
 		return branch;
 	}

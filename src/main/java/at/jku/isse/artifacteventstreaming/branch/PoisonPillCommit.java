@@ -76,4 +76,9 @@ public class PoisonPillCommit implements Commit {
 		//noop
 	}
 
+	@Override
+	public long getTimeStamp() {		
+		return -1;
+	}
+
 }

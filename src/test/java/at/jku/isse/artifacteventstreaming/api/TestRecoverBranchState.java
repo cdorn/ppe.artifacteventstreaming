@@ -133,7 +133,7 @@ class TestRecoverBranchState {
 			// create commit to merge
 			Resource testResource = ResourceFactory.createResource(repoURI+"#art1");
 			Statement stmt = model.createStatement(testResource, RDFS.label, model.createTypedLiteral(1));
-			Commit commit = new StatementCommitImpl(repoURI.toString()+"#someBranch", "Commit to Merge", null, Set.of(stmt), Collections.emptySet());
+			Commit commit = new StatementCommitImpl(repoURI.toString()+"#someBranch", "Commit to Merge", null, 0, Set.of(stmt), Collections.emptySet());
 			//branch.getDataset().begin();
 			try {
 				 branch.enqueueIncomingCommit(commit);

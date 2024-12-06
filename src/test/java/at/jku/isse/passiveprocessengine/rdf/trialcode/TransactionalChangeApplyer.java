@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 public class TransactionalChangeApplyer extends StatementListener {
 
 	private final OntModel targetModel;
-	private Commit transactionScope = new StatementCommitImpl("main", "test", "none");
+	private Commit transactionScope = new StatementCommitImpl("main", "test", "none", 0);
 	
 	@Override
 	public void addedStatement(Statement s) {
@@ -31,14 +31,14 @@ public class TransactionalChangeApplyer extends StatementListener {
 	
 	public void commitTransaction(String commitMsg) {
 		Commit scope = transactionScope;
-		transactionScope = new StatementCommitImpl("main", commitMsg, "none");
+		transactionScope = new StatementCommitImpl("main", commitMsg, "none", 0);
 		targetModel.add(scope.getAddedStatements());
 		targetModel.remove(scope.getRemovedStatements());
 	}
 	
 	public Commit abortTransaction() {
 		Commit scope = transactionScope;
-		transactionScope = new StatementCommitImpl("main", "test", "none");
+		transactionScope = new StatementCommitImpl("main", "test", "none", 0);
 		return scope;
 	}
 }

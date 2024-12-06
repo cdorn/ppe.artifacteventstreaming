@@ -69,7 +69,7 @@ class TestCommitToChangeEvents {
 	}
 	
 	private Commit generateCommit() {
-		return new StatementCommitImpl("BranchId", "", "", aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		return new StatementCommitImpl("BranchId", "", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
 	}
 	
 	@Test

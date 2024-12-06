@@ -28,21 +28,26 @@ public class StatementCommitImpl implements Commit {
 	private final String precedingCommitId;
 	@Getter
 	private final String originatingBranchId;
+	@Getter
+	private final long timeStamp;
 	
 	
-	public StatementCommitImpl(String branchId, String commitMsg, String precedingCommitId) {
+	public StatementCommitImpl(String branchId, String commitMsg, String precedingCommitId, long timeStamp) {
 		this.commitMessage = commitMsg;
 		this.originatingBranchId = branchId;
 		this.commitId = generateUUID();
 		this.precedingCommitId = precedingCommitId;
+		this.timeStamp = timeStamp;
 	}
 	
 	public StatementCommitImpl(@JsonProperty("originatingBranchId") String branchId
 			, @JsonProperty("commitMessage") String commitMsg
 			, @JsonProperty("precedingCommitId") String precedingCommitId
+			, @JsonProperty("timeStamp") long timeStamp
 			, @JsonProperty("addedStatements") Set<Statement> addedStatements
-			, @JsonProperty("removedStatements") Set<Statement> removedStatements) {
-		this(branchId, commitMsg, precedingCommitId);
+			, @JsonProperty("removedStatements") Set<Statement> removedStatements
+			) {
+		this(branchId, commitMsg, precedingCommitId, timeStamp);
 		this.addedStatements.addAll(addedStatements);
 		this.removedStatements.addAll(removedStatements);
 	}
@@ -52,14 +57,17 @@ public class StatementCommitImpl implements Commit {
 			,  String mergedCommitId
 			, String commitMsg
 			, String precedingCommitId
+			, long timeStamp
 			, Set<Statement> addedStatements
-			, Set<Statement> removedStatements) {
+			, Set<Statement> removedStatements
+			) {
 		this.commitMessage = commitMsg;
 		this.originatingBranchId = branchId;
 		this.commitId = mergedCommitId;
 		this.precedingCommitId = precedingCommitId;
 		this.addedStatements.addAll(addedStatements);
 		this.removedStatements.addAll(removedStatements);
+		this.timeStamp = timeStamp;
 	}
 	
 	private String generateUUID() {

@@ -30,6 +30,7 @@ import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
+import at.jku.isse.artifacteventstreaming.api.TimeStampProvider;
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.CrossBranchStreamer;
@@ -44,6 +45,7 @@ public class BranchImpl  implements Branch, Runnable {
 	private final OntModel model;
 	private final OntIndividual branchResource;
 	@Getter private final BranchStateUpdater stateKeeper;
+	private final TimeStampProvider timeStampProvider;
 	
 	@Getter private final BlockingQueue<Commit> inQueue;
 	private final List<CommitHandler> handlers = Collections.synchronizedList(new LinkedList<>());
@@ -61,7 +63,8 @@ public class BranchImpl  implements Branch, Runnable {
 			, @NonNull OntIndividual branchResource
 			, @NonNull BranchStateUpdater stateKeeper
 			, @NonNull BlockingQueue<Commit> inQueue
-			, @NonNull BlockingQueue<Commit> outQueue			
+			, @NonNull BlockingQueue<Commit> outQueue
+			, @NonNull TimeStampProvider timeStampProvider
 			) {
 		super();
 		this.dataset = dataset;
@@ -70,6 +73,7 @@ public class BranchImpl  implements Branch, Runnable {
 		this.stateKeeper = stateKeeper;
 		this.inQueue = inQueue;
 		this.outQueue = outQueue;
+		this.timeStampProvider = timeStampProvider;
 		this.crossBranchStreamer = new CrossBranchStreamer(branchResource.getURI(), stateKeeper, outQueue);
 		registerChangeListener(stmtAggregator);
 	}
@@ -300,7 +304,7 @@ public class BranchImpl  implements Branch, Runnable {
 			log.debug("Commit not created as no changes occurred since last commit: "+getLastCommitId());
 			return null;
 		} else {
-			var commit = new StatementCommitImpl( branchResource.getURI() , commitMsg, getLastCommitId(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());
+			var commit = new StatementCommitImpl( branchResource.getURI() , commitMsg, getLastCommitId(), timeStampProvider.getCurrentTimeStamp(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());
 			handleCommitInternally(commit);
 			outQueue.add(commit); 
 			return commit;
@@ -310,7 +314,7 @@ public class BranchImpl  implements Branch, Runnable {
 	@Override
 	public Commit commitMergeOf(Commit mergedCommit) throws PersistenceException {
 		//we always create a local commit upon a merge to signal that we received and processed that commit
-		var commit = new StatementCommitImpl( branchResource.getURI() , mergedCommit.getCommitId(), mergedCommit.getCommitMessage(), getLastCommitId(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());
+		var commit = new StatementCommitImpl( branchResource.getURI() , mergedCommit.getCommitId(), mergedCommit.getCommitMessage(), getLastCommitId(), timeStampProvider.getCurrentTimeStamp(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());
 		if (commit.isEmpty()) {
 			log.info(String.format("MergeCommit %s merged into branch %s has no changes after incoming processing",commit.getCommitId(), this.branchResource.getURI()));
 		}
