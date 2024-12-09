@@ -31,7 +31,7 @@ public class ListWrapper extends TypedCollectionResource implements List<Object>
 			owner.removeAll(listReferenceProperty);
 			seq = owner.getModel().createSeq(owner.getURI()+"#"+listReferenceProperty.getLocalName());
 			owner.addProperty(listReferenceProperty, seq);
-			seq.addProperty(resolver.getListType().getContainerProperty().asProperty(), owner);
+			seq.addProperty(resolver.getCardinalityUtil().getListType().getContainerProperty().asProperty(), owner);
 		} 
 		this.listContent = seq.as(Seq.class);
 	}

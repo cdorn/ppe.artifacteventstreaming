@@ -1,6 +1,6 @@
 package at.jku.isse.artifacteventstreaming.rdf;
 
-import static at.jku.isse.passiveprocessengine.rdfwrapper.MapResourceType.MAP_NS;
+import static at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType.MAP_NS;
 import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
@@ -22,6 +22,7 @@ import com.google.errorprone.annotations.Var;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
+import at.jku.isse.artifacteventstreaming.replay.InMemoryHistoryRepository;
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.PPEPropertyType;
@@ -53,7 +54,7 @@ class TestCommitToChangeEvents {
 		resolver = new NodeToDomainResolver(m);
 		aggr = new StatementAggregator();
 		listener = new PPEChangeListener();
-		transformer = new CommitChangeEventTransformer("Transformer", OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM), resolver);
+		transformer = new CommitChangeEventTransformer("Transformer", OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM), resolver, new InMemoryHistoryRepository());
 		transformer.registerWithWorkspace(listener);
 		m.register(aggr);
 		m.setNsPrefix("isse", NS);

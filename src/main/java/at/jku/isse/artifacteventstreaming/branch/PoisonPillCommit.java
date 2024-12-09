@@ -7,6 +7,7 @@ import java.util.Set;
 import org.apache.jena.rdf.model.Statement;
 
 import at.jku.isse.artifacteventstreaming.api.Commit;
+import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 
 public class PoisonPillCommit implements Commit {
 

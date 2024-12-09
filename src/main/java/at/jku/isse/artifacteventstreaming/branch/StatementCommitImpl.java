@@ -13,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import at.jku.isse.artifacteventstreaming.api.Commit;
+import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import lombok.Getter;
 
 @JsonIgnoreProperties(value = { "additionCount", "removalCount", "empty" })

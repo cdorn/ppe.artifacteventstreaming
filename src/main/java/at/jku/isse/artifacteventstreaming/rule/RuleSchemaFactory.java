@@ -8,6 +8,8 @@ import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
 
+import at.jku.isse.artifacteventstreaming.schemasupport.SchemaFactory;
+
 public class RuleSchemaFactory extends SchemaFactory {
 
 	private static final String RULEONTOLOGY = "ruleontology";

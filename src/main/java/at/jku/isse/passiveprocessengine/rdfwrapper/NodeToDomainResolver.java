@@ -22,6 +22,10 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
 
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
+import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.InstanceRepository;
 import at.jku.isse.passiveprocessengine.core.PPEInstance;
@@ -41,18 +45,12 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		super();
 		this.model = model;
 		init();		
-		mapType = new MapResourceType(model); //TODO make these from ontology
-		listType = new ListResourceType(model);
-		singleType = new SingleResourceType(model);
+		cardinalityUtil = new PropertyCardinalityTypes(model);
 	}
 
 	protected final OntModel model;
 	@Getter
-	private MapResourceType mapType;
-	@Getter
-	private ListResourceType listType;
-	@Getter
-	private SingleResourceType singleType;
+	private PropertyCardinalityTypes cardinalityUtil;
 	
 	protected final Map<OntClass, RDFInstanceType> typeIndex = new HashMap<>();	
 	protected final Map<OntIndividual, RDFInstance> instanceIndex = new HashMap<>();
@@ -106,11 +104,11 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	}
 	
 	public OntClass getMapEntryBaseType() {		
-		return mapType.getMapEntryClass();
+		return getCardinalityUtil().getMapType().getMapEntryClass();
 	}	
 
 	public OntClass getListBaseType() {
-		return listType.getListClass();
+		return getCardinalityUtil().getListType().getListClass();
 	}
 	
 	public OntDataRange resolveAtomicInstanceType(PPEInstanceType type) {

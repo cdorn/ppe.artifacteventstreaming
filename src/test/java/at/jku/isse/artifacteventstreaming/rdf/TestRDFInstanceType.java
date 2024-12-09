@@ -63,7 +63,7 @@ class TestRDFInstanceType {
 		assertEquals(null, typeBase.getParentType());
 		
 		
-		var prop = resolver.getMapType().addObjectMapProperty(typeBase.getType(), NS+"hasMap", typeChild.getType());
+		var prop = resolver.getCardinalityUtil().getMapType().addObjectMapProperty(typeBase.getType(), NS+"hasMap", typeChild.getType());
 		assertNotEquals(null, prop);
 		var propType = typeBase.getPropertyType(NS+"hasMap");
 		assertEquals(typeChild, propType.getInstanceType());

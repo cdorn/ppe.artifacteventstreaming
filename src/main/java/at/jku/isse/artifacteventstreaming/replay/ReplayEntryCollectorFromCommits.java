@@ -1,17 +1,21 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 
+import at.jku.isse.artifacteventstreaming.api.AES;
+import at.jku.isse.artifacteventstreaming.api.AES.OPTYPE;
 import at.jku.isse.artifacteventstreaming.api.Commit;
-import at.jku.isse.artifacteventstreaming.replay.ReplayEntry.OPTYPE;
+import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 
 public class ReplayEntryCollectorFromCommits implements ReplayEntryCollector {
 
@@ -28,7 +32,7 @@ public class ReplayEntryCollectorFromCommits implements ReplayEntryCollector {
 	public List<ReplayEntry> getReplayEntriesInChronologicalOrder(Map<Resource, Set<Property>> replayScope) {
 		return commitsInChronologicalOrder.stream()
 				.flatMap(commit -> flattenCommit(commit, replayScope))
-				.toList();		
+				.collect(Collectors.toCollection(ArrayList::new));		
 	}
 	
 	private Stream<ReplayEntry> flattenCommit(Commit commit, Map<Resource, Set<Property>> replayScope) {
@@ -38,7 +42,7 @@ public class ReplayEntryCollectorFromCommits implements ReplayEntryCollector {
 				.map(stmt -> {
 					var props = replayScope.get(stmt.getSubject());
 					if (props.contains(stmt.getPredicate())) {
-						return new ReplayEntry(OPTYPE.ADD, stmt, commit.getCommitId(), commit.getTimeStamp());
+						return new ReplayEntry(AES.OPTYPE.ADD, new ContainedStatementImpl(stmt), commit.getCommitId(), commit.getTimeStamp(), commit.getOriginatingBranchId());
 					} else {
 						return null;
 					}
@@ -50,7 +54,7 @@ public class ReplayEntryCollectorFromCommits implements ReplayEntryCollector {
 				.map(stmt -> {
 					var props = replayScope.get(stmt.getSubject());
 					if (props.contains(stmt.getPredicate())) {
-						return new ReplayEntry(OPTYPE.REMOVE, stmt, commit.getCommitId(), commit.getTimeStamp());
+						return new ReplayEntry(AES.OPTYPE.REMOVE, new ContainedStatementImpl(stmt), commit.getCommitId(), commit.getTimeStamp(), commit.getOriginatingBranchId());
 					} else {
 						return null;
 					}
@@ -64,6 +68,6 @@ public class ReplayEntryCollectorFromCommits implements ReplayEntryCollector {
 		return commitsInChronologicalOrder.stream()
 				.filter(commit -> commit.getTimeStamp() >= fromTimeStampIncl)
 				.flatMap(commit -> flattenCommit(commit, replayScope))
-				.toList();
+				.collect(Collectors.toCollection(ArrayList::new));
 	}
 }

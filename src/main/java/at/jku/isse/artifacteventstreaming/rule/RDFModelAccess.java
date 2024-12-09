@@ -28,16 +28,16 @@ import org.apache.jena.vocabulary.XSD;
 import org.apache.jena.ontapi.model.OntClass.CardinalityRestriction;
 import org.apache.jena.ontapi.model.OntClass.ValueRestriction;
 
+import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 import at.jku.isse.designspace.rule.arl.evaluator.ModelAccess;
 import at.jku.isse.designspace.rule.arl.exception.EvaluationException;
 import at.jku.isse.designspace.rule.arl.exception.ParsingException;
 import at.jku.isse.designspace.rule.arl.parser.ArlType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.CARDINALITIES;
-import at.jku.isse.passiveprocessengine.rdfwrapper.ListResourceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.MapResource;
-import at.jku.isse.passiveprocessengine.rdfwrapper.MapResourceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType;
-import at.jku.isse.passiveprocessengine.rdfwrapper.SingleResourceType;
 
 public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
 

@@ -1,6 +1,6 @@
 package at.jku.isse.artifacteventstreaming.jena;
 
-import static at.jku.isse.passiveprocessengine.rdfwrapper.MapResourceType.MAP_NS;
+import static at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType.MAP_NS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 
@@ -22,8 +22,8 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.Test;
 
+import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.MapResource;
-import at.jku.isse.passiveprocessengine.rdfwrapper.MapResourceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.ResourceMismatchException;
 
 class ResourceAsHashMapTest {

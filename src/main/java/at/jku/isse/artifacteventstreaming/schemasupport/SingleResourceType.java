@@ -1,4 +1,4 @@
-package at.jku.isse.passiveprocessengine.rdfwrapper;
+package at.jku.isse.artifacteventstreaming.schemasupport;
 
 import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntModel;
@@ -9,8 +9,8 @@ import lombok.Getter;
 public class SingleResourceType {
 	public static final String SINGLE_NS = "http://at.jku.isse.single#";
 	
-	public static final String SINGLE_OBJECT_URI = SINGLE_NS+"#object";
-	public static final String SINGEL_LITERAL_URI = SINGLE_NS+"#literal";
+	public static final String SINGLE_OBJECT_URI = SINGLE_NS+"object";
+	public static final String SINGEL_LITERAL_URI = SINGLE_NS+"literal";
 	
 	@Getter
 	private final OntObjectProperty singleObjectProperty;

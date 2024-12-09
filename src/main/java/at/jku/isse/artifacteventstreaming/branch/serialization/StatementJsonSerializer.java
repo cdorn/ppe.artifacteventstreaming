@@ -11,6 +11,8 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
+import at.jku.isse.artifacteventstreaming.api.AES;
+
 public class StatementJsonSerializer extends StdSerializer<Statement> {
 
 	public static final String OBJECT = "object";
@@ -30,7 +32,7 @@ public class StatementJsonSerializer extends StdSerializer<Statement> {
 	@Override
 	public void serialize(Statement value, JsonGenerator gen, SerializerProvider provider) throws IOException {
 		
-		String id = resourceToId(value.getSubject());
+		String id = AES.resourceToId(value.getSubject());
 		gen.writeStartObject();
         gen.writeStringField(SUBJECT, id);		
         gen.writeStringField(PREDICATE, value.getPredicate().getURI());
@@ -39,7 +41,7 @@ public class StatementJsonSerializer extends StdSerializer<Statement> {
         	 gen.writeStringField(DATATYPE, datatypeURI);
         	 gen.writeStringField(OBJECT, value.getObject().asLiteral().getLexicalForm());
         } else {
-        	gen.writeStringField(OBJECT, resourceToId(value.getObject().asResource()));
+        	gen.writeStringField(OBJECT, AES.resourceToId(value.getObject().asResource()));
         }                		
         gen.writeEndObject();
 	}
@@ -50,7 +52,4 @@ public class StatementJsonSerializer extends StdSerializer<Statement> {
 		mapper.registerModule(module);
 	}
 	
-	private String resourceToId(Resource res) {
-		return res.getURI() != null ? res.getURI() : res.getId().toString();
-	}
 }

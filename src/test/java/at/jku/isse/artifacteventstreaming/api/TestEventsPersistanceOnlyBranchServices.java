@@ -32,6 +32,7 @@ import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonDeserializer;
 import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonSerializer;
+import at.jku.isse.artifacteventstreaming.replay.ContainedStatementImpl;
 
 class TestEventsPersistanceOnlyBranchServices {
 

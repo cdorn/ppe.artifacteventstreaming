@@ -1,4 +1,4 @@
-package at.jku.isse.passiveprocessengine.rdfwrapper;
+package at.jku.isse.artifacteventstreaming.schemasupport;
 
 import java.util.List;
 import java.util.stream.Stream;

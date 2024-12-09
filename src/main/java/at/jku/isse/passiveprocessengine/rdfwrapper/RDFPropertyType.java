@@ -12,6 +12,9 @@ import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
 
+import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.CARDINALITIES;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.PPEPropertyType;
@@ -29,7 +32,7 @@ public class RDFPropertyType implements PPEPropertyType {
 	public RDFPropertyType(OntRelationalProperty property, NodeToDomainResolver resolver) {
 		super();
 		this.property = property;
-		Entry<OntObject, CARDINALITIES> entry = determineValueTypeAndCardinality(property, resolver.getMapType(), resolver.getListType(), resolver.getSingleType());
+		Entry<OntObject, CARDINALITIES> entry = determineValueTypeAndCardinality(property, resolver.getCardinalityUtil().getMapType(), resolver.getCardinalityUtil().getListType(), resolver.getCardinalityUtil().getSingleType());
 		this.cardinality = entry.getValue();
 		this.valueType = resolver.resolveToType(entry.getKey());
 	}

@@ -13,14 +13,14 @@ import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.CARDINALITIES;
-import at.jku.isse.passiveprocessengine.rdfwrapper.ListResourceType;
-import at.jku.isse.passiveprocessengine.rdfwrapper.MapResourceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType;
-import at.jku.isse.passiveprocessengine.rdfwrapper.SingleResourceType;
 
 class TestRDFPropertyType {
 
@@ -39,9 +39,9 @@ class TestRDFPropertyType {
 		resolver = new NodeToDomainResolver(m);
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
-		mapFactory = resolver.getMapType();
-		listFactory = resolver.getListType();
-		singleFactory = resolver.getSingleType();
+		mapFactory = resolver.getCardinalityUtil().getMapType();
+		listFactory = resolver.getCardinalityUtil().getListType();
+		singleFactory = resolver.getCardinalityUtil().getSingleType();
 		artifactType = ((RDFInstanceType) resolver.createNewInstanceType(NS+"artifact")).getType();	
 		otherType =  ((RDFInstanceType) resolver.createNewInstanceType(NS+"other")).getType();	
 		otherType.addProperty(RDFS.label, "other");

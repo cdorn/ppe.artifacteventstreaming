@@ -2,6 +2,7 @@ package at.jku.isse.artifacteventstreaming.replay;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +25,7 @@ public class ReplaySession {
 	private List<ReplayEntry> history;
 	
 	public void revert() {
-		history = new LinkedList<>(collector.getReplayEntriesInChronologicalOrder(replayScope)); // history needs to be modifiable for sorting and scope extension
+		history = collector.getReplayEntriesInChronologicalOrder(replayScope);
 		revert(history);
 	}
 	
@@ -53,17 +54,31 @@ public class ReplaySession {
 	}
 	
 	public void addToScope(Map<Resource, Set<Property>> additionalReplayScope) {
-		Map<Resource, Set<Property>> filteredReplayScope = new HashMap<>(additionalReplayScope);
+		//copy to ensure mutability:
+		Map<Resource, Set<Property>> filteredReplayScope = new HashMap<>();
+		additionalReplayScope.entrySet().stream().forEach(entry -> filteredReplayScope.put(entry.getKey(), new HashSet<>(entry.getValue())));
+		
 		filteredReplayScope.entrySet().stream()
 			.forEach(entry -> {
 				entry.getValue().removeAll(replayScope.getOrDefault(entry.getKey(), Collections.emptySet())); // remove what we already have
+				replayScope.computeIfAbsent(entry.getKey(), k-> new HashSet<>()).addAll(entry.getValue());// add the filtered scope to the replayScope for future checking in this method
 			});
-		replayScope.putAll(filteredReplayScope); // add the filtered scope to the replayScope for future checking in this method
 		
-		var partialHistory = collector.getPartialReplayEntries(history.get(currentNonReplayedEntryPos).getTimeStamp(), filteredReplayScope);
+		var partialHistory = collector.getPartialReplayEntries(getCurrentReplayTimestamp(), filteredReplayScope);
 		revert(partialHistory);
 		// insert history, there wont be any event earlier that current pos in history (as we asked not to have anything earlier)
 		history.addAll(partialHistory);
 		history.sort(new ReplayEntry.CompareByTimeStamp()); // resort to oldest first	
+	}
+	
+	/**
+	 * @return the timestamp of the next, not yet replayed change, or -1 if history is empty or replay is complete
+	 */
+	public long getCurrentReplayTimestamp() {
+		if (history.isEmpty() || currentNonReplayedEntryPos >= history.size()) {
+			return -1;
+		} else {
+			return history.get(currentNonReplayedEntryPos).getTimeStamp();
+		}
 	}
 }

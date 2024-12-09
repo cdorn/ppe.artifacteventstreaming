@@ -18,7 +18,8 @@ import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import at.jku.isse.artifacteventstreaming.SchemaUtils;
+import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.SchemaUtils;
 
 class TestRuleDefinitions {
 	
@@ -44,6 +45,7 @@ class TestRuleDefinitions {
 		//THIS OntSpec is important: as without inference, then subproperties and subclass individuals are not correctly inferred
 		// but when using RDFS inference only, then we dont get individual change events due to some deep down graph listener registration problem 
 		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_RDFS_INF ); // needs deep setting of graph listener
+		PropertyCardinalityTypes schemaUtils = new PropertyCardinalityTypes(m);
 		//m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF ); 		
 		m.setNsPrefix("rules", RuleSchemaFactory.uri);
 		m.setNsPrefix("test", baseURI.toString());
@@ -58,8 +60,8 @@ class TestRuleDefinitions {
 		subProp.addRange(artSubType);
 		subProp.addDomain(artSubType);
 		
-		labelProp = SchemaUtils.createSingleDataPropertyType(baseURI+"label", artType, m.getDatatype(XSD.xstring));
-		priorityProp = SchemaUtils.createSingleDataPropertyType(baseURI+"priority", artType, m.getDatatype(XSD.xlong)); 
+		labelProp = schemaUtils.createSingleDataPropertyType(baseURI+"label", artType, m.getDatatype(XSD.xstring));
+		priorityProp = schemaUtils.createSingleDataPropertyType(baseURI+"priority", artType, m.getDatatype(XSD.xlong)); 
 		
 		factory = new RuleSchemaProvider(m, ruleSchemaFactory);
 		modelAccess = new RDFModelAccess(m);

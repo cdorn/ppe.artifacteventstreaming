@@ -5,6 +5,8 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 
 public class AES {
+	public enum OPTYPE {ADD, REMOVE}
+
 	public static final String uri = "http://at.jku.isse.artifacteventstreaming#";
 	
 	public static final String branchType = uri+"Branch";
@@ -32,4 +34,8 @@ public class AES {
     public static final Property destinationBranch = property("hasDestinationBranch");
     
     public static final Property isConfigForHandlerType = property("isConfigForHandlerType");
+
+	public static String resourceToId(Resource res) {
+		return res.getURI() != null ? res.getURI() : res.getId().toString();
+	}
 }

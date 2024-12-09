@@ -5,18 +5,19 @@ import java.util.Comparator;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Statement;
 
+import at.jku.isse.artifacteventstreaming.api.AES;
+import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class ReplayEntry {
 
-	public enum OPTYPE {ADD, REMOVE}
-	
-	@Getter private final OPTYPE opType;
-	@Getter private final Statement statement;
+	@Getter private final AES.OPTYPE opType;
+	@Getter private final ContainedStatement statement;
 	@Getter private final String commitId;
 	@Getter private final long timeStamp;
+	@Getter private final String branchURI;
 	
 	public void applyForward(Model model) {
 		switch (opType) {

@@ -7,7 +7,8 @@ import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.vocabulary.XSD;
 
-import at.jku.isse.artifacteventstreaming.SchemaUtils;
+import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.SchemaUtils;
 import lombok.Getter;
 
 public class MockSchema {
@@ -26,18 +27,19 @@ public class MockSchema {
 	@Getter public OntObjectProperty parentProperty;
 	
 	public MockSchema(OntModel model) {		
+		PropertyCardinalityTypes schemaUtils = new PropertyCardinalityTypes(model);
 		issueType = model.createOntClass(TEST_SCHEMA_URI+"Issue");
 		
-		keyProperty = SchemaUtils.createSingleDataPropertyType(TEST_SCHEMA_URI+"key", issueType, model.getDatatype(XSD.xstring));
-		stateProperty = SchemaUtils.createSingleDataPropertyType(TEST_SCHEMA_URI+"state", issueType, model.getDatatype(XSD.xstring));
-		priorityProperty = SchemaUtils.createSingleDataPropertyType(TEST_SCHEMA_URI+"priority", issueType, model.getDatatype(XSD.xint));
+		keyProperty = schemaUtils.createSingleDataPropertyType(TEST_SCHEMA_URI+"key", issueType, model.getDatatype(XSD.xstring));
+		stateProperty = schemaUtils.createSingleDataPropertyType(TEST_SCHEMA_URI+"state", issueType, model.getDatatype(XSD.xstring));
+		priorityProperty = schemaUtils.createSingleDataPropertyType(TEST_SCHEMA_URI+"priority", issueType, model.getDatatype(XSD.xint));
 		
-		requirementsProperty = SchemaUtils.createBaseObjectPropertyType(TEST_SCHEMA_URI+"requirements", issueType, issueType);  
-		bugsProperty = SchemaUtils.createBaseObjectPropertyType(TEST_SCHEMA_URI+"bugs", issueType, issueType);
-		upstreamProperty = SchemaUtils.createBaseObjectPropertyType(TEST_SCHEMA_URI+"upstream", issueType, issueType);
-		downstreamProperty = SchemaUtils.createBaseObjectPropertyType(TEST_SCHEMA_URI+"downstream", issueType, issueType);
+		requirementsProperty = schemaUtils.createBaseObjectPropertyType(TEST_SCHEMA_URI+"requirements", issueType, issueType);  
+		bugsProperty = schemaUtils.createBaseObjectPropertyType(TEST_SCHEMA_URI+"bugs", issueType, issueType);
+		upstreamProperty = schemaUtils.createBaseObjectPropertyType(TEST_SCHEMA_URI+"upstream", issueType, issueType);
+		downstreamProperty = schemaUtils.createBaseObjectPropertyType(TEST_SCHEMA_URI+"downstream", issueType, issueType);
 		
-		parentProperty = SchemaUtils.createSingleObjectPropertyType(TEST_SCHEMA_URI+"downstream", issueType, issueType);
+		parentProperty = schemaUtils.createSingleObjectPropertyType(TEST_SCHEMA_URI+"downstream", issueType, issueType);
 		
 		
 	}

@@ -317,18 +317,18 @@ public class BranchImpl  implements Branch, Runnable {
 	private void handleCommitInternally(Commit commit) throws PersistenceException {
 		log.debug(String.format("Handling commit %s in branch %s", commit.getCommitId(), branchResource.getURI()));
 		// clear the changes
-		if (!services.isEmpty() && !commit.isEmpty()) {
-			executeServiceLoop(commit);
-		}		 
-		// persist augmented commit and  mark preliminary commit as processed
 		try {
+			if (!services.isEmpty() && !commit.isEmpty()) {
+				executeServiceLoop(commit);
+			}		 
+		// persist augmented commit and  mark preliminary commit as processed
 			stateKeeper.afterServices(commit);
 			dataset.commit(); // together with commit persistence
 			log.debug(String.format("Branch %s contains now %s statements", branchResource.getLabel(), model.size()));
 		} catch (Exception e) {
 			log.warn(String.format("Failed to persist post-service commit %s %s with exception %s", commit.getCommitMessage(), commit.getCommitId(), e.getMessage()));
 			//SHOULD WE: rethrow e to signal that we cannot continue here as we would loose persisted commit history.
-			dataset.abort();
+			undoNoncommitedChanges();
 			throw e; // if so, then we need to abort transaction before rethrowing
 		} finally {
 			dataset.end();
@@ -348,6 +348,7 @@ public class BranchImpl  implements Branch, Runnable {
 		dataset.begin();
 		// we now have the local changes persisted and have a restart point established
 		// next we iterated through services
+
 		int baseAdds = commit.getAdditionCount();
 		int baseRemoves = commit.getRemovalCount();
 		int addsCount = baseAdds;
@@ -366,31 +367,33 @@ public class BranchImpl  implements Branch, Runnable {
 			for (IncrementalCommitHandler service : services) {
 				service.handleCommitFromOffset(commit, offsetAdds.get(service), offsetRemoves.get(service));
 				// any changes by a service are now in the statement lists
-				
+
 				// provide changes immediately to next service:					
 				commit.appendAddedStatements(stmtAggregator.retrieveAddedStatements());									
 				newAdds = commit.getAdditionCount() - addsCount;
 				addsCount = commit.getAdditionCount();
 				perIterationAdds += newAdds;
-									
+
 				commit.appendRemovedStatement(stmtAggregator.retrieveRemovedStatements());					
 				newRemoves = commit.getRemovalCount() - removesCount;
 				removesCount = commit.getRemovalCount();
 				perIterationsRemovals += newRemoves;
-				
+
 				// store these changes as seen by this service (and also consider those produced by this service)
 				offsetAdds.put(service, commit.getAdditionCount());
 				offsetRemoves.put(service,  commit.getRemovalCount());
-				
+
 			}
 			rounds++;
 			//continue while new changes happen and max 100 rounds to avoid infinite loops
 		} while ((perIterationAdds > 0 || perIterationsRemovals > 0) && rounds < 100);
-		
+
 		if ((perIterationAdds > 0 || perIterationsRemovals > 0) && rounds >= 100) {
 			log.warn(String.format("Service loop for commit '%s' reached maximum iteration count of 100 while still new statements available", commit.getCommitMessage()));
 		}
 		commit.removeEffectlessStatements(baseAdds, baseRemoves);
+
+		
 		if (commit.isEmpty()) {
 			log.info(String.format("Commit %s of branch %s has no changes after local service processing", commit.getCommitId(), this.branchResource.getURI()));
 		}
@@ -409,8 +412,6 @@ public class BranchImpl  implements Branch, Runnable {
 		
 		stmtAggregator.retrieveAddedStatements();
 		stmtAggregator.retrieveRemovedStatements();
-
-		//dataset.begin();
 	}
 
 	@Override

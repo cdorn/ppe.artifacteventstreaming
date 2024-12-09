@@ -60,14 +60,14 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	@Override
 	public PPEPropertyType createListPropertyType(String arg0, PPEInstanceType arg1) {
 		if (BuildInType.isAtomicType(arg1)) {
-			var prop = resolver.getListType().addLiteralListProperty(this.type, makePropertyURI(arg0), resolver.resolveAtomicInstanceType(arg1));
+			var prop = resolver.getCardinalityUtil().getListType().addLiteralListProperty(this.type, makePropertyURI(arg0), resolver.resolveAtomicInstanceType(arg1));
 			if (prop == null) { 
 				return null;
 			} else {
 				return insertAndReturn(prop);
 			}
 		} else {
-			var prop = resolver.getListType().addObjectListProperty(this.type, makePropertyURI(arg0), ((RDFInstanceType) arg1).getType());
+			var prop = resolver.getCardinalityUtil().getListType().addObjectListProperty(this.type, makePropertyURI(arg0), ((RDFInstanceType) arg1).getType());
 			if (prop == null) { 
 				return null;
 			} else {
@@ -79,14 +79,14 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	@Override
 	public PPEPropertyType createMapPropertyType(String arg0, PPEInstanceType ignored, PPEInstanceType valueType) {
 		if (BuildInType.isAtomicType(valueType)) {
-			var prop = resolver.getMapType().addLiteralMapProperty(this.type, makePropertyURI(arg0), resolver.resolveAtomicInstanceType(valueType));
+			var prop = resolver.getCardinalityUtil().getMapType().addLiteralMapProperty(this.type, makePropertyURI(arg0), resolver.resolveAtomicInstanceType(valueType));
 			if (prop == null) { 
 				return null;
 			} else {
 				return insertAndReturn(prop);
 			}
 		} else {
-			var prop = resolver.getMapType().addObjectMapProperty(this.type, makePropertyURI(arg0), (OntClass) resolver.resolveTypeToClassOrDatarange(valueType));
+			var prop = resolver.getCardinalityUtil().getMapType().addObjectMapProperty(this.type, makePropertyURI(arg0), (OntClass) resolver.resolveTypeToClassOrDatarange(valueType));
 			if (prop == null) { 
 				return null;
 			} else {
@@ -97,7 +97,7 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 
 	@Override
 	public PPEPropertyType createSetPropertyType(String arg0, PPEInstanceType arg1) {
-		OntRelationalProperty prop = createBasePropertyType(arg0, arg1);
+		OntRelationalProperty prop =  createBasePropertyType(arg0, arg1);
 		if (prop != null) {
 			return insertAndReturn(prop);
 		} else
@@ -107,19 +107,21 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	private OntRelationalProperty createBasePropertyType(String arg0, PPEInstanceType arg1) {
 		var propUri = makePropertyURI(arg0);
 		if (BuildInType.isAtomicType(arg1)) {
-			if (this.element.getModel().getDataProperty(propUri) != null)
-				return null;
-			var prop = this.element.getModel().createDataProperty(propUri);
-			prop.addRange(resolver.resolveAtomicInstanceType(arg1));
-			prop.addDomain(this.type);	
-			return prop;
+//			if (this.element.getModel().getDataProperty(propUri) != null)
+//				return null;
+//			var prop = this.element.getModel().createDataProperty(propUri);
+//			prop.addRange(resolver.resolveAtomicInstanceType(arg1));
+//			prop.addDomain(this.type);	
+//			return prop;
+			return resolver.getCardinalityUtil().createBaseDataPropertyType(propUri, this.type, resolver.resolveAtomicInstanceType(arg1));
 		} else {
-			if (this.element.getModel().getObjectProperty(propUri) != null)
-				return null;
-			var prop = this.element.getModel().createObjectProperty(propUri);
-			prop.addRange((OntClass) resolver.resolveTypeToClassOrDatarange(arg1));
-			prop.addDomain(this.type);	
-			return prop;
+//			if (this.element.getModel().getObjectProperty(propUri) != null)
+//				return null;
+//			var prop = this.element.getModel().createObjectProperty(propUri);
+//			prop.addRange((OntClass) resolver.resolveTypeToClassOrDatarange(arg1));
+//			prop.addDomain(this.type);	
+//			return prop;
+			return resolver.getCardinalityUtil().createBaseObjectPropertyType(propUri, this.type, (OntClass)resolver.resolveTypeToClassOrDatarange(arg1));
 		}
 	}
 	
@@ -131,22 +133,33 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 
 	@Override
 	public PPEPropertyType createSinglePropertyType(String arg0, PPEInstanceType arg1) {
-		var prop = createBasePropertyType(arg0, arg1);		
-		if (prop == null)
-			return null;
-		else {
-			
-			if (BuildInType.isAtomicType(arg1)) {
-				var maxOneProp = this.element.getModel().createDataMaxCardinality((OntDataProperty) prop, 1, null);
-				this.type.addSuperClass(maxOneProp);		
-				resolver.getSingleType().getSingleLiteralProperty().addSubProperty((OntDataProperty) prop);
-			} else {
-				var maxOneProp = this.element.getModel().createObjectMaxCardinality((OntObjectProperty) prop, 1, null);
-				this.type.addSuperClass(maxOneProp);
-				resolver.getSingleType().getSingleObjectProperty().addSubProperty((OntObjectProperty) prop);
-			}
+		var propUri = makePropertyURI(arg0);
+		var prop = BuildInType.isAtomicType(arg1) ? 
+				resolver.getCardinalityUtil().createSingleDataPropertyType(propUri, this.type, resolver.resolveAtomicInstanceType(arg1))
+				: 
+				resolver.getCardinalityUtil().createSingleObjectPropertyType(propUri, this.type, (OntClass)resolver.resolveTypeToClassOrDatarange(arg1));
+		if (prop != null)
 			return insertAndReturn(prop);
-		}
+		else 
+			return null;
+//		var prop = createBasePropertyType(arg0, arg1);		
+//		if (prop == null)
+//			return null;
+//		else {
+////			
+//			if (BuildInType.isAtomicType(arg1)) {
+//				 resolver.getCardinalityUtil().createSingleDataPropertyType(arg0, this.type, resolver.resolveAtomicInstanceType(arg1));
+//				
+//				var maxOneProp = this.element.getModel().createDataMaxCardinality((OntDataProperty) prop, 1, null);
+//				this.type.addSuperClass(maxOneProp);		
+//				resolver.getSingleType().getSingleLiteralProperty().addSubProperty((OntDataProperty) prop);
+//			} else {
+//				var maxOneProp = this.element.getModel().createObjectMaxCardinality((OntObjectProperty) prop, 1, null);
+//				this.type.addSuperClass(maxOneProp);
+//				resolver.getSingleType().getSingleObjectProperty().addSubProperty((OntObjectProperty) prop);
+//			}
+//			return insertAndReturn(prop);
+//		}
 	}
 
 	@Override

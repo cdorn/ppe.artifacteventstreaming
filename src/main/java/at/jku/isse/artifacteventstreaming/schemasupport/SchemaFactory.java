@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rule;
+package at.jku.isse.artifacteventstreaming.schemasupport;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
