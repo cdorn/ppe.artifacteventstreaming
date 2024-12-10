@@ -1,5 +1,7 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
+import java.nio.file.attribute.AclEntryType;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -8,8 +10,10 @@ import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntDataRange;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
+import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.sparql.pfunction.library.container;
@@ -130,11 +134,24 @@ public class MapResourceType {
 	}
 	
 	public boolean isMapEntry(OntIndividual ontInd) {
-		return ontInd.classes(false).anyMatch(superClass -> superClass.equals(getMapEntryClass()));
+		return ontInd.classes(true).anyMatch(type -> mapEntryClass.hasSubClass(type, false) || type.equals(mapEntryClass));
 	}
 	
 	public boolean wasMapEntry(List<Resource> delTypes) {
 		return delTypes.stream().anyMatch(type -> type.getURI().equals(getMapEntryClass().getURI()) || 
 				getMapEntryClass().subClasses(true).map(clazz -> clazz.asResource()).anyMatch(clazz -> clazz.equals(type))  );
+	}
+
+	public List<Property> findMapReferencePropertiesBetween(Resource subject, OntObject mapEntry) {
+		List<Property> props = new ArrayList<>();
+		var iter = subject.getModel().listStatements(subject, null, mapEntry);
+		while (iter.hasNext()) {
+			props.add(iter.next().getPredicate());
+		}
+		
+		if (props.size() > 1) {
+			props.remove(mapReferenceSuperProperty.asProperty());
+		}
+		return props;
 	}
 }

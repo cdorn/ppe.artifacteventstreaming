@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.rdf.model.RDFNode;
 
+import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import lombok.RequiredArgsConstructor;
 
 public class MapWrapper extends TypedCollectionResource implements Map<String, Object>{

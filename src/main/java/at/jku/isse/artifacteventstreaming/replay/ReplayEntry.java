@@ -51,4 +51,12 @@ public class ReplayEntry {
 			return Long.compare(o1.getTimeStamp(), o2.getTimeStamp());
 		}		
 	}
+
+	@Override
+	public String toString() {
+		return "ReplayEntry [" + opType + ", " + statement + ", at=" + timeStamp
+				+ ", branchURI=" + branchURI + "]";
+	}
+	
+	
 }

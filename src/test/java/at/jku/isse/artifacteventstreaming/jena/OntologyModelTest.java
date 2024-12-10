@@ -31,9 +31,9 @@ import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.ChangeListener;
-import at.jku.isse.passiveprocessengine.rdfwrapper.MapResource;
 
 class OntologyModelTest {
 

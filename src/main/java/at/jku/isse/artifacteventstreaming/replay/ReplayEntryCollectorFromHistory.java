@@ -13,7 +13,7 @@ import at.jku.isse.artifacteventstreaming.api.AES;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-public class ReplayEntryCollectorsFromHistory implements ReplayEntryCollector {
+public class ReplayEntryCollectorFromHistory implements ReplayEntryCollector {
 
 	private final PerResourceHistoryRepository historyRepo;
 	private final String branchURI;

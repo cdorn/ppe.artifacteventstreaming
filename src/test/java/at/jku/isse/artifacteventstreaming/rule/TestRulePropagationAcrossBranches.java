@@ -82,7 +82,7 @@ class TestRulePropagationAcrossBranches {
 				.build();		
 		
 		model1 = branchSource.getModel();
-		schema = new MockSchema(model1); // create types for testing
+		schema = new MockSchema(model1, null); // create types for testing
 		// setup rule service for source branch
 		observerSource = observerFactory.buildInstance("RuleTriggerObserverSource", model1, repoModel);
 		branchSource.appendBranchInternalCommitService(observerSource); // register rule service with branch

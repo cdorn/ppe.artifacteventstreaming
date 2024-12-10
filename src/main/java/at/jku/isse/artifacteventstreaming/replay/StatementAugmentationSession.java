@@ -141,7 +141,7 @@ public class StatementAugmentationSession {
 			return;
 		}
 		var owner = optOwner.get();
-		var commonProps = /*isDelete ? findFormerPropertiesBetween(owner, list) :*/ findCurrentPropertiesBetween(owner, list); // list is never removed, just stays empty
+		var commonProps = /*isDelete ? findFormerPropertiesBetween(owner, list) :*/ schemaUtils.getListType().findListReferencePropertiesBetween(owner, list); // list is never removed, just stays empty
 		if (commonProps.size() != 1) {
 			log.error(String.format("Cannot unambiguously determine list ownership/containment property to use between %s and %s, found %s", owner.getURI(), id, commonProps.size()));
 			// just produce basic wrappers
@@ -174,7 +174,7 @@ public class StatementAugmentationSession {
 		// adding of a key + value + ownerreference (i.e., first insert)
 		// removal of a key + value + ownerreference (key/value removal)
 		
-		var commonProps = isDeletion? findFormerPropertiesBetween(owner, mapEntry) : findCurrentPropertiesBetween(owner, mapEntry);
+		var commonProps = isDeletion? findFormerPropertiesBetween(owner, mapEntry) :  schemaUtils.getMapType().findMapReferencePropertiesBetween(owner, mapEntry);
 		if (commonProps.size() != 1) {
 			log.error(String.format("Cannot unambiguously determine map entry property to use between %s and %s, found %s", owner.getURI(), id, commonProps.size()));
 			// just produce basic wrappers
@@ -222,14 +222,14 @@ public class StatementAugmentationSession {
 	}
 
 	
-	private List<Property> findCurrentPropertiesBetween(Resource subject, OntObject object) {
-		List<Property> props = new ArrayList<>();
-		var iter = subject.getModel().listStatements(subject, null, object);
-		while (iter.hasNext()) {
-			props.add(iter.next().getPredicate());
-		}
-		return props;
-	}
+//	private List<Property> findCurrentPropertiesBetween(Resource subject, OntObject object) {
+//		List<Property> props = new ArrayList<>();
+//		var iter = subject.getModel().listStatements(subject, null, object);
+//		while (iter.hasNext()) {
+//			props.add(iter.next().getPredicate());
+//		}
+//		return props;
+//	}
 	
 	private List<Property> findFormerPropertiesBetween(Resource subject, Resource object) {
 		return removedStatements.stream()

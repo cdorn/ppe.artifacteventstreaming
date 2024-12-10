@@ -5,7 +5,6 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
 
 public interface ContainedStatement extends Statement {
-
 	
 	/**
 	 * Currently exclusively used to associate statements about lists and hashmap entries to their containing resource.

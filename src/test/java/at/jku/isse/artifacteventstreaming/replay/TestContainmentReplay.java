@@ -21,44 +21,64 @@ import org.junit.jupiter.api.Test;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.rule.MockSchema;
+import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
+import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.passiveprocessengine.rdfwrapper.ResourceMismatchException;
 
-class TestPartialReplay {
+class TestContainmentReplay {
 
 	public static URI baseURI = URI.create("http://at.jku.isse.artifacteventstreaming/test/replay#");
+	String branchURI = baseURI.toString()+"testbranch";
 	StatementAggregator aggr;
 	OntModel m;
 	MockSchema schema;
 	OntObject issue1;
-	ReplayEntryCollectorFromCommits collector;
+	ReplayEntryCollectorFromHistory collector;
+	PropertyCardinalityTypes schemaUtil;
 	
 	@BeforeEach
-	void setupListener() {
+	void setupListener() throws ResourceMismatchException {
 		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_RDFS_INF );
-		schema = new MockSchema(m, null);
+		schemaUtil = new PropertyCardinalityTypes(m);
+		schema = new MockSchema(m, schemaUtil);
 		aggr = new StatementAggregator();
 		aggr.registerWithModel(m);
-		collector = new ReplayEntryCollectorFromCommits();
+		
+		InMemoryHistoryRepository historyRepo = new InMemoryHistoryRepository();
+		collector = new ReplayEntryCollectorFromHistory(historyRepo, branchURI );
+		CommitContainmentAugmenter augmenter = new CommitContainmentAugmenter(branchURI, m, historyRepo, schemaUtil);
+
 		issue1 = schema.createIssue("Issue1");
+		var seq = schemaUtil.getListType().getOrCreateSequenceFor(issue1, schema.getLabelProperty());
+		var map = MapResource.asMapResource(issue1, schema.getKeyValueProperty().asNamed(), schemaUtil.getMapType());
 		
 		issue1.addProperty(schema.getPriorityProperty(), m.createTypedLiteral(1L));
 		issue1.removeAll(schema.getStateProperty());
 		issue1.addProperty(schema.getStateProperty(), m.createTypedLiteral("InProgress"));
-		var commit1 = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
-		collector.addCommit(commit1);
+		seq.add(1, "First");
+		map.put("First", m.createTypedLiteral(1));
+		
+		var commit1 = new StatementCommitImpl(branchURI , "TestCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		augmenter.handleCommit(commit1);
 		
 		issue1.addProperty(schema.getPriorityProperty(), m.createTypedLiteral(2L));
 		issue1.remove(schema.getPriorityProperty(), m.createTypedLiteral(1L));
 		issue1.removeAll(schema.getStateProperty());
 		issue1.addProperty(schema.getStateProperty(), m.createTypedLiteral("Resolved"));
-		var commit2 = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit2", "", 1, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
-		collector.addCommit(commit2);
+		seq.add(1, "NewFirst");
+		map.put("Second", m.createTypedLiteral(2));
+		var commit2 = new StatementCommitImpl(branchURI , "TestCommit2", "", 1, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		augmenter.handleCommit(commit2);
+		
 		
 		issue1.addProperty(schema.getPriorityProperty(), m.createTypedLiteral(3L));
 		issue1.remove(schema.getPriorityProperty(), m.createTypedLiteral(2L));
 		issue1.removeAll(schema.getStateProperty());
 		issue1.addProperty(schema.getStateProperty(), m.createTypedLiteral("Closed"));
-		var commit3 = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit3", "", 2, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
-		collector.addCommit(commit3);
+		seq.add(1, "VeryNewFirst");
+		map.put("First", m.createTypedLiteral(3));
+		var commit3 = new StatementCommitImpl(branchURI , "TestCommit3", "", 2, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		augmenter.handleCommit(commit3);
 		
 	}
 
@@ -131,5 +151,55 @@ class TestPartialReplay {
 		fwd = session.playForwardOneTimestamp();
 		assertTrue(fwd.isEmpty());
 	}
+	
+	@Test 
+	void testRevertListContainmentCommits() {
+		var scope = new HashMap<Resource,Set<Property>>();
+		scope.computeIfAbsent(issue1, k -> new HashSet<>()).add(schema.getLabelProperty().asProperty());
+		ReplaySession session = new ReplaySession(collector, scope, m);
+		session.revert();
+		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
+		
+		var fwd = session.playForwardOneTimestamp();
+		assertEquals(5, fwd.size()); //type info and list linking
+		var seq = schemaUtil.getListType().getOrCreateSequenceFor(issue1, schema.getLabelProperty());
+		assertEquals("First", seq.getString(1));
+		
+		fwd = session.playForwardOneTimestamp();
+		assertEquals(3, fwd.size()); // insert and move once
+		assertEquals("NewFirst", seq.getString(1));
+		
+		fwd = session.playForwardOneTimestamp();
+		assertEquals(5, fwd.size()); // insert and move twice
+		assertEquals("VeryNewFirst", seq.getString(1));
+		
+	}
 
+	@Test
+	void testRevertMapContainmentCommits() throws ResourceMismatchException {
+		var scope = new HashMap<Resource,Set<Property>>();
+		scope.computeIfAbsent(issue1, k -> new HashSet<>()).add(schema.getKeyValueProperty().asProperty());
+		ReplaySession session = new ReplaySession(collector, scope, m);
+		session.revert();
+		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
+		
+		var fwd = session.playForwardOneTimestamp();
+		assertEquals(5, fwd.size()); //type info and entry linking
+		var map = MapResource.asMapResource(issue1, schema.getKeyValueProperty().asNamed(), schemaUtil.getMapType());
+		assertEquals(1, map.get("First").asLiteral().getInt());
+		
+		fwd = session.playForwardOneTimestamp();
+		assertEquals(5, fwd.size()); //type info and entry linking
+		map = MapResource.asMapResource(issue1, schema.getKeyValueProperty().asNamed(), schemaUtil.getMapType()); // need to reload map
+		assertEquals(1, map.get("First").asLiteral().getInt());
+		assertEquals(2, map.get("Second").asLiteral().getInt());
+		
+		fwd = session.playForwardOneTimestamp();
+		assertEquals(2, fwd.size()); // replacing 
+		map = MapResource.asMapResource(issue1, schema.getKeyValueProperty().asNamed(), schemaUtil.getMapType()); // need to reload map
+		assertEquals(3, map.get("First").asLiteral().getInt());
+		assertEquals(2, map.get("Second").asLiteral().getInt());
+	}
+	
+	
 }

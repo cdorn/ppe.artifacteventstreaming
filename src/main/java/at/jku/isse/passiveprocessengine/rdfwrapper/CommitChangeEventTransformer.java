@@ -16,8 +16,11 @@ import lombok.extern.slf4j.Slf4j;
 public class CommitChangeEventTransformer extends CommitContainmentAugmenter implements ChangeEventTransformer, IncrementalCommitHandler {
 
 	ProcessInstanceChangeListener eventSink;
+	NodeToDomainResolver resolver;
+	
 	public CommitChangeEventTransformer(String serviceName, OntModel repoModel, NodeToDomainResolver resolver, PerResourceHistoryRepository historyRepo) {
-		super(serviceName, repoModel, resolver, historyRepo, resolver.getCardinalityUtil());
+		super(serviceName, repoModel, historyRepo, resolver.getCardinalityUtil());
+		this.resolver = resolver;
 	}	
 	
 	@Override

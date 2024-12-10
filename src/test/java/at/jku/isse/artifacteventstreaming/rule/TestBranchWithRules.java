@@ -47,7 +47,7 @@ class TestBranchWithRules {
 				.addOutgoingCommitDistributer(serviceOut)
 				.build();		
 		model = branch.getModel();
-		schema = new MockSchema(model); // create types for testing
+		schema = new MockSchema(model, null); // create types for testing
 								
 		// setup rule service				
 		observer = observerFactory.buildInstance("RuleTriggerObserver1", model, repoModel);

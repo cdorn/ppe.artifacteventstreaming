@@ -14,14 +14,12 @@ import at.jku.isse.passiveprocessengine.rdfwrapper.TransformationSession;
 
 public class CommitContainmentAugmenter extends AbstractHandlerBase implements IncrementalCommitHandler {
 
-	protected final NodeToDomainResolver resolver;
 	protected final PerResourceHistoryRepository historyRepo;
 	protected final PropertyCardinalityTypes cardinalityUtils;
 
-	public CommitContainmentAugmenter(String serviceName, OntModel repoModel, NodeToDomainResolver resolver,
+	public CommitContainmentAugmenter(String serviceName, OntModel repoModel,
 			PerResourceHistoryRepository historyRepo, PropertyCardinalityTypes cardinalityUtils) {
 		super(serviceName, repoModel);
-		this.resolver = resolver;
 		this.historyRepo = historyRepo;
 		this.cardinalityUtils = cardinalityUtils;
 	}

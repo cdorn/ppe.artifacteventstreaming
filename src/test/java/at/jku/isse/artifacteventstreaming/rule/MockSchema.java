@@ -25,9 +25,15 @@ public class MockSchema {
 	@Getter public OntObjectProperty upstreamProperty;
 	@Getter public OntObjectProperty downstreamProperty;
 	@Getter public OntObjectProperty parentProperty;
+	@Getter public OntObjectProperty labelProperty;
+	@Getter public OntObjectProperty keyValueProperty;
 	
-	public MockSchema(OntModel model) {		
-		PropertyCardinalityTypes schemaUtils = new PropertyCardinalityTypes(model);
+	private final PropertyCardinalityTypes schemaUtils;
+	
+	public MockSchema(OntModel model, PropertyCardinalityTypes schemaUtils) {		
+		if (schemaUtils == null)
+			this.schemaUtils = new PropertyCardinalityTypes(model);
+		else this.schemaUtils = schemaUtils;
 		issueType = model.createOntClass(TEST_SCHEMA_URI+"Issue");
 		
 		keyProperty = schemaUtils.createSingleDataPropertyType(TEST_SCHEMA_URI+"key", issueType, model.getDatatype(XSD.xstring));
@@ -40,8 +46,8 @@ public class MockSchema {
 		downstreamProperty = schemaUtils.createBaseObjectPropertyType(TEST_SCHEMA_URI+"downstream", issueType, issueType);
 		
 		parentProperty = schemaUtils.createSingleObjectPropertyType(TEST_SCHEMA_URI+"downstream", issueType, issueType);
-		
-		
+		labelProperty = schemaUtils.getListType().addLiteralListProperty(issueType, TEST_SCHEMA_URI+"label", model.getDatatype(XSD.xstring));
+		keyValueProperty = schemaUtils.getMapType().addLiteralMapProperty(issueType, TEST_SCHEMA_URI+"keyValue", model.getDatatype(XSD.xint));
 	}
 	
 	public OntIndividual createIssue(String name, OntIndividual... reqs) {
@@ -53,7 +59,8 @@ public class MockSchema {
 			issue.addProperty(requirementsProperty.asProperty(), req);
 		}		
 		return issue;
-	}
+	}	
+	
 	
 	public RDFRuleDefinition getRegisteredRuleRequirementsSizeGT1(int counter, RuleRepository repo) throws RuleException {
 		return repo.getRuleBuilder()

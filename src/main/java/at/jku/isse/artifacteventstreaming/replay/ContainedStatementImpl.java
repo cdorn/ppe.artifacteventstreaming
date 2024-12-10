@@ -52,6 +52,15 @@ public class ContainedStatementImpl implements ContainedStatement {
 		}
 	}	
 	
+	@Override
+	public String toString() {
+		if (container == null) {
+			return delegate.toString();
+		} else {
+			return "<"+container.toString() +","+ containmentProperty.toString() +"> contain " + delegate.toString() ;
+		}
+	}
+	
 	//delegate methods:
 	public Triple asTriple() {
 		return delegate.asTriple();

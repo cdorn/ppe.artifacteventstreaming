@@ -18,6 +18,7 @@ import org.apache.jena.ontapi.model.OntClass.ValueRestriction;
 import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.vocabulary.RDF;
 
+import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.CARDINALITIES;

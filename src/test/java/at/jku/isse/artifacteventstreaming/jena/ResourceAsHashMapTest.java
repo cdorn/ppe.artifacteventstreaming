@@ -22,8 +22,8 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.Test;
 
+import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
-import at.jku.isse.passiveprocessengine.rdfwrapper.MapResource;
 import at.jku.isse.passiveprocessengine.rdfwrapper.ResourceMismatchException;
 
 class ResourceAsHashMapTest {

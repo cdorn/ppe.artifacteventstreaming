@@ -1,20 +1,25 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.ontapi.model.OntClass.DataAllValuesFrom;
 import org.apache.jena.ontapi.model.OntClass.ObjectAllValuesFrom;
 import org.apache.jena.ontapi.model.OntDataRange;
 import org.apache.jena.ontapi.model.OntIndividual;
+import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.rdf.model.Seq;
 import org.apache.jena.rdf.model.StmtIterator;
+import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 
@@ -130,12 +135,47 @@ public class ListResourceType {
 	}
 	
 	public boolean isListContainer(OntIndividual ontInd) {
-		return ontInd.classes(true).anyMatch(superClass -> superClass.equals(getListClass()));
+		return ontInd.classes(true).anyMatch(type -> listClass.hasSubClass(type, true));
 	}
 
 	public boolean wasListContainer(List<Resource> delTypes) {
 		return delTypes.stream().anyMatch(type -> type.getURI().equals(getListClass().getURI()) || 
 				getListClass().subClasses(true).map(clazz -> clazz.asResource()).anyMatch(clazz -> clazz.equals(type))  );
+	}
+	
+	
+	/**
+	 * @param owner the container of the list resource
+	 * @param listReferenceProperty the property pointing to the list resource from the owner, 
+	 * if no list resource exists or the resource is not rdf:Seq, removes all properties and creates new list resource
+	 * @return list resource, typed to the range of the listReferenceProperty (if range has a owl2:Class referenced)
+	 */
+	public Seq getOrCreateSequenceFor(OntObject owner, OntRelationalProperty listReferenceProperty) {
+		var seq = owner.getPropertyResourceValue(listReferenceProperty.asProperty());
+		if( seq == null || !seq.canAs(Seq.class)) {
+			owner.removeAll(listReferenceProperty.asProperty());
+			seq = owner.getModel().createSeq(owner.getURI()+"#"+listReferenceProperty.getLocalName());
+			owner.addProperty(listReferenceProperty.asProperty(), seq);
+			seq.addProperty(getContainerProperty().asProperty(), owner);
+			
+			var optRange = listReferenceProperty.ranges().findAny();
+			if (optRange.isPresent()) {
+				seq.addProperty(RDF.type, optRange.get());
+			} 
+		} 
+		return seq.as(Seq.class);
+	}
+	
+	public List<Property> findListReferencePropertiesBetween(Resource subject, OntObject object) {
+		List<Property> props = new ArrayList<>();
+		var iter = subject.getModel().listStatements(subject, null, object);
+		while (iter.hasNext()) {
+			props.add(iter.next().getPredicate());
+		}
+		if (props.size() > 1) {
+			props.remove(listReferenceSuperProperty.asProperty());
+		}
+		return props;
 	}
 
 }

@@ -25,7 +25,7 @@ public class InMemoryHistoryRepository implements PerResourceHistoryRepository {
 
 	@Override
 	public List<ReplayEntry> getHistoryForResource(String uriOrAnonId, String branchURI) {
-		return history.getOrDefault(branchURI, Collections.emptyList()).stream()
+		return history.getOrDefault(uriOrAnonId, Collections.emptyList()).stream()
 			.filter(entry -> entry.getBranchURI().equals(branchURI))
 			.toList();
 	}
