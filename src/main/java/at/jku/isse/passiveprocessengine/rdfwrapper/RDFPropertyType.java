@@ -5,9 +5,13 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 
+import org.apache.jena.datatypes.RDFDatatype;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntClass.CardinalityRestriction;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.ontapi.model.OntDataProperty;
+import org.apache.jena.ontapi.model.OntDataRange;
+import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
@@ -28,13 +32,14 @@ public class RDFPropertyType implements PPEPropertyType {
 	private final OntRelationalProperty property;
 	private final CARDINALITIES cardinality;
 	private final PPEInstanceType valueType;
+	private final Entry<OntObject, CARDINALITIES> rdfTypeAndCardinality;
 
 	public RDFPropertyType(OntRelationalProperty property, NodeToDomainResolver resolver) {
 		super();
 		this.property = property;
-		Entry<OntObject, CARDINALITIES> entry = determineValueTypeAndCardinality(property, resolver.getCardinalityUtil().getMapType(), resolver.getCardinalityUtil().getListType(), resolver.getCardinalityUtil().getSingleType());
-		this.cardinality = entry.getValue();
-		this.valueType = resolver.resolveToType(entry.getKey());
+		rdfTypeAndCardinality = determineValueTypeAndCardinality(property, resolver.getCardinalityUtil().getMapType(), resolver.getCardinalityUtil().getListType(), resolver.getCardinalityUtil().getSingleType());
+		this.cardinality = rdfTypeAndCardinality.getValue();
+		this.valueType = resolver.resolveToType(rdfTypeAndCardinality.getKey());
 	}
 
 
@@ -226,8 +231,27 @@ public class RDFPropertyType implements PPEPropertyType {
 
 	@Override
 	public boolean isAssignable(Object arg0) {
-		throw new RuntimeException("Not implemented"); // lets fail fast
-		//return true;
+		var rdfType = rdfTypeAndCardinality.getKey();
+		if (rdfType instanceof OntDataRange.Named named) {
+			RDFDatatype datatype = named.toRDFDatatype();
+			if (arg0 instanceof RDFInstance inst) {
+				return datatype.isValidValue(inst.getElement());
+			} else if (arg0 instanceof RDFInstanceType instType) {
+				return datatype.isValidValue(instType.getElement());
+			} else {
+				return datatype.isValidValue(arg0);
+			}
+		} else if (rdfType instanceof OntClass.Named named) {
+			
+			if (arg0 instanceof RDFInstance inst) {
+				return inst.getInstance().hasOntClass(named, false);
+			} else if (arg0 instanceof RDFInstanceType instType) {
+				return instType.getType().as(OntIndividual.class).hasOntClass(named, false);
+			} else {
+				throw new RuntimeException("Expected RDFInstance or RDFInstanceType but received: "+arg0);
+			}
+		}
+		return true;
 	}
 
 
