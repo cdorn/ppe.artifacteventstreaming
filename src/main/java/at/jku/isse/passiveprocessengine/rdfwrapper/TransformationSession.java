@@ -15,6 +15,7 @@ import org.apache.jena.rdf.model.Statement;
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.replay.PerResourceHistoryRepository;
 import at.jku.isse.artifacteventstreaming.replay.StatementAugmentationSession;
+import at.jku.isse.passiveprocessengine.core.PPEInstance;
 import at.jku.isse.passiveprocessengine.core.PropertyChange;
 import at.jku.isse.passiveprocessengine.core.PropertyChange.Update;
 import lombok.Getter;
@@ -88,7 +89,7 @@ public class TransformationSession extends StatementAugmentationSession {
 	@Override
 	protected void handleMapEntryChange(List<StatementWrapper> stmts, Property prop, Resource owner) {
 		super.handleMapEntryChange(stmts, prop, owner);
-		RDFInstance changeSubject = (RDFInstance) resolver.resolveToRDFElement(owner);
+		PPEInstance changeSubject = (PPEInstance) resolver.resolveToRDFElement(owner);
 		
 		var keyOpt = findFirstStatementAboutProperty(stmts, resolver.getCardinalityUtil().getMapType().getKeyProperty().asProperty());
 		var litValueOpt = findFirstStatementAboutProperty(stmts, resolver.getCardinalityUtil().getMapType().getLiteralValueProperty().asProperty());
@@ -98,7 +99,12 @@ public class TransformationSession extends StatementAugmentationSession {
 			log.error("MapEntry change has inconsistent statements, cannot generate change event");
 			return;
 		}
-		var value = resolver.convertFromRDF(litValueOpt.orElse(objValueOpt.get()).getObject());
+		Object value;
+		if (litValueOpt.isPresent()) {
+			value = resolver.convertFromRDF(litValueOpt.get().getObject());
+		} else {
+			value = resolver.convertFromRDF(objValueOpt.get().getObject());
+		}
 		if (stmts.get(0).op().equals(AES.OPTYPE.ADD)) { // all statements have to have the same OP, otherwise inconsistent
 			updates.add(new PropertyChange.Add(prop.getLocalName(), changeSubject, value));
 		} else {

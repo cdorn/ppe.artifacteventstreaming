@@ -2,17 +2,24 @@ package at.jku.isse.artifacteventstreaming.rdf;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.query.Dataset;
+import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.vocabulary.RDFS;
 import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
+import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
@@ -34,9 +41,14 @@ class TestRDFPropertyType {
 	static SingleResourceType singleFactory;
 	
 	@BeforeEach
-	void setup() {
-		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM );
-		resolver = new NodeToDomainResolver(m);
+	void setup() throws URISyntaxException, Exception {
+		Dataset repoDataset = DatasetFactory.createTxnMem();
+		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);			
+		BranchImpl branch = (BranchImpl) new BranchBuilder(new URI(NS+"repo"), repoDataset, repoModel )	
+				.setBranchLocalName("branch1")
+				.build();		
+		m = branch.getModel();		
+		resolver = new NodeToDomainResolver(branch, null);
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
 		mapFactory = resolver.getCardinalityUtil().getMapType();

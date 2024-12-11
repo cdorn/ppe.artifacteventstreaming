@@ -81,15 +81,17 @@ public class RDFElement {
 	
 
 	public PPEInstanceType getInstanceType() {
-		if (element.canAs(OntClass.class)) {
-			var optType = element.as(OntClass.class).superClasses(true)
-					.filter(superClass -> !(superClass instanceof CardinalityRestriction))
-					.filter(superClass -> !(superClass instanceof ValueRestriction))
-					.findFirst();
-			if (optType.isPresent()) {
-				return resolver.resolveToType(optType.get());
-			}
-		} else if(element.canAs(OntIndividual.class)) {
+//		if (element.canAs(OntClass.class)) {
+//			var optType = element.as(OntClass.class).superClasses(true)
+//					.filter(superClass -> !(superClass instanceof CardinalityRestriction))
+//					.filter(superClass -> !(superClass instanceof ValueRestriction))
+//					.findFirst();
+//			if (optType.isPresent()) {
+//				return resolver.resolveToType(optType.get());
+//			}
+//		} else
+			
+		if(element.canAs(OntIndividual.class)) {
 			var optType = element.as(OntIndividual.class).classes(true).findFirst();
 			if (optType.isPresent()) {
 				return resolver.resolveToType(optType.get());
@@ -131,7 +133,7 @@ public class RDFElement {
 
 	public String makePropertyURI(String propertyLocalName) {
 		if (!NodeToDomainResolver.isValidURL(propertyLocalName)) {		
-			return this.element.getNameSpace()+propertyLocalName;
+			return this.element.getURI()+"#"+propertyLocalName;
 		} else {
 			return propertyLocalName;
 		}
@@ -139,10 +141,9 @@ public class RDFElement {
 	
 	protected OntRelationalProperty resolveProperty(String property, CARDINALITIES... expectedCardinalities) {
 		var expCardi = Set.of(expectedCardinalities);
-		property = makePropertyURI(property);
-
 		RDFInstanceType type = (RDFInstanceType) getInstanceType();
 		if (type == null) { // we are untyped, thus return just the property, consumer needs to know what they are doing
+			property = makePropertyURI(property);
 			OntRelationalProperty prop = element.getModel().getObjectProperty(property);
 			if (prop == null)
 				prop = element.getModel().getDataProperty(property);
@@ -164,10 +165,10 @@ public class RDFElement {
 	}
 	
 	protected Optional<RDFPropertyType> resolveToPropertyType(String property) {
-		property = makePropertyURI(property);
+		//property = makePropertyURI(property);
 		
-		if (this instanceof RDFInstanceType rdfType)
-			return Optional.ofNullable( (RDFPropertyType) rdfType.getPropertyType(property));		
+//		if (this instanceof RDFInstanceType rdfType)
+//			return Optional.ofNullable( (RDFPropertyType) rdfType.getPropertyType(property));		
 		var ppeType = getInstanceType();		
 		if (ppeType != null) {						
 			return Optional.ofNullable( (RDFPropertyType) ppeType.getPropertyType(property));

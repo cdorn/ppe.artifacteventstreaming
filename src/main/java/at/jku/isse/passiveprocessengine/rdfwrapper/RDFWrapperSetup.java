@@ -51,11 +51,12 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 			var model1 = branch.getModel();
 			var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);
 			var repairService = new RepairService(model1, observer.getRepo());
-			RuleEnabledResolver resolver = new RuleEnabledResolver(model1, repairService, observer.getFactory(), observer.getRepo());
+			RuleEnabledResolver resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo());
 			var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, new InMemoryHistoryRepository());
 			branch.appendBranchInternalCommitService(observer);
 			branch.appendBranchInternalCommitService(changeTransformer);
 			branch.startCommitHandlers(null);
+			branch.getDataset().begin();
 			
 			instanceRepository = resolver;
 			schemaRegistry = resolver;

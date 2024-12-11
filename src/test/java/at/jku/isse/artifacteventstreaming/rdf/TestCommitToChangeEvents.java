@@ -3,6 +3,8 @@ package at.jku.isse.artifacteventstreaming.rdf;
 import static at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType.MAP_NS;
 import static org.junit.Assert.assertEquals;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -12,6 +14,8 @@ import java.util.stream.Collectors;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.query.Dataset;
+import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +24,8 @@ import org.junit.jupiter.api.Test;
 import com.google.errorprone.annotations.Var;
 
 import at.jku.isse.artifacteventstreaming.api.Commit;
+import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
+import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.replay.InMemoryHistoryRepository;
@@ -49,9 +55,14 @@ class TestCommitToChangeEvents {
 	CommitChangeEventTransformer transformer;
 	
 	@BeforeEach
-	void setup() {
-		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM );
-		resolver = new NodeToDomainResolver(m);
+	void setup() throws URISyntaxException, Exception {		
+		Dataset repoDataset = DatasetFactory.createTxnMem();
+		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);			
+		BranchImpl branch = (BranchImpl) new BranchBuilder(new URI(NS+"repo"), repoDataset, repoModel )	
+				.setBranchLocalName("branch1")
+				.build();		
+		m = branch.getModel();		
+		resolver = new NodeToDomainResolver(branch, null);
 		aggr = new StatementAggregator();
 		listener = new PPEChangeListener();
 		transformer = new CommitChangeEventTransformer("Transformer", OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM), resolver, new InMemoryHistoryRepository());

@@ -75,7 +75,7 @@ public class RDFPropertyType implements PPEPropertyType {
 				valueObj = getValueTypeFromProperty(property);
 			} else if (listBaseType.getListReferenceSuperProperty().hasSubProperty(objProp, false)) {
 				cardinality = CARDINALITIES.LIST;
-				valueObj = getValueTYpeForListContainerProperty(objProp, listBaseType.getListClass());
+				valueObj = getValueTypeForListContainerProperty(objProp, listBaseType.getListClass());
 			} else if (mapBaseType.getMapReferenceSuperProperty().hasSubProperty(objProp, false)) {
 				cardinality = CARDINALITIES.MAP;
 				valueObj = getValueTypeForMapContainerProperty(objProp, mapBaseType.getMapEntryClass());
@@ -190,7 +190,7 @@ public class RDFPropertyType implements PPEPropertyType {
 		return null;
 	}
 	
-	private static OntObject getValueTYpeForListContainerProperty(OntObjectProperty property, OntClass listBaseType) {
+	private static OntObject getValueTypeForListContainerProperty(OntObjectProperty property, OntClass listBaseType) {
 		Optional<OntClass> optList = property.ranges()
 				.filter(OntClass.class::isInstance)
 				.map(OntClass.class::cast)

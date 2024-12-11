@@ -88,7 +88,7 @@ public class RuleRepository {
 	public RDFRuleDefinition findRuleDefinitionForURI(@NonNull String definitionUri) {
 		return definitions.get(definitionUri);
 	}
-		
+				
 	/**
 	 * @param def the rule evaluation objects to obtain for the given rule definition
 	 * @return for each instance/individual that matches the rule definition's context type, one rule evaluation object, from which the evaluation must be triggered.

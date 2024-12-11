@@ -9,6 +9,8 @@ import java.util.stream.Collectors;
 
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntModel;
+
+import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleException;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
@@ -35,8 +37,8 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 	final RuleRepository repo;
 	final RuleRepositoryInspector inspector;
 	
-	public RuleEnabledResolver(OntModel model, RepairService repairService, RuleSchemaProvider ruleSchema, RuleRepository repo) {
-		super(model);
+	public RuleEnabledResolver(Branch branch, RepairService repairService, RuleSchemaProvider ruleSchema, RuleRepository repo) {
+		super(branch, repo);
 		this.repairService = repairService;
 		this.ruleSchema = ruleSchema;
 		this.repo = repo;
@@ -48,6 +50,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 		OntClass ctxType = (OntClass) resolveTypeToClassOrDatarange(type);
 		try {
 			var ruleDef = repo.getRuleBuilder()
+				.withRuleURI(NodeToDomainResolver.BASE_NS+ruleName)
 				.withContextType(ctxType)
 				.withRuleExpression(ruleExpression)
 				.withRuleTitle(ruleName)

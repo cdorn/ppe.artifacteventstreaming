@@ -16,6 +16,7 @@ import org.apache.jena.ontapi.model.OntObjectProperty.Named;
 import org.apache.jena.ontapi.model.OntProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 
 import com.ctc.wstx.shaded.msv_core.util.Uri;
@@ -41,10 +42,10 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 		// noop, cannot override instancetype of an InstanceType (i.e., meta type cannot be overridden)
 	}
 	
-	@Override
-	public PPEInstanceType getInstanceType() {
-		return BuildInType.METATYPE;
-	}
+//	@Override
+//	public PPEInstanceType getInstanceType() {
+//		//return BuildInType.METATYPE;
+//	}
 
 	@Override
 	public void markAsDeleted() {
