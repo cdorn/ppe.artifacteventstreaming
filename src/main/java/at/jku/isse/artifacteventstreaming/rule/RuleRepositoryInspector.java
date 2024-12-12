@@ -16,7 +16,7 @@ public class RuleRepositoryInspector {
 
 	private final RuleSchemaProvider factory;
 	
-	protected Set<OntIndividual> getAllScopes() {		
+	public Set<OntIndividual> getAllScopes() {		
 		return factory.getRuleScopeCollection().individuals().collect(Collectors.toSet());
 	}
 	
@@ -37,7 +37,7 @@ public class RuleRepositoryInspector {
 		return scopes;
 	}
 	
-	protected int getEvalCountFromScope(OntIndividual scope) {
+	public  int getEvalCountFromScope(OntIndividual scope) {
 		var evals = new HashSet<OntIndividual>();
 		var iterRule = scope.listProperties(factory.getUsedInRuleProperty().asProperty());
 		while(iterRule.hasNext()) { //property
@@ -68,7 +68,7 @@ public class RuleRepositoryInspector {
 		return evals;
 	}
 	
-	protected void printScope(OntIndividual scope) {
+	public void printScope(OntIndividual scope) {
 		var inst = scope.getPropertyResourceValue(factory.getUsingElementProperty().asProperty());
 		var instName = inst != null ? inst.getLocalName() : "NULL_INSTANCE";
 		var property = scope.getPropertyResourceValue(factory.getUsingPredicateProperty().asProperty());

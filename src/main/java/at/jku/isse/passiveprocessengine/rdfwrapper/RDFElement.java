@@ -120,14 +120,11 @@ public class RDFElement {
 	 */
 	public void setSingleProperty(String property, Object value) {
 		var prop = resolveProperty(property, CARDINALITIES.SINGLE);
-		if (value instanceof RDFElement inst) { // then a resource and not a literal
-			element
-				.removeAll(prop.asProperty())
-				.addProperty(prop.asProperty(), inst.getElement());
-		} else {
-			element
-				.removeAll(prop.asProperty())
-				.addLiteral(prop.asProperty(),  value);
+		element.removeAll(prop.asProperty());
+		if (value instanceof RDFElement inst && value != null) { // then a resource and not a literal
+				element.addProperty(prop.asProperty(), inst.getElement());
+		} else if (value != null) {
+			element.addLiteral(prop.asProperty(),  value);
 		}
 	}
 

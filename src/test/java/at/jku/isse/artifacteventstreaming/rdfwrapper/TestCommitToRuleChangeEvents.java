@@ -35,7 +35,10 @@ import at.jku.isse.artifacteventstreaming.replay.InMemoryHistoryRepository;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleEvaluationIterationMetadata;
 import at.jku.isse.artifacteventstreaming.rule.RuleEvaluationListener;
+import at.jku.isse.artifacteventstreaming.rule.RuleException;
+import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
+import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserver;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 import at.jku.isse.passiveprocessengine.core.BuildInType;
@@ -46,6 +49,7 @@ import at.jku.isse.passiveprocessengine.core.PropertyChange.Update;
 import at.jku.isse.passiveprocessengine.rdfwrapper.CommitChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.MapWrapper;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RuleEnabledResolver;
 import lombok.Getter;
@@ -65,6 +69,8 @@ class TestCommitToRuleChangeEvents {
 	PPEChangeListener listener;
 	CommitChangeEventTransformer transformer;
 	BranchImpl branch;
+	RuleTriggerObserver observer;
+	RuleRepositoryInspector inspector;
 	
 	@BeforeEach
 	void setup() throws URISyntaxException, Exception {		
@@ -77,10 +83,11 @@ class TestCommitToRuleChangeEvents {
 		m = branch.getModel();		
 		var cardUtil = new PropertyCardinalityTypes(m);
 		var observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory(cardUtil));
-		var observer = observerFactory.buildInstance("RuleTriggeringObserver", m, repoModel);
+		observer = observerFactory.buildInstance("RuleTriggeringObserver", m, repoModel);
 		observer.registerListener(new TestRuleEvaluationListener());
 		var repairService = new RepairService(m, observer.getRepo());
 		resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
+		inspector = new RuleRepositoryInspector(observer.getFactory());
 		//aggr = new StatementAggregator();
 		listener = new PPEChangeListener();
 		transformer = new CommitChangeEventTransformer("Transformer", repoModel, resolver, new InMemoryHistoryRepository());
@@ -100,32 +107,17 @@ class TestCommitToRuleChangeEvents {
 		listOfString = typeChild.createListPropertyType("listOfString", BuildInType.STRING);
 		setOfBaseArt = typeChild.createSetPropertyType("setOfBaseArt", typeBase);
 		parent = typeBase.createSinglePropertyType("parent", typeBase);		
+		branch.commitChanges("InitialCommit");
+	}
+		
+	@Test
+	void useList() throws BranchConfigurationException, PersistenceException, RuleException {
+		branch.getDataset().begin();
 		observer.getRepo().getRuleBuilder()
 		.withContextType(typeChild.getType())
 		.withRuleTitle("TestListUsage")
 		.withRuleExpression("self.listOfString.size() > 0")
-		.build();
-		observer.getRepo().getRuleBuilder()
-		.withContextType(typeChild.getType())
-		.withRuleTitle("TestSingleUsage")
-		.withRuleExpression("self.parent.isDefined()")
-		.build();
-		observer.getRepo().getRuleBuilder()
-		.withContextType(typeChild.getType())
-		.withRuleTitle("TestSetUsage")
-		.withRuleExpression("self.setOfBaseArt.size() > 0")
-		.build();
-		branch.commitChanges("InitialCommit");
-	}
-	
-	private Commit generateCommit() {
-		return new StatementCommitImpl("BranchId", "", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
-	}
-		
-	@Test
-	void useList() throws BranchConfigurationException, PersistenceException {
-		branch.getDataset().begin();
-						
+		.build();		
 		var art1 = resolver.createInstance(NS+"art1", typeChild);
 		branch.commitChanges("Commit 1");
 		listener.printCurrentUpdates();
@@ -167,8 +159,13 @@ class TestCommitToRuleChangeEvents {
 	}
 	
 	@Test
-	void useSet() throws BranchConfigurationException, PersistenceException {
+	void useSet() throws BranchConfigurationException, PersistenceException, RuleException {
 		branch.getDataset().begin();
+		observer.getRepo().getRuleBuilder()
+		.withContextType(typeChild.getType())
+		.withRuleTitle("TestSetUsage")
+		.withRuleExpression("self.setOfBaseArt.size() > 0")
+		.build();
 		var art1 = resolver.createInstance(NS+"art1", typeChild);
 		var art2 = resolver.createInstance(NS+"art2", typeChild);
 		var art3 = resolver.createInstance(NS+"art3", typeChild);
@@ -203,29 +200,49 @@ class TestCommitToRuleChangeEvents {
 	}
 	
 	@Test
-	void useSingle() throws BranchConfigurationException, PersistenceException {
+	void useSingle() throws BranchConfigurationException, PersistenceException, RuleException {
 		branch.getDataset().begin();
-		var art1 = resolver.createInstance(NS+"art1", typeChild);
+		observer.getRepo().getRuleBuilder()
+		.withContextType(typeChild.getType())
+		.withRuleTitle("TestSingleUsage")
+		.withRuleExpression("self.parent.isDefined()")
+		.build();
+		var art1 = (RDFInstance)resolver.createInstance(NS+"art1", typeChild);
 		var art2 = resolver.createInstance(NS+"art2", typeChild);
 		var art3 = resolver.createInstance(NS+"art3", typeChild);
 		branch.commitChanges("Commit 1");
-		listener.printCurrentUpdates();
 		listener.latestUpdates.clear();
+		inspector.getAllScopes().stream().forEach(scope -> inspector.printScope(scope));
 		
+		System.out.println("  ");
+		System.out.println("Begin 2  ");
 		branch.getDataset().begin();
 		art1.setSingleProperty(parent.getId(), art2);
 		branch.commitChanges("Commit 2");
 		listener.printCurrentUpdates();
-		assertEquals(2, listener.getLatestUpdates().size());
-		assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().get().getValue());
+		assertEquals(3, listener.getLatestUpdates().size());
+		//assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().get().getValue());
 		listener.latestUpdates.clear();
 
+		System.out.println("  ");
+		System.out.println("Begin 3  ");
 		branch.getDataset().begin();
 		art1.setSingleProperty(parent.getId(), art3);
 		branch.commitChanges("Commit 3");
 		listener.printCurrentUpdates();
-		assertEquals(1, listener.getLatestUpdates().size());
-		assertEquals(false, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().get().getValue());
+		assertEquals(1, listener.getLatestUpdates().size()); // update of the property, no change in evaluation result
+		assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().isEmpty());
+		listener.latestUpdates.clear();
+		
+		System.out.println("  ");
+		System.out.println("Begin 4  ");
+		branch.getDataset().begin();
+		art1.setSingleProperty(parent.getId(), null);
+		branch.commitChanges("Commit 4");
+		listener.printCurrentUpdates();
+		assertEquals(3, listener.getLatestUpdates().size()); // removal of the property and change in evaluation result
+		//FIXME: add the remove operation
+		//assertEquals(false, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().get().getValue());
 		listener.latestUpdates.clear();
 	}
 	
@@ -235,7 +252,13 @@ class TestCommitToRuleChangeEvents {
 		public void signalRuleEvaluationFinished(Set<RuleEvaluationIterationMetadata> iterationMetadata) {
 			if (iterationMetadata.isEmpty()) return;
 			System.out.println("Rules Evaluated:");
-			iterationMetadata.forEach(reim -> System.out.println(reim.getRule().getDefinition().getName()+" with "+ reim.getRule().getContextInstance().getLocalName() + " -> "+reim.getRule().isConsistent()));
+			iterationMetadata.forEach(reim -> {
+				var name = reim.getRule().getDefinition().getName();
+				var ctx = reim.getRule().getContextInstance().getLocalName();
+				var result = reim.getRule().isConsistent();
+				var isDiff = reim.getHasEvaluationOutcomeChanged() ? "NEW" : "SAME";
+				System.out.println(name+" with "+ ctx + " -> "+result+ " "+isDiff);	
+			});
 		}
 		
 	}

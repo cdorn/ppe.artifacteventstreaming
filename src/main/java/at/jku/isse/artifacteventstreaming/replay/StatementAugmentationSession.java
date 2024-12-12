@@ -211,18 +211,6 @@ public class StatementAugmentationSession {
 			.findAny();
 	}
 	
-	
-
-	
-//	private List<Property> findCurrentPropertiesBetween(Resource subject, OntObject object) {
-//		List<Property> props = new ArrayList<>();
-//		var iter = subject.getModel().listStatements(subject, null, object);
-//		while (iter.hasNext()) {
-//			props.add(iter.next().getPredicate());
-//		}
-//		return props;
-//	}
-	
 	private List<Property> findFormerPropertiesBetween(Resource subject, Resource object) {
 		return removedStatements.stream()
 			.filter(stmt -> stmt.getSubject().equals(subject) && stmt.getObject().equals(object))

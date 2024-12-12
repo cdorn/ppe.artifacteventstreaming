@@ -101,6 +101,7 @@ public class RuleRepository {
 			// find all instances of the rule context type --> create rule evaluations for every instance
 			var individuals = def.getRDFContextType().individuals().collect(Collectors.toSet());
 			return individuals.stream()	
+				.filter(indiv -> evaluations.findEvaluation(indiv, def).isEmpty()) // ensure there is not already one eval wrapper 
 				.map(ind -> RuleEvaluationWrapperResourceImpl.create(factory, def, ind))							
 				.map(eval -> { evaluations.put(eval.getRuleEvalObj().getId(), eval); return eval;} )
 				.map(RuleEvaluationWrapperResource.class::cast)

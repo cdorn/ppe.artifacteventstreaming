@@ -240,9 +240,11 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     private Object mapAsObjectValues(List<Statement> content, Resource element, Property prop) {
     	if (prop.canAs(OntRelationalProperty.class)) {
     		var ontProp = prop.as(OntRelationalProperty.class);
-    		if (ontProp.hasSuperProperty(singleFactory.getSingleLiteralProperty(), false)) { // single element
+    		if (singleFactory.getSingleObjectProperty().hasSubProperty(ontProp, false)) { // single element
     			return content.get(0).getObject().asResource();
-    		} else if (ontProp.hasSuperProperty(mapFactory.getMapReferenceSuperProperty(), false)) { // a map
+    		} else if (singleFactory.getSingleLiteralProperty().hasSubProperty(ontProp, false)) { // single element
+        			return content.get(0).getObject().asLiteral().getValue();
+    		} else if (mapFactory.getMapReferenceSuperProperty().hasSubProperty(ontProp, false)) { // a map
     			// map is not really supported by the rule engine, lets do this anyway
     			Map<String, Object> map = new HashMap<>();
     			MapResource.loadMap(element.listProperties(prop), mapFactory).stream()
@@ -254,7 +256,7 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     					}
     				});
     			return map;
-    		} else if (ontProp.hasSuperProperty(listFactory.getListReferenceSuperProperty(), false)) { // a list
+    		} else if (listFactory.getListReferenceSuperProperty().hasSubProperty(ontProp, false)) { // a list
     			var list = content.get(0).getObject().asResource().as(Seq.class);
     			var iter = list.listProperties();
     			List<Object> result = new LinkedList<>();
