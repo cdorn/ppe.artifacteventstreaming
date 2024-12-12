@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rdf;
+package at.jku.isse.artifacteventstreaming.rdfwrapper;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -22,6 +22,7 @@ import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.CARDINALITIES;
@@ -48,7 +49,8 @@ class TestRDFPropertyType {
 				.setBranchLocalName("branch1")
 				.build();		
 		m = branch.getModel();		
-		resolver = new NodeToDomainResolver(branch, null);
+		var cardUtil = new PropertyCardinalityTypes(m);
+		resolver = new NodeToDomainResolver(branch, null, cardUtil);
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
 		mapFactory = resolver.getCardinalityUtil().getMapType();

@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rdf;
+package at.jku.isse.artifacteventstreaming.rdfwrapper;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

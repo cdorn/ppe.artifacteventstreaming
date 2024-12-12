@@ -53,18 +53,19 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	protected final Map<OntIndividual, RDFInstance> instanceIndex = new HashMap<>();	
 	protected final Branch branch;
 	protected final OntClass metaClass;
+	protected long commitSessionCounter = 1;
 	
 	@Getter private PropertyCardinalityTypes cardinalityUtil;
 	protected Lock writeLock;
 	
-	public NodeToDomainResolver(Branch branch, RuleRepository ruleRepo) {
+	public NodeToDomainResolver(Branch branch, RuleRepository ruleRepo, PropertyCardinalityTypes cardinalityUtil) {
 		super();
 		this.ruleRepo = ruleRepo;
 		this.branch = branch;
 		this.model = branch.getModel();
 		this.dataset = branch.getDataset();		
 		init();		
-		cardinalityUtil = new PropertyCardinalityTypes(model);
+		this.cardinalityUtil = cardinalityUtil; 
 		metaClass = createMetaClass(model);		
 	}
 	
@@ -235,10 +236,13 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	}
 
 	public void removeTypeCascading(RDFInstanceType type) {				
+		// first we need to remove instances of these types
+		type.getType().individuals().forEach(indiv -> { 
+			instanceIndex.remove(indiv);
+			indiv.removeProperties(); 
+		});		
 		type.getType().subClasses().forEach(typeIndex::remove); // we just update the index, properties are deleted by the RDFInstanceType objects
-		typeIndex.remove(type.getType());		
-		// TODO: but we need to also remove instances of these types
-		throw new RuntimeException("Not fully implemented");
+		typeIndex.remove(type.getType());				
 	}
 	
 	@Override
@@ -257,7 +261,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	
 	@Override
 	public void startReadTransaction() {
-		dataset.begin(ReadWrite.READ);
+		dataset.begin(ReadWrite.READ); //TODO  perhaps this needs to be called from within branch
 	}
 
 	@Override
@@ -269,17 +273,23 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 
 	@Override
 	public void concludeTransaction() {
-		try {
-			branch.commitChanges("SomeChanges");
-		} catch (PersistenceException e) {			
-			e.printStackTrace();
-		} catch (BranchConfigurationException e) {			
-			e.printStackTrace();
-		} 
-		if (dataset.transactionMode() != null && dataset.transactionMode().equals(ReadWrite.WRITE)) {
-			writeLock.leaveCriticalSection();			
-		}		
-		// dataset transaction end set by branch 
+		if (dataset.transactionMode() != null && dataset.transactionMode().equals(ReadWrite.WRITE)) {			
+			try {
+				branch.commitChanges("Commit "+commitSessionCounter++);
+				if (writeLock != null) {
+					writeLock.leaveCriticalSection();
+					writeLock = null;
+				}
+				// dataset write transaction end set by branch 
+			} catch (PersistenceException e) {			
+				e.printStackTrace();
+			} catch (BranchConfigurationException e) {			
+				e.printStackTrace();
+			} 
+		} else {
+			dataset.end();
+		}
+		
 	}
 
 	@Override
@@ -322,18 +332,33 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	public RDFElement resolveToRDFElement(RDFNode node) {
 		if (node instanceof OntClass) {
 			return typeIndex.get(node);
-		} else if (node instanceof OntIndividual) {
-			return instanceIndex.get(node);
+		} else if (node instanceof OntIndividual indiv) {
+			return findIndividual(indiv);
 		} else if (node.canAs(OntClass.class)) {
-				return typeIndex.get(node);
+			return typeIndex.get(node);
 		} else if (node.canAs(OntIndividual.class)) {
-				return instanceIndex.get(node);			
+			return findIndividual(node.as(OntIndividual.class));
 		} else {			
 			log.warn("Cannot resolve resource node to RDFELement: "+node.toString());
 			return null;
 		}
 	}
 
+	private RDFElement findIndividual(OntIndividual node) {
+		var localInst = instanceIndex.get(node);
+		if (localInst != null)
+			return localInst;
+		else { 
+			var indiv = node.as(OntIndividual.class);
+			if (indiv.isAnon() && ruleRepo != null) { // mode with rule repo
+				var evalWrapper = ruleRepo.getEvaluations().get(indiv.getId());
+				if (evalWrapper != null)
+					return new RDFInstance(evalWrapper.getRuleEvalObj(), this); //FIXME: we are created new wrappers every time, but if we cache, we wont know when they need to be deleted					
+			} 
+			return null;
+		}
+	}
+	
 	public OntModel getModel() {
 		return model;
 	}
@@ -369,13 +394,15 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	}
 	
 	public static boolean isValidURL(String url)  {
-	    try {
-	        var uri = new URI(url);	    
-	        uri.toURL();
-	        return true;	   
-	    } catch (Exception e) {
-	        return false;
-	    }
+//	    try {
+//	        var uri = new URI(url);	    
+//	        uri.toURL();
+//	        return true;	   
+//	    } catch (Exception e) {
+//	        return false;
+//	    }
+		//FIXME: proper check
+		return url.startsWith("http");
 	}
 
 

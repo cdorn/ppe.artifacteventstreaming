@@ -68,6 +68,7 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 
 	@Override
 	public void handleCommitFromOffset(Commit commit, int indexOfNewAddition, int indexOfNewRemoval) {
+		super.logIncomingCommit(commit, indexOfNewAddition, indexOfNewRemoval);
 		Map<RuleEvaluationWrapperResource, RuleEvaluationIterationMetadata> rulesToReevaluate = new HashMap<>();		
 		List<Statement> removalScope = null;
 		List<Statement> additionScope = null;
@@ -109,6 +110,7 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 				})
 				.filter(Objects::nonNull)
                 .collect(Collectors.toSet());
+		log.debug(String.format("%s evaluated %s rules (+%s rule evaluation failures) ", serviceName, reim.size(), rulesToReevaluate.size() - reim.size()));
 		listeners.stream().forEach(listener -> listener.signalRuleEvaluationFinished(reim));
 	}
 	

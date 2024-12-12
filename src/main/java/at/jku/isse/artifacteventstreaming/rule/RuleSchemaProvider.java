@@ -4,6 +4,8 @@ import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
+
+import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 import lombok.Getter;
 import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.*;
 
@@ -35,15 +37,17 @@ public class RuleSchemaProvider {
 	
 	// additional property on individual to point to scope
 	@Getter private OntObjectProperty hasRuleScope;
+	@Getter private final RuleSchemaFactory schemaFactory;
 	
 	private RDFModelAccess modelAccess;
 	
 	public RuleSchemaProvider(OntModel model, RuleSchemaFactory schemaFactory) {
 		super();
 		schemaFactory.addRuleSchemaToModel(model);
+		this.schemaFactory = schemaFactory;
 		this.model = model;
 		model.setNsPrefix("rules", uri);
-		modelAccess = new RDFModelAccess(model);
+		modelAccess = new RDFModelAccess(model, schemaFactory.getPropertyCardinalityTypes());
 		initTypes();
 	}
 	

@@ -37,6 +37,7 @@ import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
+import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SimpleService;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
 
@@ -44,7 +45,7 @@ class TestRulePropagationAcrossBranches {
 	
 	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/repoWithRule2");
 	
-	RuleTriggerObserverFactory observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory());
+	
 	CountDownLatch latch;
 	SyncForTestingService serviceOut;
 	OntModel model1;
@@ -73,6 +74,9 @@ class TestRulePropagationAcrossBranches {
 		branchDestination.appendIncomingCommitMerger(merger);
 		//setup rules for destination branch
 		var destModel = branchDestination.getModel();
+		var cardUtil = new PropertyCardinalityTypes(destModel);
+		RuleTriggerObserverFactory observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory(cardUtil));
+		
 		observerDest = observerFactory.buildInstance("RuleTriggerObserverDestination", destModel, repoModel);
 		branchDestination.appendBranchInternalCommitService(observerDest);		// register rule service with destination branch
 		
@@ -82,7 +86,7 @@ class TestRulePropagationAcrossBranches {
 				.build();		
 		
 		model1 = branchSource.getModel();
-		schema = new MockSchema(model1, null); // create types for testing
+		schema = new MockSchema(model1, cardUtil); // create types for testing
 		// setup rule service for source branch
 		observerSource = observerFactory.buildInstance("RuleTriggerObserverSource", model1, repoModel);
 		branchSource.appendBranchInternalCommitService(observerSource); // register rule service with branch

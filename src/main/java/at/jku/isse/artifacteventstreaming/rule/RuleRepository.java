@@ -1,10 +1,12 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
+import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -219,6 +221,16 @@ public class RuleRepository {
 	}
 	
 	public Set<RuleEvaluationWrapperResource> getRulesAffectedByChange(OntIndividual changedSubject, Property predicate) {
+		// if this is a mapentry change -> do not need to support that, as rules dont support maps
+		// if this is a list entry change --> find owner of list, and property between owner and this entry
+		if (factory.getSchemaFactory().getPropertyCardinalityTypes().getListType().isListContainer(changedSubject)) {
+			var entry = findListOwner(changedSubject);
+			if (entry != null) {
+				changedSubject = entry.getKey();
+				predicate = entry.getValue();
+			}
+		}
+		
 		// check which rules have this subject and predicate in the scope
 		Set<RuleEvaluationWrapperResource> evals = new HashSet<>();
 		var iter = changedSubject.listProperties(factory.getHasRuleScope().asProperty());
@@ -243,6 +255,23 @@ public class RuleRepository {
 		return evals;
 	}
 	
+	private Entry<OntIndividual, Property> findListOwner(OntIndividual list) {
+		var id = list.isAnon() ? list.getId() : list.getURI();
+		// first obtain the owner of the list
+		var optOwner = factory.getSchemaFactory().getPropertyCardinalityTypes().getCurrentListOwner(list);
+		// should only exist one such resource as we dont share lists across individuals
+		if (optOwner.isEmpty()) {			
+			return null;
+		}
+		var owner = optOwner.get();
+		var commonProps = factory.getSchemaFactory().getPropertyCardinalityTypes().getListType().findListReferencePropertiesBetween(owner, list); // list is never removed, just stays empty
+		if (commonProps.size() != 1) {
+			return null;
+		}
+		var listProp = commonProps.get(0);
+		return new AbstractMap.SimpleEntry<OntIndividual, Property>(owner.as(OntIndividual.class), listProp);
+	}
+
 	public Set<RuleEvaluationWrapperResource> getRulesAffectedByTypeRemoval(@NonNull OntIndividual subject, @NonNull String removedTypeURI) {
 		// check if type is completely removed except for own/rdf types
 		if (!hasSomeSpecificType(subject)) { 

@@ -15,6 +15,7 @@ import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
+import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 import at.jku.isse.designspace.artifactconnector.core.repository.CoreTypeFactory;
 import at.jku.isse.passiveprocessengine.core.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.core.DesignspaceTestSetup;
@@ -27,7 +28,7 @@ import lombok.Getter;
 @Getter
 public class RDFWrapperSetup implements DesignspaceTestSetup {
 
-	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/rdfwrapper");
+	public static final URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/rdfwrapper");
 	
 	private InstanceRepository instanceRepository;
 	private SchemaRegistry schemaRegistry;
@@ -37,7 +38,7 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 	private CoreTypeFactory coreTypeFactory;
 	private RuleSchemaProvider ruleSchemaProvider;
 	
-	private final RuleTriggerObserverFactory observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory());
+	private RuleTriggerObserverFactory observerFactory;;
 	
 	@Override
 	public void setup() {
@@ -49,9 +50,11 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 					.setBranchLocalName("main")
 					.build();		
 			var model1 = branch.getModel();
+			var cardUtil = new PropertyCardinalityTypes(model1);
+			observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory(cardUtil));
 			var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);
 			var repairService = new RepairService(model1, observer.getRepo());
-			RuleEnabledResolver resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo());
+			RuleEnabledResolver resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
 			var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, new InMemoryHistoryRepository());
 			branch.appendBranchInternalCommitService(observer);
 			branch.appendBranchInternalCommitService(changeTransformer);

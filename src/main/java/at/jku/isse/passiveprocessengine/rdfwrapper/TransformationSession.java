@@ -132,6 +132,7 @@ public class TransformationSession extends StatementAugmentationSession {
 		}
 		// something (e.g., or single value) added/removed from individual
 		updates.addAll(stmts.stream().map(wrapper -> {
+var localName = wrapper.stmt().getPredicate().getLocalName();
 			var value = resolver.convertFromRDF(wrapper.stmt().getObject());
 			if (value == null) return null;
 			var prop = wrapper.stmt().getPredicate();
@@ -171,6 +172,7 @@ public class TransformationSession extends StatementAugmentationSession {
 	
 	@Override
 	protected void processUntypedSubject(RDFNode inst, List<StatementWrapper> stmts) {
+		super.processUntypedSubject(inst, stmts);
 //		stmts.stream().forEach(wrapper -> {
 //		// inserting a list element may lead to a lot of list changes as all the indexes are updates (i.e., removed and added+1)
 //			var prop = wrapper.stmt().getPredicate();
@@ -180,6 +182,10 @@ public class TransformationSession extends StatementAugmentationSession {
 //			
 //		}
 //		});
+		stmts.stream().forEach(wrapper -> {
+			var localName = wrapper.stmt().getPredicate().getLocalName();
+			localName.length();
+		});
 		return; //TODO: for now we ignore untyped changes
 	}
 	

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -22,6 +23,7 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDFS;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
@@ -41,8 +43,14 @@ class TestRecoverBranchState {
 
 	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/branchRecoveryTest");
 	
-	private static URI branchURI = URI.create(BranchBuilder.generateBranchURI(repoURI, SOURCE));
-	private static URI branchURI2 = URI.create(BranchBuilder.generateBranchURI(repoURI, DEST));
+	private static URI branchURI;
+	private static URI branchURI2;
+	
+	@BeforeAll
+	void setup() throws URISyntaxException {
+		branchURI = BranchBuilder.generateBranchURI(repoURI, SOURCE);
+		branchURI2 = BranchBuilder.generateBranchURI(repoURI, DEST);
+	}
 	
 	@Test
 	void testRecoverPrelimCommit() throws Exception {
@@ -51,7 +59,7 @@ class TestRecoverBranchState {
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		//OntModel branchModel = OntModelFactory.createModel();
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
-		URI branchURI = URI.create(BranchBuilder.generateBranchURI(repoURI, "main"));
+		URI branchURI = BranchBuilder.generateBranchURI(repoURI, "main");
 		BranchStateUpdater stateKeeper = stateFactory.createStateKeeperFor(branchURI);
 		Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel)
 				.setStateKeeper(stateKeeper)				
@@ -116,7 +124,7 @@ class TestRecoverBranchState {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
-		URI branchURI = URI.create(BranchBuilder.generateBranchURI(repoURI, "main"));
+		URI branchURI = BranchBuilder.generateBranchURI(repoURI, "main");
 		BranchStateUpdater stateKeeper = stateFactory.createStateKeeperFor(branchURI);
 		CountDownLatch latch = new CountDownLatch(1);
 		SyncForTestingService service1 = new SyncForTestingService("Out1", latch, repoModel);

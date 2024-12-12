@@ -1,0 +1,260 @@
+package at.jku.isse.artifacteventstreaming.rdfwrapper;
+
+import static at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType.MAP_NS;
+import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.DynamicTest.stream;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.apache.jena.ontapi.OntModelFactory;
+import org.apache.jena.ontapi.OntSpecification;
+import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.query.Dataset;
+import org.apache.jena.query.DatasetFactory;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFDataMgr;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.google.errorprone.annotations.Var;
+
+import at.jku.isse.artifacteventstreaming.api.Commit;
+import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
+import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
+import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
+import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
+import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
+import at.jku.isse.artifacteventstreaming.replay.InMemoryHistoryRepository;
+import at.jku.isse.artifacteventstreaming.rule.RepairService;
+import at.jku.isse.artifacteventstreaming.rule.RuleEvaluationIterationMetadata;
+import at.jku.isse.artifacteventstreaming.rule.RuleEvaluationListener;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
+import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
+import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.passiveprocessengine.core.BuildInType;
+import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
+import at.jku.isse.passiveprocessengine.core.PPEInstanceType.PPEPropertyType;
+import at.jku.isse.passiveprocessengine.core.ProcessInstanceChangeListener;
+import at.jku.isse.passiveprocessengine.core.PropertyChange.Update;
+import at.jku.isse.passiveprocessengine.rdfwrapper.CommitChangeEventTransformer;
+import at.jku.isse.passiveprocessengine.rdfwrapper.MapWrapper;
+import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RuleEnabledResolver;
+import lombok.Getter;
+
+class TestCommitToRuleChangeEvents {
+
+	static String NS = "http://at.jku.isse.test#";
+	static OntModel m;
+	static NodeToDomainResolver resolver;
+	RDFInstanceType typeBase;
+	RDFInstanceType typeChild;
+	PPEPropertyType mapOfArt;
+	PPEPropertyType listOfString;
+	PPEPropertyType setOfBaseArt;
+	PPEPropertyType parent;
+	StatementAggregator aggr;
+	PPEChangeListener listener;
+	CommitChangeEventTransformer transformer;
+	BranchImpl branch;
+	
+	@BeforeEach
+	void setup() throws URISyntaxException, Exception {		
+		Dataset repoDataset = DatasetFactory.createTxnMem();
+		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);			
+		branch = (BranchImpl) new BranchBuilder(new URI(NS+"repo"), repoDataset, repoModel )	
+				.setBranchLocalName("branch1")
+				.setModelReasoner(OntSpecification.OWL2_DL_MEM_RDFS_INF)
+				.build();		
+		m = branch.getModel();		
+		var cardUtil = new PropertyCardinalityTypes(m);
+		var observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory(cardUtil));
+		var observer = observerFactory.buildInstance("RuleTriggeringObserver", m, repoModel);
+		observer.registerListener(new TestRuleEvaluationListener());
+		var repairService = new RepairService(m, observer.getRepo());
+		resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
+		//aggr = new StatementAggregator();
+		listener = new PPEChangeListener();
+		transformer = new CommitChangeEventTransformer("Transformer", repoModel, resolver, new InMemoryHistoryRepository());
+		transformer.registerWithWorkspace(listener);		
+		m.setNsPrefix("isse", NS);
+		m.setNsPrefix("map", MAP_NS);
+		branch.appendBranchInternalCommitService(observer);
+		branch.appendBranchInternalCommitService(transformer);
+		branch.startCommitHandlers(null);
+		branch.getDataset().begin();
+		
+		resolver.getMapEntryBaseType();
+		resolver.getListBaseType();
+		typeBase = resolver.createNewInstanceType(NS+"artifact");
+		typeChild = resolver.createNewInstanceType(NS+"issue", typeBase);
+		mapOfArt = typeChild.createMapPropertyType("mapOfArt", BuildInType.STRING, typeBase);
+		listOfString = typeChild.createListPropertyType("listOfString", BuildInType.STRING);
+		setOfBaseArt = typeChild.createSetPropertyType("setOfBaseArt", typeBase);
+		parent = typeBase.createSinglePropertyType("parent", typeBase);		
+		observer.getRepo().getRuleBuilder()
+		.withContextType(typeChild.getType())
+		.withRuleTitle("TestListUsage")
+		.withRuleExpression("self.listOfString.size() > 0")
+		.build();
+		observer.getRepo().getRuleBuilder()
+		.withContextType(typeChild.getType())
+		.withRuleTitle("TestSingleUsage")
+		.withRuleExpression("self.parent.isDefined()")
+		.build();
+		observer.getRepo().getRuleBuilder()
+		.withContextType(typeChild.getType())
+		.withRuleTitle("TestSetUsage")
+		.withRuleExpression("self.setOfBaseArt.size() > 0")
+		.build();
+		branch.commitChanges("InitialCommit");
+	}
+	
+	private Commit generateCommit() {
+		return new StatementCommitImpl("BranchId", "", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+	}
+		
+	@Test
+	void useList() throws BranchConfigurationException, PersistenceException {
+		branch.getDataset().begin();
+						
+		var art1 = resolver.createInstance(NS+"art1", typeChild);
+		branch.commitChanges("Commit 1");
+		listener.printCurrentUpdates();
+		listener.latestUpdates.clear();
+		
+		System.out.println("  ");
+		System.out.println("Begin 2  ");
+		branch.getDataset().begin();
+		var list = art1.getTypedProperty(listOfString.getId(), List.class);
+		list.add("entry1");
+		//RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
+		branch.commitChanges("Commit 2");
+		listener.printCurrentUpdates();
+		assertEquals(2, listener.getLatestUpdates().size());
+		assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().get().getValue());
+		assertEquals("entry1", listener.getLatestUpdates().stream().filter(update -> update.getName().equals("listOfString")).findAny().get().getValue());
+		listener.latestUpdates.clear();
+		
+		System.out.println("  ");
+		System.out.println("Begin 3  ");
+		branch.getDataset().begin();
+		list.add(0, "entry2");
+		branch.commitChanges("Commit 3");
+		listener.printCurrentUpdates();
+		assertEquals(3, listener.getLatestUpdates().size()); // adding and replacements of existing item to next spot, no change of rule eval outcome, hence no event		
+		assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().isEmpty());
+		listener.latestUpdates.clear();
+		
+		
+		System.out.println("  ");
+		System.out.println("Begin 4  ");
+		branch.getDataset().begin();
+		list.clear();
+		branch.commitChanges("Commit 4");
+		listener.printCurrentUpdates();
+		assertEquals(3, listener.getLatestUpdates().size()); // removal of both entries
+		assertEquals(false, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().get().getValue());
+		listener.latestUpdates.clear();
+	}
+	
+	@Test
+	void useSet() throws BranchConfigurationException, PersistenceException {
+		branch.getDataset().begin();
+		var art1 = resolver.createInstance(NS+"art1", typeChild);
+		var art2 = resolver.createInstance(NS+"art2", typeChild);
+		var art3 = resolver.createInstance(NS+"art3", typeChild);
+		branch.commitChanges("Commit 1");
+		listener.printCurrentUpdates();
+		listener.latestUpdates.clear();
+		
+		branch.getDataset().begin();
+		var set = art1.getTypedProperty(setOfBaseArt.getId(), Set.class);
+		set.add(art2);
+		branch.commitChanges("Commit 2");
+		listener.printCurrentUpdates();
+		assertEquals(2, listener.getLatestUpdates().size());
+		assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().get().getValue());
+		listener.latestUpdates.clear();
+		
+		branch.getDataset().begin();
+		set.add(art3);
+		branch.commitChanges("Commit 3");
+		listener.printCurrentUpdates();
+		assertEquals(1, listener.getLatestUpdates().size());
+		assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().isEmpty());
+		listener.latestUpdates.clear();
+		
+		branch.getDataset().begin();
+		set.clear();
+		branch.commitChanges("Commit 4");
+		listener.printCurrentUpdates();
+		assertEquals(3, listener.getLatestUpdates().size()); // removal of both entries
+		assertEquals(false, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().get().getValue());
+		listener.latestUpdates.clear();
+	}
+	
+	@Test
+	void useSingle() throws BranchConfigurationException, PersistenceException {
+		branch.getDataset().begin();
+		var art1 = resolver.createInstance(NS+"art1", typeChild);
+		var art2 = resolver.createInstance(NS+"art2", typeChild);
+		var art3 = resolver.createInstance(NS+"art3", typeChild);
+		branch.commitChanges("Commit 1");
+		listener.printCurrentUpdates();
+		listener.latestUpdates.clear();
+		
+		branch.getDataset().begin();
+		art1.setSingleProperty(parent.getId(), art2);
+		branch.commitChanges("Commit 2");
+		listener.printCurrentUpdates();
+		assertEquals(2, listener.getLatestUpdates().size());
+		assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().get().getValue());
+		listener.latestUpdates.clear();
+
+		branch.getDataset().begin();
+		art1.setSingleProperty(parent.getId(), art3);
+		branch.commitChanges("Commit 3");
+		listener.printCurrentUpdates();
+		assertEquals(1, listener.getLatestUpdates().size());
+		assertEquals(false, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().get().getValue());
+		listener.latestUpdates.clear();
+	}
+	
+	static class TestRuleEvaluationListener implements RuleEvaluationListener {
+
+		@Override
+		public void signalRuleEvaluationFinished(Set<RuleEvaluationIterationMetadata> iterationMetadata) {
+			if (iterationMetadata.isEmpty()) return;
+			System.out.println("Rules Evaluated:");
+			iterationMetadata.forEach(reim -> System.out.println(reim.getRule().getDefinition().getName()+" with "+ reim.getRule().getContextInstance().getLocalName() + " -> "+reim.getRule().isConsistent()));
+		}
+		
+	}
+	
+	static class PPEChangeListener implements ProcessInstanceChangeListener {
+
+		@Getter
+		List<Update> latestUpdates = new ArrayList<>();
+		
+		@Override
+		public void handleUpdates(Collection<Update> arg0) {
+			latestUpdates.addAll(arg0);
+		}
+		
+		public void printCurrentUpdates() {
+			System.out.println("START:");
+			latestUpdates.stream().forEach(event -> System.out.println(event));
+			System.out.println("END:");			
+		}
+		
+	}
+}

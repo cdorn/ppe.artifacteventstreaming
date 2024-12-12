@@ -18,7 +18,9 @@ import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
@@ -132,7 +134,7 @@ public class StatementAugmentationSession {
 		 */  
 		var id = list.isAnon() ? list.getId() : list.getURI();
 		// first obtain the owner of the list
-		var optOwner = isDelete ? getFormerListOwner(stmts) : getCurrentListyOwner((OntIndividual) list);
+		var optOwner = isDelete ? schemaUtils.getFormerListOwner(stmts) : schemaUtils.getCurrentListOwner((OntIndividual) list);
 		// should only exist one such resource as we dont share lists across individuals
 		if (optOwner.isEmpty()) {
 			log.error("Encountered ownerless list "+id);
@@ -209,17 +211,7 @@ public class StatementAugmentationSession {
 			.findAny();
 	}
 	
-	private Optional<Resource> getCurrentListyOwner(OntIndividual list) {
-		return Optional.ofNullable(list.getPropertyResourceValue(schemaUtils.getListType().getContainerProperty().asProperty()));
-	}
 	
-	private Optional<Resource> getFormerListOwner(List<StatementWrapper> stmts) {
-		return stmts.stream().filter(wrapper -> wrapper.op().equals(AES.OPTYPE.REMOVE))
-			.map(StatementWrapper::stmt)
-			.filter(stmt -> stmt.getPredicate().equals(schemaUtils.getListType().getContainerProperty().asProperty()))
-			.map(Statement::getResource)
-			.findAny();
-	}
 
 	
 //	private List<Property> findCurrentPropertiesBetween(Resource subject, OntObject object) {
@@ -243,14 +235,42 @@ public class StatementAugmentationSession {
 		wrapInContainmentStatements(stmts);
 	}
 	
-	protected boolean isSingleProperty(Statement stmt) {
-		if (stmt.getPredicate().canAs(OntObjectProperty.class)) {
-			var ontProp = stmt.getPredicate().as(OntObjectProperty.class);
-			return (stmt.getObject().isLiteral() && schemaUtils.getSingleType().getSingleLiteralProperty().hasSubProperty(ontProp, false)|| 
-					!stmt.getObject().isLiteral() && schemaUtils.getSingleType().getSingleObjectProperty().hasSubProperty(ontProp, false));
-		} else { // if not an ont object property, then cannot be a single property
+	protected boolean isSingleProperty(Statement stmt) {		
+		if (stmt.getObject().isLiteral()) {			
+			StmtIterator iter = stmt.getPredicate().listProperties(RDFS.subPropertyOf);
+			while (iter.hasNext()) {
+				var res = iter.next().getResource();
+				if (res.equals(schemaUtils.getSingleType().getSingleLiteralProperty())) {
+					return true;
+				}
+			}
 			return false;
-		}
+			
+//			var ontProp = schemaUtils.getSingleType().getSingleLiteralProperty().getModel().getDataProperty(stmt.getPredicate().getURI());
+//			if (ontProp == null) return false;
+//			return schemaUtils.getSingleType().getSingleLiteralProperty().hasSubProperty(ontProp, false);
+		} else {
+			StmtIterator iter = stmt.getPredicate().listProperties(RDFS.subPropertyOf);
+			while (iter.hasNext()) {
+				if (iter.next().getResource().equals(schemaUtils.getSingleType().getSingleObjectProperty())) {
+					return true;
+				}
+			}
+			return false;
+			
+			
+//			var ontProp = schemaUtils.getSingleType().getSingleLiteralProperty().getModel().getObjectProperty(stmt.getPredicate().getURI());
+//			if (ontProp == null) return false;
+//			return schemaUtils.getSingleType().getSingleObjectProperty().hasSubProperty(ontProp, false);
+		}		
+//		var prop = schemaUtils.getSingleType().getSingleLiteralProperty().getModel().getProperty(stmt.getPredicate().getURI());
+//		if (prop.canAs(OntObjectProperty.class)) {
+//			var ontProp = prop.as(OntObjectProperty.class);
+//			return (stmt.getObject().isLiteral() && schemaUtils.getSingleType().getSingleLiteralProperty().hasSubProperty(ontProp, false)|| 
+//					!stmt.getObject().isLiteral() && schemaUtils.getSingleType().getSingleObjectProperty().hasSubProperty(ontProp, false));
+//		} else { // if not an ont object property, then cannot be a single property
+//			return false;
+//		}
 	}
 	
 	protected void processUntypedSubject(RDFNode inst, List<StatementWrapper> stmts) {

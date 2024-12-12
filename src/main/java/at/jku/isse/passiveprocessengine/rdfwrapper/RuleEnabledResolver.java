@@ -17,6 +17,7 @@ import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserver;
+import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 import at.jku.isse.designspace.rule.arl.evaluator.EvaluationNode;
 import at.jku.isse.designspace.rule.arl.evaluator.RuleDefinitionImpl;
 import at.jku.isse.designspace.rule.arl.evaluator.RuleEvaluation;
@@ -37,8 +38,8 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 	final RuleRepository repo;
 	final RuleRepositoryInspector inspector;
 	
-	public RuleEnabledResolver(Branch branch, RepairService repairService, RuleSchemaProvider ruleSchema, RuleRepository repo) {
-		super(branch, repo);
+	public RuleEnabledResolver(Branch branch, RepairService repairService, RuleSchemaProvider ruleSchema, RuleRepository repo, PropertyCardinalityTypes cardinalityTypes) {
+		super(branch, repo, cardinalityTypes);
 		this.repairService = repairService;
 		this.ruleSchema = ruleSchema;
 		this.repo = repo;

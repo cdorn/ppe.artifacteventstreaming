@@ -1,6 +1,7 @@
 package at.jku.isse.artifacteventstreaming.branch;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -38,6 +39,7 @@ public class BranchBuilder {
 
 	private BranchStateUpdater stateKeeper;
 	private URI repositoryURI;
+	private URI branchURI;
 	private String branchName = "main";
 	private Dataset branchDataset;
 	private final Dataset repoDataset;
@@ -72,6 +74,14 @@ public class BranchBuilder {
 			throw new RuntimeException("Branchname cannot be empty");
 		}
 		this.branchName = branchName;
+		return this;
+	}
+	
+	/**
+	 * if not used, by default the 'main' branch will be created.
+	 */
+	public BranchBuilder setBrancURI(@NonNull URI branchURI) {		
+		this.branchURI = branchURI;
 		return this;
 	}
 	
@@ -126,8 +136,8 @@ public class BranchBuilder {
 	}
 	
 	
-	public static String generateBranchURI(URI repositoryURI, String branchName) {
-		return Objects.toString(repositoryURI)+"#"+branchName;
+	public static URI generateBranchURI(URI repositoryURI, String branchName) throws URISyntaxException {
+		return new URI(Objects.toString(repositoryURI)+"::"+branchName);
 	}
 	
 	public static String getBranchNameFromURI(@NonNull URI branchURI) {
@@ -143,7 +153,9 @@ public class BranchBuilder {
 		if (branchDataset == null) {
 			setDataset(DatasetFactory.createTxnMem());
 		}
-		String branchURI = generateBranchURI(repositoryURI, branchName);
+		if (branchURI == null) {
+			branchURI = generateBranchURI(repositoryURI, branchName);
+		}
 		OntIndividual branchResource = prepareBranch(branchURI);
 		BlockingQueue<Commit> inQueue = new LinkedBlockingQueue<>();
 		BlockingQueue<Commit> outQueue = new LinkedBlockingQueue<>();
@@ -152,7 +164,7 @@ public class BranchBuilder {
 		//branchDataset.begin();
 		OntModel model = OntModelFactory.createModel(branchDataset.getDefaultModel().getGraph(), modelSpec);
 		if (stateKeeper == null) {
-			stateKeeper = new StateKeeperImpl(URI.create(branchURI), new InMemoryBranchStateCache(), new InMemoryEventStore());
+			stateKeeper = new StateKeeperImpl(branchURI, new InMemoryBranchStateCache(), new InMemoryEventStore());
 		}
 		if (timeStampProvider == null) {
 			timeStampProvider = new SystemTimeStampProvider();
@@ -162,18 +174,18 @@ public class BranchBuilder {
 		return branch;
 	}
 	
-	private OntIndividual prepareBranch(String branchURI) {
-		Resource branchRes = ResourceFactory.createResource(branchURI);
+	private OntIndividual prepareBranch(URI branchURI) {
+		Resource branchRes = ResourceFactory.createResource(branchURI.toString());
 		Resource repoRes = ResourceFactory.createResource(repositoryURI.toString());
 		OntIndividual branchResource = null;
 		repoDataset.begin(ReadWrite.WRITE);
 		if (repoModel == null)
 			repoModel = OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		if (repoModel.contains(branchRes, AES.partOfRepository, repoRes)) {
-			branchResource = repoModel.createIndividual(branchURI);		
+			branchResource = repoModel.createIndividual(branchURI.toString());		
 		} else { // we assume, each branch has its own model, hence we create the core concepts here as well
 			addCoreConcepts(repoModel);
-			branchResource = buildBranchResource(repositoryURI, repoModel, branchName);			
+			branchResource = buildBranchResource(repositoryURI, repoModel, branchURI);			
 		}	
 		repoDataset.commit();
 		repoDataset.end();
@@ -195,12 +207,12 @@ public class BranchBuilder {
 		configForType.addComment("Is used to enable lookup the right handler factory from which to re-create a handler with the configuration described in domain of this property. Config properties are specific for each handler type");
 	}
 	
-	private static OntIndividual buildBranchResource(URI repositoryURI, OntModel initializedModel, String branchName) {
+	private static OntIndividual buildBranchResource(URI repositoryURI, OntModel initializedModel, URI branchURI) {
 		OntClass.Named branchType = initializedModel.getOntClass(AES.branchType);
 		OntObjectProperty.Named partOfRepo = initializedModel.getObjectProperty(AES.partOfRepository.getURI());
-		OntIndividual branch = branchType.createIndividual(generateBranchURI(repositoryURI, branchName));
+		OntIndividual branch = branchType.createIndividual(branchURI.toString());
 		Resource repo = ResourceFactory.createResource(repositoryURI.toString());
-		branch.addLabel(branchName);
+		branch.addLabel(branch.getLocalName());
 		branch.addProperty(partOfRepo, repo);
 		return branch;
 	}
@@ -215,8 +227,13 @@ public class BranchBuilder {
 	
 	public static boolean doesDatasetContainBranch(Dataset dataset, URI repositoryURI, String branchName) {
 		dataset.begin();
-		String branchURI = generateBranchURI(repositoryURI, branchName);
-		Resource branchRes = ResourceFactory.createResource(branchURI);
+		URI branchURI;
+		try {
+			branchURI = generateBranchURI(repositoryURI, branchName);
+		} catch (URISyntaxException e) {
+			return false;
+		}
+		Resource branchRes = ResourceFactory.createResource(branchURI.toString());
 		Resource repoRes = ResourceFactory.createResource(repositoryURI.toString());
 		boolean doesContain = dataset.getDefaultModel().contains(branchRes, AES.partOfRepository, repoRes);
 		dataset.end();

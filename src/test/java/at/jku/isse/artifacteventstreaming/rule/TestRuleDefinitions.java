@@ -19,7 +19,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
-import at.jku.isse.artifacteventstreaming.schemasupport.SchemaUtils;
 
 class TestRuleDefinitions {
 	
@@ -28,7 +27,6 @@ class TestRuleDefinitions {
 
 	public static URI baseURI = URI.create("http://at.jku.isse.artifacteventstreaming/test/rules#");
 	
-	public static RuleSchemaFactory ruleSchemaFactory = new RuleSchemaFactory();
 	
 	OntModel m;
 	OntClass artType;
@@ -62,9 +60,10 @@ class TestRuleDefinitions {
 		
 		labelProp = schemaUtils.createSingleDataPropertyType(baseURI+"label", artType, m.getDatatype(XSD.xstring));
 		priorityProp = schemaUtils.createSingleDataPropertyType(baseURI+"priority", artType, m.getDatatype(XSD.xlong)); 
-		
+		var cardUtil = new PropertyCardinalityTypes(m);
+		RuleSchemaFactory ruleSchemaFactory = new RuleSchemaFactory(cardUtil);		
 		factory = new RuleSchemaProvider(m, ruleSchemaFactory);
-		modelAccess = new RDFModelAccess(m);
+		modelAccess = new RDFModelAccess(m, cardUtil);
 	}
 	
 	@Test

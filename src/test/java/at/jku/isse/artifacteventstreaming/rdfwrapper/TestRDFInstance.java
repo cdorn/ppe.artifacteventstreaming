@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rdf;
+package at.jku.isse.artifacteventstreaming.rdfwrapper;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
+import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstance;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
@@ -61,7 +62,8 @@ public class TestRDFInstance {
 				.build();		
 		m = branch.getModel();	
 		m.setNsPrefix("test", NS);
-		resolver = new NodeToDomainResolver(branch, null);
+		var cardUtil = new PropertyCardinalityTypes(m);
+		resolver = new NodeToDomainResolver(branch, null, cardUtil);
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
 		typeBase = resolver.createNewInstanceType(NS+"artifact");

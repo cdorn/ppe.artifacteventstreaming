@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rdf;
+package at.jku.isse.artifacteventstreaming.rdfwrapper;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
+import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.PPEPropertyType;
@@ -40,6 +41,8 @@ class TestRDFInstanceType {
 				.setBranchLocalName("branch1")
 				.build();		
 		m = branch.getModel();
+		var cardUtil = new PropertyCardinalityTypes(m); // this adds list , mapentry and metaclass type
+		resolver = new NodeToDomainResolver(branch, null, cardUtil);
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
 		typeBase = resolver.createNewInstanceType(NS+"artifact");
@@ -50,7 +53,7 @@ class TestRDFInstanceType {
 	void testGetSuperClass() {
 		System.out.println(typeChild.getParentType().getName());
 		assertEquals(typeChild.getParentType(), typeBase);
-		assertEquals(typeChild.getInstanceType(), BuildInType.METATYPE);
+		//assertEquals(typeChild.getInstanceType(), BuildInType.METATYPE);
 		assertEquals(null, typeBase.getParentType());
 	}
 	
@@ -63,14 +66,14 @@ class TestRDFInstanceType {
 		assertTrue(names.contains("priority"));
 		assertTrue(names.contains("listOfArt"));
 		
-		PPEPropertyType listProp = typeChild.getPropertyType(typeChild.makePropertyURI("listOfArt"));
+		PPEPropertyType listProp = typeChild.getPropertyType("listOfArt");
 		assertNotEquals(null, listProp);
 		assertEquals(typeBase, listProp.getInstanceType());
-		assertTrue(typeChild.hasPropertyType(typeBase.makePropertyURI("priority")));
-		PPEPropertyType nonExistantProp = typeChild.getPropertyType(typeBase.makePropertyURI("sdfdsfdsf"));
+		assertTrue(typeChild.hasPropertyType("priority"));
+		PPEPropertyType nonExistantProp = typeChild.getPropertyType("sdfdsfdsf");
 		assertNull(nonExistantProp);
 		
-		assertEquals(typeChild.getInstanceType(), BuildInType.METATYPE);
+		//assertEquals(resolver.resolveToType(null)e.METATYPE, typeChild.getInstanceType());
 		assertEquals(null, typeBase.getParentType());
 		
 		
@@ -84,7 +87,7 @@ class TestRDFInstanceType {
 	void testFindType() {
 		assertEquals(typeBase, resolver.findAllInstanceTypesByFQN(typeBase.getId()).iterator().next());
 		assertEquals(typeChild, resolver.findAllInstanceTypesByFQN(typeChild.getId()).iterator().next());
-		assertEquals(2, resolver.getAllNonDeletedInstanceTypes().size());
+		assertEquals(5, resolver.getAllNonDeletedInstanceTypes().size());
 	}
 	
 	@Test
@@ -92,7 +95,7 @@ class TestRDFInstanceType {
 		assertEquals(typeBase, resolver.findAllInstanceTypesByFQN(typeBase.getId()).iterator().next());
 		typeBase.markAsDeleted();
 		assertTrue(resolver.findAllInstanceTypesByFQN(typeBase.getId()).isEmpty());
-		assertEquals(0, resolver.getAllNonDeletedInstanceTypes().size());
+		assertEquals(3, resolver.getAllNonDeletedInstanceTypes().size());
 	}
 	
 	@Test

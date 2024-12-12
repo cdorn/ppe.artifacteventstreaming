@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
+import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
 
 class TestBranchWithRules {
@@ -29,7 +30,7 @@ class TestBranchWithRules {
 	SyncForTestingService serviceOut;
 	OntModel model;
 	Branch branch;	
-	RuleTriggerObserverFactory observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory());
+	
 	RuleTriggerObserver observer;	
 	MockSchema schema;
 		
@@ -47,7 +48,9 @@ class TestBranchWithRules {
 				.addOutgoingCommitDistributer(serviceOut)
 				.build();		
 		model = branch.getModel();
-		schema = new MockSchema(model, null); // create types for testing
+		var cardUtil = new PropertyCardinalityTypes(model);
+		RuleTriggerObserverFactory observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory(cardUtil));
+		schema = new MockSchema(model, cardUtil); // create types for testing
 								
 		// setup rule service				
 		observer = observerFactory.buildInstance("RuleTriggerObserver1", model, repoModel);

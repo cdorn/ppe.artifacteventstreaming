@@ -269,6 +269,6 @@ public class RDFElement {
 
 	@Override
 	public String toString() {
-		return "RDFElement [" + element.getURI() + "]";
+		return "RDFElement [" + getId() + "]";
 	}
 }

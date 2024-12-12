@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.rule.MockSchema;
+import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 
 class TestPartialReplay {
 
@@ -34,7 +35,8 @@ class TestPartialReplay {
 	@BeforeEach
 	void setupListener() {
 		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_RDFS_INF );
-		schema = new MockSchema(m, null);
+		var cardUtils = new PropertyCardinalityTypes(m);
+		schema = new MockSchema(m, cardUtils);
 		aggr = new StatementAggregator();
 		aggr.registerWithModel(m);
 		collector = new ReplayEntryCollectorFromCommits();

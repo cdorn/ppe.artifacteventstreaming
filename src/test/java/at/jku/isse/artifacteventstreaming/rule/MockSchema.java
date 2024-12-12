@@ -8,8 +8,8 @@ import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.vocabulary.XSD;
 
 import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
-import at.jku.isse.artifacteventstreaming.schemasupport.SchemaUtils;
 import lombok.Getter;
+import lombok.NonNull;
 
 public class MockSchema {
 
@@ -28,12 +28,9 @@ public class MockSchema {
 	@Getter public OntObjectProperty labelProperty;
 	@Getter public OntObjectProperty keyValueProperty;
 	
-	private final PropertyCardinalityTypes schemaUtils;
+	//private final PropertyCardinalityTypes schemaUtils;
 	
-	public MockSchema(OntModel model, PropertyCardinalityTypes schemaUtils) {		
-		if (schemaUtils == null)
-			this.schemaUtils = new PropertyCardinalityTypes(model);
-		else this.schemaUtils = schemaUtils;
+	public MockSchema(@NonNull OntModel model, @NonNull PropertyCardinalityTypes schemaUtils) {				
 		issueType = model.createOntClass(TEST_SCHEMA_URI+"Issue");
 		
 		keyProperty = schemaUtils.createSingleDataPropertyType(TEST_SCHEMA_URI+"key", issueType, model.getDatatype(XSD.xstring));

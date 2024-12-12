@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rdf;
+package at.jku.isse.artifacteventstreaming.rdfwrapper;
 
 import static at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType.MAP_NS;
 import static org.junit.Assert.assertEquals;
@@ -29,6 +29,10 @@ import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.replay.InMemoryHistoryRepository;
+import at.jku.isse.artifacteventstreaming.rule.RepairService;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
+import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
+import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.PPEPropertyType;
@@ -37,13 +41,16 @@ import at.jku.isse.passiveprocessengine.core.PropertyChange.Update;
 import at.jku.isse.passiveprocessengine.rdfwrapper.CommitChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.MapWrapper;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RuleEnabledResolver;
 import lombok.Getter;
 
 class TestCommitToChangeEvents {
 
 	static String NS = "http://at.jku.isse.test#";
 	static OntModel m;
-	static NodeToDomainResolver resolver;
+	static RuleEnabledResolver  resolver;
 	PPEInstanceType typeBase;
 	PPEInstanceType typeChild;
 	PPEPropertyType mapOfArt;
@@ -62,10 +69,14 @@ class TestCommitToChangeEvents {
 				.setBranchLocalName("branch1")
 				.build();		
 		m = branch.getModel();		
-		resolver = new NodeToDomainResolver(branch, null);
+		var cardUtil = new PropertyCardinalityTypes(m);
+		var observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory(cardUtil));
+		var observer = observerFactory.buildInstance("RuleTriggeringObserver", m, repoModel);
+		var repairService = new RepairService(m, observer.getRepo());
+		resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
 		aggr = new StatementAggregator();
 		listener = new PPEChangeListener();
-		transformer = new CommitChangeEventTransformer("Transformer", OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM), resolver, new InMemoryHistoryRepository());
+		transformer = new CommitChangeEventTransformer("Transformer", repoModel, resolver, new InMemoryHistoryRepository());
 		transformer.registerWithWorkspace(listener);
 		m.register(aggr);
 		m.setNsPrefix("isse", NS);
@@ -78,6 +89,8 @@ class TestCommitToChangeEvents {
 		listOfString = typeChild.createListPropertyType("listOfString", BuildInType.STRING);
 		setOfBaseArt = typeChild.createSetPropertyType("setOfBaseArt", typeBase);
 		parent = typeBase.createSinglePropertyType("parent", typeBase);
+
+		
 	}
 	
 	private Commit generateCommit() {

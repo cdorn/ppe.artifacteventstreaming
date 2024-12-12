@@ -31,6 +31,7 @@ import org.apache.jena.ontapi.model.OntClass.ValueRestriction;
 import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 import at.jku.isse.designspace.rule.arl.evaluator.ModelAccess;
 import at.jku.isse.designspace.rule.arl.exception.EvaluationException;
@@ -46,11 +47,11 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
 	private MapResourceType mapFactory;
 	private SingleResourceType singleFactory;
 	
-    public RDFModelAccess(OntModel model) {
+    public RDFModelAccess(OntModel model, PropertyCardinalityTypes propertyCardinalities) {
     	this.model = model;
-    	listFactory = new ListResourceType(model);
-    	mapFactory = new MapResourceType(model);
-    	singleFactory = new SingleResourceType(model);        
+    	listFactory = propertyCardinalities.getListType();
+    	mapFactory = propertyCardinalities.getMapType();
+    	singleFactory = propertyCardinalities.getSingleType();        
     }
     
     private OntProperty resolveToProperty(OntClass ontClass, String propertyName) {
@@ -260,7 +261,7 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     			while (iter.hasNext()) {
     				var stmt = iter.next();
     				if (stmt.getPredicate().getOrdinal() > 0) {
-    					result.add(stmt.getResource());
+    					result.add(statementObjectToResourceOrValue(stmt.getObject()));
     				}
     			}
     			return result;	    			
@@ -274,10 +275,17 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     		//no type info available, make a set:
     		return content.stream()
     				.map(Statement::getObject)
-    				.map(RDFNode::asResource)
+    				.map(this::statementObjectToResourceOrValue)
     				.collect(Collectors.toSet());
     	}
     	
+    }
+    
+    private Object statementObjectToResourceOrValue(RDFNode node) {
+    	if (node.isLiteral())
+    		return node.asLiteral().getValue();
+    	else 
+    		return node.asResource();
     }
 
     public ArlType.TypeKind typeKind(OntObject type) {

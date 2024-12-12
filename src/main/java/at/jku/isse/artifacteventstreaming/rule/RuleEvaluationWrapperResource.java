@@ -19,4 +19,5 @@ public interface RuleEvaluationWrapperResource {
 	boolean isEnabled();
 	public void delete();
 	public RepairNode getRepairTree();
+	public RDFRuleDefinition getDefinition();
 }

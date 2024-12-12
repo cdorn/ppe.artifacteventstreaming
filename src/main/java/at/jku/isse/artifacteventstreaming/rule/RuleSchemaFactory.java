@@ -1,5 +1,7 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
+import java.util.List;
+
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
@@ -8,7 +10,9 @@ import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
 
+import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.SchemaFactory;
+import lombok.Getter;
 
 public class RuleSchemaFactory extends SchemaFactory {
 
@@ -52,9 +56,11 @@ public class RuleSchemaFactory extends SchemaFactory {
 	private OntObjectProperty havingScopePartProperty;
 
 	private final OntModel model;
+	@Getter private final PropertyCardinalityTypes propertyCardinalityTypes;
 
-	public RuleSchemaFactory() {
-		this.model = loadOntologyFromFilesystem(RULEONTOLOGY); 			
+	public RuleSchemaFactory(PropertyCardinalityTypes schemaUtil) {
+		this.model = loadOntologyFromFilesystem(RULEONTOLOGY);
+		this.propertyCardinalityTypes = schemaUtil;
 		initTypes();
 		model.setNsPrefix("rules", uri);
 		super.writeOntologyToFilesystemn(model, RULEONTOLOGY);
@@ -78,29 +84,17 @@ public class RuleSchemaFactory extends SchemaFactory {
 
 		var expressionProperty = model.getDataProperty(ruleExpressionURI);
 		if (expressionProperty == null) {
-			expressionProperty = model.createDataProperty(ruleExpressionURI);
-			expressionProperty
-			.addDomain(definitionType)
-			.addRange(model.getDatatype(XSD.xstring));		
-			definitionType.addSuperClass(model.createDataMaxCardinality(expressionProperty, 1, null));
+			propertyCardinalityTypes.createSingleDataPropertyType(ruleExpressionURI, definitionType, model.getDatatype(XSD.xstring)); 
 		}
 
 		var expressionErrorProperty = model.getDataProperty(ruleExpressionErrorURI);
 		if (expressionErrorProperty == null) {
-			expressionErrorProperty = model.createDataProperty(ruleExpressionErrorURI);
-			expressionErrorProperty
-			.addDomain(definitionType)
-			.addRange(model.getDatatype(XSD.xstring));
-			definitionType.addSuperClass(model.createDataMaxCardinality(expressionErrorProperty, 1, null));
+			propertyCardinalityTypes.createSingleDataPropertyType(ruleExpressionErrorURI, definitionType, model.getDatatype(XSD.xstring));
 		}
 
 		var contextTypeProperty = model.getObjectProperty(ruleContextTypeURI);
 		if (contextTypeProperty == null) {	
-			contextTypeProperty = model.createObjectProperty(ruleContextTypeURI);
-			contextTypeProperty
-			.addDomain(definitionType)
-			.addRange(model.createOntClass(OWL2.Class.getURI())); // the concept of 'class' in OWL2, not the java .class 
-			definitionType.addSuperClass(model.createObjectMaxCardinality(contextTypeProperty, 1, null));
+			propertyCardinalityTypes.createSingleObjectPropertyType(ruleContextTypeURI, definitionType, model.createOntClass(OWL2.Class.getURI())); // the concept of 'class' in OWL2, not the java .class 			
 		}
 	}
 
@@ -115,78 +109,44 @@ public class RuleSchemaFactory extends SchemaFactory {
 
 		var evaluationHasConsistentResultProperty = model.getDataProperty(ruleHasConsistentResultURI);
 		if (evaluationHasConsistentResultProperty == null) {
-			evaluationHasConsistentResultProperty = model.createDataProperty(ruleHasConsistentResultURI);
-			evaluationHasConsistentResultProperty
-			.addDomain(resultBaseType)
-			.addRange(model.getDatatype(XSD.xboolean));
-			resultBaseType.addSuperClass(model.createDataMaxCardinality(evaluationHasConsistentResultProperty, 1, null));
+			propertyCardinalityTypes.createSingleDataPropertyType(ruleHasConsistentResultURI, resultBaseType, model.getDatatype(XSD.xboolean));
 		}
 
 		var evaluationErrorProperty = model.getDataProperty(ruleEvaluationErrorURI);
 		if (evaluationErrorProperty == null) {
-			evaluationErrorProperty = model.createDataProperty(ruleEvaluationErrorURI);
-			evaluationErrorProperty
-			.addDomain(resultBaseType)
-			.addRange(model.getDatatype(XSD.xstring));
-			resultBaseType.addSuperClass(model.createDataMaxCardinality(evaluationErrorProperty, 1, null));
+			propertyCardinalityTypes.createSingleDataPropertyType(ruleEvaluationErrorURI, resultBaseType, model.getDatatype(XSD.xstring));
 		}
 
 		var contextElementScopeProperty = model.getObjectProperty(ruleContextElementURI);
 		if (contextElementScopeProperty == null) {
-			contextElementScopeProperty = model.createObjectProperty(ruleContextElementURI);
-			contextElementScopeProperty
-			.addDomain(resultBaseType)
-			.addRange(ruleScopeCollection);  
-			resultBaseType.addSuperClass(model.createObjectMaxCardinality(contextElementScopeProperty, 1, null));
+			propertyCardinalityTypes.createSingleObjectPropertyType(ruleContextElementURI, resultBaseType, ruleScopeCollection);  			
 		}
 
 		havingScopePartProperty = model.getObjectProperty(havingScopeURI);
 		if (havingScopePartProperty == null) {
-			havingScopePartProperty = model.createObjectProperty(havingScopeURI);
-			havingScopePartProperty
-			.addDomain(resultBaseType)
-			.addRange(ruleScopeCollection);
+			havingScopePartProperty = propertyCardinalityTypes.createSingleObjectPropertyType(havingScopeURI, resultBaseType, ruleScopeCollection);
 		}
 
 		var isEnabledProperty = model.getDataProperty(ruleIsEnabledURI);	
 		if (isEnabledProperty == null) {
-			isEnabledProperty = model.createDataProperty(ruleIsEnabledURI);
-			isEnabledProperty
-			.addDomain(definitionType)
-			.addDomain(resultBaseType)
-			.addRange(model.getDatatype(XSD.xboolean));
-			var max1 = model.createDataMaxCardinality(isEnabledProperty, 1, null);
-			definitionType.addSuperClass(max1);
-			resultBaseType.addSuperClass(max1);			
+			propertyCardinalityTypes.createSingleDataPropertyType(ruleIsEnabledURI, List.of(definitionType, resultBaseType), model.getDatatype(XSD.xboolean));																	
 		}
 	}
 
 	private void initScopePartTypeProperties() {						
 		var usingPredicateProperty = model.getObjectProperty(usingPropertyURI);
 		if (usingPredicateProperty == null) {
-			usingPredicateProperty = model.createObjectProperty(usingPropertyURI);
-			usingPredicateProperty
-			.addDomain(ruleScopeCollection)
-			.addRange(model.createOntClass(RDF.Property.getURI()));
-			ruleScopeCollection.addSuperClass(model.createObjectMaxCardinality(usingPredicateProperty, 1, null));
+			propertyCardinalityTypes.createSingleObjectPropertyType(usingPropertyURI, ruleScopeCollection, model.createOntClass(RDF.Property.getURI()));
 		}
 
 		var usingElementProperty = model.getObjectProperty(usingElementURI);
 		if (usingElementProperty == null) {
-			usingElementProperty = model.createObjectProperty(usingElementURI);
-			usingElementProperty
-			.addDomain(ruleScopeCollection)
-			.addRange(model.createOntClass(OWL2.NamedIndividual.getURI()));
-			ruleScopeCollection.addSuperClass(model.createObjectMaxCardinality(usingElementProperty, 1, null));
+			propertyCardinalityTypes.createSingleObjectPropertyType(usingElementURI, ruleScopeCollection, model.createOntClass(OWL2.NamedIndividual.getURI()));
 		}
 
-		var usedInRuleProperty = model.getObjectProperty(usedInRuleURI);
+		OntObjectProperty usedInRuleProperty = model.getObjectProperty(usedInRuleURI);
 		if (usedInRuleProperty == null) {
-			usedInRuleProperty = model.createObjectProperty(usedInRuleURI);
-			usedInRuleProperty
-			.addDomain(ruleScopeCollection)
-			.addRange(resultBaseType);		
-
+			usedInRuleProperty = propertyCardinalityTypes.createBaseObjectPropertyType(usedInRuleURI, ruleScopeCollection, resultBaseType);		
 			usedInRuleProperty.addInverseProperty(havingScopePartProperty);
 		}
 	}

@@ -111,8 +111,11 @@ public class ListWrapper extends TypedCollectionResource implements List<Object>
 	}
 	
 	@Override
-	public void clear() {
-		listContent.removeProperties();
+	public void clear() {		
+		var size = listContent.size();
+		for (int i = size; i > 0 ; i--) { // if we remove from the start, all the remaining elements are moved down one step, --> very inefficient
+			listContent.remove(i); 
+		}
 	}
 	
 	@Override

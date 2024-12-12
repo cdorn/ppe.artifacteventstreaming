@@ -72,13 +72,14 @@ public class StatementAggregator extends StatementListener {
 	}
 	
 	public void registerWithModel(OntModel model) {
-		// when using inference, this does not register the listener at the right graph:	https://github.com/apache/jena/issues/2868
-		model.register(this);
+		// when using inference, this does not register the listener at the right graph:	https://github.com/apache/jena/issues/2868		
 		if (model.getGraph() instanceof InfGraph infG) {
             Graph raw = infG.getRawGraph();
             if (raw instanceof UnionGraph ugraph) {
             	ugraph.getEventManager().register(((ModelCom)model).adapt(this));
             }            
-        }   
+        } else {
+        	model.register(this);
+        }
 	}
 }

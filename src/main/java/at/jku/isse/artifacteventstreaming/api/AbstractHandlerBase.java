@@ -40,4 +40,10 @@ public abstract class AbstractHandlerBase implements CommitHandler {
 	public void clearConfig() {
 		config.removeProperties();
 	}
+	
+	public void logIncomingCommit(Commit commit, int indexOfNewAddition, int indexOfNewRemoval) {
+		var addDiff = commit.getAdditionCount() - indexOfNewAddition;
+		var removeDiff = commit.getRemovalCount() - indexOfNewRemoval;		
+		log.debug(String.format("%s called for %s with offsets %s (+%s) and %s (+%s) ", serviceName, commit.getCommitMessage(), indexOfNewAddition, addDiff, indexOfNewRemoval, removeDiff));
+	}
 }

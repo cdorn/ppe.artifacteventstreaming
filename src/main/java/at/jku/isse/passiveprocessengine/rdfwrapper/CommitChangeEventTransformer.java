@@ -35,6 +35,7 @@ public class CommitChangeEventTransformer extends CommitContainmentAugmenter imp
 	
 	@Override
 	public void handleCommitFromOffset(Commit commit, int indexOfNewAddition, int indexOfNewRemoval) {
+		super.logIncomingCommit(commit, indexOfNewAddition, indexOfNewRemoval);
 		var addSize = commit.getAddedStatements().size();
 		var remSize = commit.getRemovedStatements().size();
 		var session = new TransformationSession(commit.getAddedStatements().subList(indexOfNewAddition, addSize)
@@ -42,7 +43,9 @@ public class CommitChangeEventTransformer extends CommitContainmentAugmenter imp
 		try {
 			session.process(commit.getCommitId(), commit.getOriginatingBranchId(), commit.getTimeStamp());
 			if (eventSink != null) {
-				eventSink.handleUpdates(session.getUpdates());
+				var updates = session.getUpdates();
+				log.debug(String.format("%s resulted in %s higherlevel events", commit.getCommitMessage(), updates.size()));
+				eventSink.handleUpdates(updates);
 			}
 		} catch (PersistenceException e) {
 			
