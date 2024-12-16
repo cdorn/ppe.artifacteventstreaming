@@ -13,6 +13,7 @@ import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
 import at.jku.isse.artifacteventstreaming.api.AES;
+import at.jku.isse.artifacteventstreaming.api.AES.OPTYPE;
 import at.jku.isse.artifacteventstreaming.replay.PerResourceHistoryRepository;
 import at.jku.isse.artifacteventstreaming.replay.StatementAugmentationSession;
 import at.jku.isse.passiveprocessengine.core.PPEInstance;
@@ -125,6 +126,7 @@ public class TransformationSession extends StatementAugmentationSession {
 		 * here we need to access schema information, either from abstraction layer RDFPropertyType, or replicate whats done inside the RDFPropertyType (less efficient)
 		 */
 		stmts = filterOutListOrMapOwnershipAdditions(stmts);
+		var shallowCopy = List.copyOf(stmts);
 		
 		RDFInstance changeSubject = (RDFInstance) resolver.resolveToRDFElement(inst);
 		if (changeSubject == null) { //typically for schema information
@@ -132,7 +134,6 @@ public class TransformationSession extends StatementAugmentationSession {
 		}
 		// something (e.g., or single value) added/removed from individual
 		updates.addAll(stmts.stream().map(wrapper -> {
-var localName = wrapper.stmt().getPredicate().getLocalName();
 			var value = resolver.convertFromRDF(wrapper.stmt().getObject());
 			if (value == null) return null;
 			var prop = wrapper.stmt().getPredicate();
@@ -140,8 +141,12 @@ var localName = wrapper.stmt().getPredicate().getLocalName();
 				if (wrapper.op().equals(AES.OPTYPE.ADD)) {
 					return new PropertyChange.Set(prop.getLocalName(), changeSubject, value);
 				} else {
-					return null; // we can never unset a property as Apache Jena disallows null values, hence there is always a new value added, 
-								//unless the resource is removed, but we dont have instance delete events for now
+					// only if there is no new value added at the same time (null values are not allowed by Jena)
+					var optAdd = shallowCopy.stream().filter(copy -> copy.stmt().getPredicate().equals(prop) && copy.op().equals(OPTYPE.ADD)).findAny();
+					if (optAdd.isEmpty()) {
+						return new PropertyChange.Set(prop.getLocalName(), changeSubject, value);
+					} else
+						return null;
 				}
 			} else {
 				if (wrapper.op().equals(AES.OPTYPE.ADD)) {

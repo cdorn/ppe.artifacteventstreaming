@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
+import org.apache.jena.rdf.model.Resource;
 
 import lombok.RequiredArgsConstructor;
 
@@ -18,6 +19,10 @@ public class RuleRepositoryInspector {
 	
 	public Set<OntIndividual> getAllScopes() {		
 		return factory.getRuleScopeCollection().individuals().collect(Collectors.toSet());
+	}
+	
+	public Resource getElementFromScope(Resource scope) {
+		return scope.getPropertyResourceValue(factory.getUsingElementProperty().asProperty());
 	}
 	
 	protected Set<OntIndividual> getScopes(OntIndividual subject, String... limitedToProps){

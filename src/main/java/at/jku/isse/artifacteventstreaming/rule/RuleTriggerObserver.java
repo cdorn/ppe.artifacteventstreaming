@@ -255,10 +255,4 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 			.filter(stmt -> stmt.getSubject().canAs(OntIndividual.class))
 			.forEach(stmt ->  addRulesToMetadata(rulesToReevaluate, repo.getRulesAffectedByChange(stmt.getSubject().as(OntIndividual.class), stmt.getPredicate()), stmt));	
 	}
-	
-	private Property resolveToSemanticallyMeaningfulPredicate(Statement stmt) {
-		//TODO for any properties that are a map or list change --> need to map the low-level statement predicate to the containment property
-		
-		return stmt.getPredicate();
-	}
 }

@@ -30,13 +30,24 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	@Getter
 	protected final OntClass type;
 	
-	protected final Map<OntProperty, RDFPropertyType> propWrappers = new HashMap<>();
+	//protected final Map<OntProperty, RDFPropertyType> propWrappers = new HashMap<>();
+	protected final Map<String, RDFPropertyType> propWrappers = new HashMap<>();
 	
 	public RDFInstanceType(OntClass element, NodeToDomainResolver resolver) {
 		super(element, resolver);
 		this.type = element;
+		// cache super properties
+		cacheSuperProperties();
+		
 	}
 
+	private void cacheSuperProperties() {
+		type.asNamed().declaredProperties()
+		.filter(OntRelationalProperty.class::isInstance)
+		.map(OntRelationalProperty.class::cast)
+		.forEach(this::insertAndReturn);
+	}
+	
 	@Override
 	public void setInstanceType(PPEInstanceType arg0) {
 		// noop, cannot override instancetype of an InstanceType (i.e., meta type cannot be overridden)
@@ -128,8 +139,12 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	
 	private PPEPropertyType insertAndReturn(OntRelationalProperty prop) {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
-		propWrappers.put(prop, propType);
-		return propType;
+		if (propType.isValid()) {
+			propWrappers.put(prop.getURI(), propType);
+			return propType;
+		} else {
+			return null;
+		}
 	}
 
 	@Override
@@ -188,6 +203,11 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 
 	@Override
 	public PPEPropertyType getPropertyType(String uri) {
+		var pType = NodeToDomainResolver.isValidURL(uri) ?
+			propWrappers.get(uri):
+		    propWrappers.values().stream().filter(propType -> propType.getProperty().getLocalName().equals(uri)).findAny().orElse(null);
+		if (pType != null) return pType;
+		
 		Optional<OntRelationalProperty> optProp = null;
 		if (NodeToDomainResolver.isValidURL(uri)) {
 			optProp = type.asNamed().declaredProperties()
@@ -202,7 +222,7 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 					.map(OntRelationalProperty.class::cast)
 					.findFirst();
 		}				
-		return optProp.map(prop -> propWrappers.computeIfAbsent( prop, k -> new RDFPropertyType((OntRelationalProperty) k, resolver))).orElse(null) ;
+		return optProp.map(prop -> propWrappers.computeIfAbsent( prop.getURI(), k -> new RDFPropertyType(prop, resolver))).orElse(null) ;
 	}
 
 	@Override

@@ -39,9 +39,17 @@ public class RDFPropertyType implements PPEPropertyType {
 		this.property = property;
 		rdfTypeAndCardinality = determineValueTypeAndCardinality(property, resolver.getCardinalityUtil().getMapType(), resolver.getCardinalityUtil().getListType(), resolver.getCardinalityUtil().getSingleType());
 		this.cardinality = rdfTypeAndCardinality.getValue();
+		if (rdfTypeAndCardinality.getKey() == null) { 
+			this.valueType = null;
+			return;
+		}
 		this.valueType = resolver.resolveToType(rdfTypeAndCardinality.getKey());
 	}
 
+	protected boolean isValid() {
+		return valueType != null;
+	}
+	
 
 	@Override
 	public String getId() {

@@ -1,10 +1,9 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Stream;
-
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObject;
@@ -19,7 +18,6 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Seq;
 import org.apache.jena.rdf.model.StmtIterator;
-import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 
@@ -43,7 +41,7 @@ public class ListResourceType {
 	@Getter
 	private final OntClass listClass;
 	private final OntModel m;
-
+	private final Set<OntClass> subclassesCache = new HashSet<>();
 	
 	public ListResourceType(OntModel model) {		
 		this.m = model;
@@ -51,6 +49,7 @@ public class ListResourceType {
 		containerProperty = createContainerProperty();		
 		listReferenceSuperProperty = m.createObjectProperty(LIST_REFERENCE_SUPERPROPERTY_URI);
 		listReferenceSuperProperty.addRange(listClass);
+		initHierarchyCache();
 	}
 	
 	private OntClass createListBaseClass() {
@@ -64,6 +63,10 @@ public class ListResourceType {
 		var prop = m.createObjectProperty(CONTAINER_PROPERTY_URI);
 		prop.addDomain(listClass);
 		return prop;
+	}
+	
+	private void initHierarchyCache() {
+		listClass.subClasses().forEach(subClass -> subclassesCache.add(subClass));
 	}
 	
 	public OntObjectProperty addObjectListProperty(OntClass resource, String listPropertyURI, OntClass valueType) {
@@ -89,7 +92,8 @@ public class ListResourceType {
 			ObjectAllValuesFrom restr = m.createObjectAllValuesFrom(liProp, valueType);
 			// add the restriction to the list type
 			listType.addSuperClass(restr);
-			listReferenceSuperProperty.addSubProperty(prop);			
+			listReferenceSuperProperty.addSubProperty(prop);	
+			subclassesCache.add(resource);
 			return prop;
 		} else 
 			return null; //as we cannot guarantee that the property that was identified is an OntObjectProperty		
@@ -119,6 +123,7 @@ public class ListResourceType {
 			// add the restriction to the list type
 			listType.addSuperClass(restr);
 			listReferenceSuperProperty.addSubProperty(prop);	
+			subclassesCache.add(resource);
 			return prop;
 		} else 
 			return null; //as we cannot guarantee that the property that was identified is an OntObjectProperty		
@@ -135,12 +140,15 @@ public class ListResourceType {
 	}
 	
 	public boolean isListContainer(OntIndividual ontInd) {
-		return ontInd.classes(true).anyMatch(type -> listClass.hasSubClass(type, true));
+		return ontInd.classes(true).anyMatch(type -> subclassesCache.contains(type));
+		//return ontInd.classes(true).anyMatch(type -> listClass.hasSubClass(type, true));
 	}
 
 	public boolean wasListContainer(List<Resource> delTypes) {
 		return delTypes.stream().anyMatch(type -> type.getURI().equals(getListClass().getURI()) || 
-				getListClass().subClasses(true).map(clazz -> clazz.asResource()).anyMatch(clazz -> clazz.equals(type))  );
+				subclassesCache.stream().map(clazz -> clazz.asResource()).anyMatch(clazz -> clazz.equals(type))  );
+	//	return delTypes.stream().anyMatch(type -> type.getURI().equals(getListClass().getURI()) || 
+	//			getListClass().subClasses(true).map(clazz -> clazz.asResource()).anyMatch(clazz -> clazz.equals(type))  );
 	}
 	
 	

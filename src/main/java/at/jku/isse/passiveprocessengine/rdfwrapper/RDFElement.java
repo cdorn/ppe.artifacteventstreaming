@@ -43,7 +43,11 @@ public class RDFElement {
 	}
 
 	public String getName() {
-		return element.getLocalName();
+		if (element.isAnon()) {
+			return element.getLabel();
+		} else {
+			return element.getLocalName();
+		}
 	}
 	
 
@@ -98,11 +102,11 @@ public class RDFElement {
 			}
 		}
 		// else we treat as untyped		
-		var stmt = element.getProperty(RDF.type); // for now an arbitrary one of there are potentially multiple ones		
-		if (stmt != null) {
-			var node = stmt.getObject();
-			return resolver.resolveToType(node);
-		}
+//		var stmt = element.getProperty(RDF.type); // for now an arbitrary one of there are potentially multiple ones		
+//		if (stmt != null) {
+//			var node = stmt.getObject();
+//			return resolver.resolveToType(node);
+//		}
 		return null;
 	}
 	

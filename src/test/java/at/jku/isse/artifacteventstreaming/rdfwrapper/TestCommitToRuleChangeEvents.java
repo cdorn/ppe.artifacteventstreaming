@@ -220,7 +220,7 @@ class TestCommitToRuleChangeEvents {
 		art1.setSingleProperty(parent.getId(), art2);
 		branch.commitChanges("Commit 2");
 		listener.printCurrentUpdates();
-		assertEquals(3, listener.getLatestUpdates().size());
+		assertEquals(2, listener.getLatestUpdates().size());
 		//assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().get().getValue());
 		listener.latestUpdates.clear();
 
@@ -240,9 +240,7 @@ class TestCommitToRuleChangeEvents {
 		art1.setSingleProperty(parent.getId(), null);
 		branch.commitChanges("Commit 4");
 		listener.printCurrentUpdates();
-		assertEquals(3, listener.getLatestUpdates().size()); // removal of the property and change in evaluation result
-		//FIXME: add the remove operation
-		//assertEquals(false, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().get().getValue());
+		assertEquals(2, listener.getLatestUpdates().size()); // removal of the property and change in evaluation result
 		listener.latestUpdates.clear();
 	}
 	

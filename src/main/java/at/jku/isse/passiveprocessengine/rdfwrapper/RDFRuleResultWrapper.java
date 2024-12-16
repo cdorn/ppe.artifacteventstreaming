@@ -1,0 +1,58 @@
+package at.jku.isse.passiveprocessengine.rdfwrapper;
+
+import org.apache.jena.ontapi.model.OntIndividual;
+
+import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
+import at.jku.isse.passiveprocessengine.core.PPEInstance;
+import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
+import at.jku.isse.passiveprocessengine.core.RuleDefinition;
+import at.jku.isse.passiveprocessengine.core.RuleResult;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class RDFRuleResultWrapper extends RDFInstance implements RuleResult {
+
+	private final RuleRepository ruleRepo;
+	
+	public RDFRuleResultWrapper(OntIndividual element, NodeToDomainResolver resolver, RuleRepository ruleRepo) {
+		super(element, resolver);
+		this.ruleRepo = ruleRepo;
+	}
+	
+	@Override
+	public PPEInstanceType getInstanceType() {
+		var types = element.as(OntIndividual.class).classes(true).toList();
+		var optType = types.stream().filter(type -> !type.equals(ruleRepo.getFactory().getDefinitionType())).findFirst();
+		if (optType.isPresent()) {
+			var type = resolver.findNonDeletedInstanceTypeByFQN(optType.get().getURI());
+			if (type.isPresent() && type.get() instanceof RuleDefinition def)
+				return def;
+		}
+		return null;
+	}
+
+
+
+	@Override
+	public Boolean isConsistent() {
+		return super.getTypedProperty("ruleHasConsistentResult", Boolean.class, false);
+	}
+
+	@Override
+	public PPEInstance getContextInstance() {
+		var scope = element.getPropertyResourceValue(ruleRepo.getFactory().getContextElementScopeProperty().asProperty());
+		if (scope != null) {
+			var el = ruleRepo.getInspector().getElementFromScope(scope);
+			if (el != null) {
+				return (RDFInstance) resolver.resolveToRDFElement(el);
+			} else {
+				log.warn("Encountered rule scope without element reference "+element.getId());
+			}
+		} else {
+			log.warn("Encountered rule result without context scope in "+element.getId());
+		}
+		return null;
+		//return super.getTypedProperty("ruleContextElement", RDFInstance.class);
+	}
+
+}

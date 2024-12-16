@@ -14,10 +14,21 @@ public class RDFInstance extends RDFElement implements PPEInstance {
 
 	@Getter
 	protected final OntIndividual instance;
+	
+	private PPEInstanceType type;
 
 	public RDFInstance(OntIndividual element, NodeToDomainResolver resolver) {
 		super(element, resolver);
 		this.instance = element;
+		//this.type = getInstanceType(); // does not work for RDFRuleResult that need the ruleRepo for its getInstanceType() method
+	}
+	
+	@Override
+	public PPEInstanceType getInstanceType() {
+		if (type == null) {
+			type = super.getInstanceType();
+		} 
+		return type;
 	}
 
 	@Override
@@ -26,9 +37,11 @@ public class RDFInstance extends RDFElement implements PPEInstance {
 			log.warn(String.format("Tried to set instance type of %s to atomic type %s, not allowed, ignoring", instance.getURI(), childType.getId()));			
 		} else {
 			//if type is already a superclass
-			var type = ((RDFInstanceType)childType).getType();
-			if (!instance.hasOntClass(type, false)) {
-				instance.addProperty(RDF.type, type);
+			var newType = ((RDFInstanceType)childType).getType();
+			if (!instance.hasOntClass(newType, false)) {
+				instance.addProperty(RDF.type, newType);
+				//TODO: we assume we are setting to a more specific subtype, never a super type, in any case, we override the local cached type
+				this.type = childType;
 			}
 		}
 	}

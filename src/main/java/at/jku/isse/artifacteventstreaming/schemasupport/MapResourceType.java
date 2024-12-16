@@ -2,7 +2,9 @@ package at.jku.isse.artifacteventstreaming.schemasupport;
 
 import java.nio.file.attribute.AclEntryType;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.apache.jena.ontapi.model.OntClass;
@@ -48,6 +50,7 @@ public class MapResourceType {
 	@Getter
 	private final OntClass mapEntryClass;
 	private final OntModel m;
+	private final Set<OntClass> subclassesCache = new HashSet<>();
 	
 	public MapResourceType(OntModel model) {		
 		this.m = model;
@@ -58,6 +61,7 @@ public class MapResourceType {
 		containerProperty = m.createObjectProperty(CONTAINER_PROPERTY_URI);
 		mapReferenceSuperProperty = m.createObjectProperty(MAP_REFERENCE_SUPERPROPERTY_URI);	
 		mapReferenceSuperProperty.addRange(mapEntryClass);
+		initHierarchyCache();
 	}		
 	
 	private OntDataProperty createKeyProperty() {
@@ -79,6 +83,10 @@ public class MapResourceType {
 		return objectValueProp;
 	}
 	
+	private void initHierarchyCache() {
+		mapEntryClass.subClasses().forEach(subClass -> subclassesCache.add(subClass));
+	}
+	
 	public static boolean isEntryProperty(OntRelationalProperty property) {
 		// better done via super/subproperty check
 		return property.getLocalName().endsWith(MapResourceType.LITERAL_VALUE) || property.getLocalName().endsWith(MapResourceType.OBJECT_VALUE);
@@ -95,6 +103,7 @@ public class MapResourceType {
 		if (p == null) {
 			OntClass mapType = model.createOntClass(propertyURI+ENTRY_TYPE);
 			mapType.addSuperClass(mapEntryClass);
+			subclassesCache.add(mapType);
 
 			OntDataProperty valueProp = model.createDataProperty(propertyURI+LITERAL_VALUE);
 			valueProp.addSuperProperty(literalValueProperty);
@@ -117,6 +126,7 @@ public class MapResourceType {
 		if (p == null) {
 			OntClass mapType = model.createOntClass(propertyURI+ENTRY_TYPE);
 			mapType.addSuperClass(mapEntryClass);
+			subclassesCache.add(mapType);
 
 			OntObjectProperty valueProp = model.createObjectProperty(propertyURI+OBJECT_VALUE);
 			valueProp.addSuperProperty(objectValueProperty);
@@ -134,12 +144,12 @@ public class MapResourceType {
 	}
 	
 	public boolean isMapEntry(OntIndividual ontInd) {
-		return ontInd.classes(true).anyMatch(type -> mapEntryClass.hasSubClass(type, false) || type.equals(mapEntryClass));
+		return ontInd.classes(true).anyMatch(type -> subclassesCache.contains(type) || type.equals(mapEntryClass));
 	}
 	
 	public boolean wasMapEntry(List<Resource> delTypes) {
 		return delTypes.stream().anyMatch(type -> type.getURI().equals(getMapEntryClass().getURI()) || 
-				getMapEntryClass().subClasses(true).map(clazz -> clazz.asResource()).anyMatch(clazz -> clazz.equals(type))  );
+				subclassesCache.stream().map(clazz -> clazz.asResource()).anyMatch(clazz -> clazz.equals(type))  );
 	}
 
 	public List<Property> findMapReferencePropertiesBetween(Resource subject, OntObject mapEntry) {

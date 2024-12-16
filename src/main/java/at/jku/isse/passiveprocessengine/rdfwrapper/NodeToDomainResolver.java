@@ -63,10 +63,10 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		this.ruleRepo = ruleRepo;
 		this.branch = branch;
 		this.model = branch.getModel();
-		this.dataset = branch.getDataset();		
-		init();		
+		this.dataset = branch.getDataset();	
 		this.cardinalityUtil = cardinalityUtil; 
-		metaClass = createMetaClass(model);		
+		metaClass = createMetaClass(model);	
+		init();		
 	}
 	
 	private void init() {
@@ -85,7 +85,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		return meta;
 	}
 	
-	public PPEInstanceType resolveToType(RDFNode node) {
+	public PPEInstanceType resolveToType(@NonNull RDFNode node) {
 		if (node instanceof OntDataRange.Named named) {
 			RDFDatatype datatype = named.toRDFDatatype();
 			if (datatype == null)
@@ -197,8 +197,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		if (typeIndex.containsKey(ontClass))  {
 			return null; // already have this class definition, not creating another wrapper around
 		} else { 
-			var type = new RDFInstanceType(ontClass, this);
-			typeIndex.put(ontClass, type);
+			ontClass.addProperty(RDF.type, metaClass);
 			for (var superClass : superClasses) {
 				if (superClass == null) {
 					log.warn("provided null superclass, ignoring");
@@ -208,7 +207,8 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 					ontClass.addSuperClass(((RDFInstanceType) superClass).getType());
 				}
 			}
-			ontClass.addProperty(RDF.type, metaClass);
+			var type = new RDFInstanceType(ontClass, this);
+			typeIndex.put(ontClass, type);
 			return type;
 		}
 	}
@@ -222,7 +222,16 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	@Override
 	public Optional<PPEInstanceType> findNonDeletedInstanceTypeByFQN(String arg0) {
 		Named ontClass = model.getOntClass(arg0);
-		return Optional.ofNullable(typeIndex.get(ontClass));
+		if (ontClass == null) return Optional.empty();
+		var type = typeIndex.get(ontClass);
+		if (type != null) {
+			return Optional.ofNullable(type);
+		} else {
+			var ruleDef = ruleRepo.findRuleDefinitionForResource(ontClass);
+			if (ruleDef == null) return Optional.empty();
+			var defWrapper = typeIndex.computeIfAbsent(ruleDef.getRuleDefinition(), k-> new RDFPPERuleDefinitionWrapper(ruleDef, this));
+			return Optional.ofNullable(defWrapper);
+		}
 	}
 
 	@Override // fqn is name as id with RDF --> using URI
@@ -281,9 +290,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 					writeLock = null;
 				}
 				// dataset write transaction end set by branch 
-			} catch (PersistenceException e) {			
-				e.printStackTrace();
-			} catch (BranchConfigurationException e) {			
+			} catch (PersistenceException | BranchConfigurationException e) {			
 				e.printStackTrace();
 			} 
 		} else {
@@ -299,6 +306,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		}		
 		if (arg1 instanceof RDFInstanceType type) {
 			var individual = model.createIndividual(id, type.getType());
+			individual.addLabel(individual.getLocalName());
 			return instanceIndex.computeIfAbsent(individual, k -> new RDFInstance(k, this));
 		}
 		else 
@@ -330,12 +338,12 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	}
 
 	public RDFElement resolveToRDFElement(RDFNode node) {
-		if (node instanceof OntClass) {
-			return typeIndex.get(node);
+		if (node instanceof OntClass ontClass) {
+			return typeIndex.get(ontClass);
 		} else if (node instanceof OntIndividual indiv) {
 			return findIndividual(indiv);
 		} else if (node.canAs(OntClass.class)) {
-			return typeIndex.get(node);
+			return typeIndex.get(node.as(OntClass.class));
 		} else if (node.canAs(OntIndividual.class)) {
 			return findIndividual(node.as(OntIndividual.class));
 		} else {			
@@ -353,7 +361,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 			if (indiv.isAnon() && ruleRepo != null) { // mode with rule repo
 				var evalWrapper = ruleRepo.getEvaluations().get(indiv.getId());
 				if (evalWrapper != null)
-					return new RDFInstance(evalWrapper.getRuleEvalObj(), this); //FIXME: we are created new wrappers every time, but if we cache, we wont know when they need to be deleted					
+					return new RDFRuleResultWrapper(evalWrapper.getRuleEvalObj(), this, ruleRepo); //FIXME: we are created new wrappers every time, but if we cache, we wont know when they need to be deleted					
 			} 
 			return null;
 		}

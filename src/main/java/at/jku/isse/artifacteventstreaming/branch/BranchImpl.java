@@ -407,9 +407,10 @@ public class BranchImpl  implements Branch, Runnable {
 
 	@Override
 	public void undoNoncommitedChanges() {
-		dataset.abort();
-		dataset.end();
-		
+		if (dataset.isInTransaction()) {
+			dataset.abort();
+			dataset.end();
+		}
 		stmtAggregator.retrieveAddedStatements();
 		stmtAggregator.retrieveRemovedStatements();
 	}

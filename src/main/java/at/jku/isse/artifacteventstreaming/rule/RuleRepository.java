@@ -32,7 +32,8 @@ import lombok.extern.slf4j.Slf4j;
 public class RuleRepository {
 	
 
-	private final RuleSchemaProvider factory;
+	@Getter private final RuleSchemaProvider factory;
+	@Getter private final RuleRepositoryInspector inspector;
 	
 	private final Map<String, RDFRuleDefinition> definitions = new HashMap<>();
 	@Getter private final EvaluationsCache evaluations = new EvaluationsCache();
@@ -40,6 +41,7 @@ public class RuleRepository {
 	public RuleRepository(@NonNull RuleSchemaProvider factory) {
 		super();
 		this.factory = factory;
+		this.inspector = new RuleRepositoryInspector(factory);
 		loadFromModel();
 	}
 		

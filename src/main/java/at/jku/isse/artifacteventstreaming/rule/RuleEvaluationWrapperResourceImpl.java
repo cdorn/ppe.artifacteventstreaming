@@ -38,7 +38,8 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	 * @return a new evaluation object wrapper, ensuring that the evaluation and context element point to the same rule scope. 
 	 */
 	public static RuleEvaluationWrapperResourceImpl create(@NonNull RuleSchemaProvider factory, @NonNull RDFRuleDefinition def, @NonNull OntIndividual contextInstance) {
-		var evalObj = def.getRuleDefinition().createIndividual();		
+		var evalObj = def.getRuleDefinition().createIndividual();	
+		evalObj.addLabel(def.getName());
 		addAddRuleEvaluationToNewOrExistingScope(contextInstance, evalObj, factory); // just to make sure that the context scope is set (no effect if already so)
 		return new RuleEvaluationWrapperResourceImpl(def, evalObj, contextInstance, factory);
 	}

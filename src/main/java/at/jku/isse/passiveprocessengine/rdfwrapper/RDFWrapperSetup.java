@@ -63,7 +63,7 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 			
 			instanceRepository = resolver;
 			schemaRegistry = resolver;
-			repairTreeProvider = new RDFRepairTreeProvider(repairService, resolver, observer); 			
+			repairTreeProvider = new RDFRepairTreeProvider(repairService, observer.getRepo(), resolver, observer); 			
 			ruleEvaluationService = resolver;
 			changeEventTransformer = changeTransformer;
 			coreTypeFactory = new CoreTypeFactory(resolver, resolver);
