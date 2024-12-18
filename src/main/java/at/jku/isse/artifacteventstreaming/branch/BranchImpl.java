@@ -323,8 +323,8 @@ public class BranchImpl  implements Branch, Runnable {
 			}		 
 		// persist augmented commit and  mark preliminary commit as processed
 			stateKeeper.afterServices(commit);
-			dataset.commit(); // together with commit persistence
 			log.debug(String.format("Branch %s contains now %s statements", branchResource.getLabel(), model.size()));
+			dataset.commit(); // together with commit persistence			
 		} catch (Exception e) {
 			log.warn(String.format("Failed to persist post-service commit %s %s with exception %s", commit.getCommitMessage(), commit.getCommitId(), e.getMessage()));
 			//SHOULD WE: rethrow e to signal that we cannot continue here as we would loose persisted commit history.
@@ -345,7 +345,7 @@ public class BranchImpl  implements Branch, Runnable {
 		} finally {
 			dataset.end();
 		}
-		dataset.begin();
+		dataset.begin(ReadWrite.WRITE);
 		// we now have the local changes persisted and have a restart point established
 		// next we iterated through services
 

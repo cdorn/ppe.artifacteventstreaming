@@ -7,9 +7,20 @@ import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
+import org.apache.jena.query.ReadWrite;
+import org.rocksdb.RocksDBException;
 
+import com.eventstore.dbclient.DeleteStreamOptions;
+
+import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
+import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
+import at.jku.isse.artifacteventstreaming.branch.persistence.FilebasedDatasetLoader;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryEventStore;
+import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
+import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 import at.jku.isse.artifacteventstreaming.replay.InMemoryHistoryRepository;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
@@ -29,6 +40,7 @@ import lombok.Getter;
 public class RDFWrapperSetup implements DesignspaceTestSetup {
 
 	public static final URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/rdfwrapper");
+	public static final URI branchURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/rdfwrapper/testbranch");
 	
 	private InstanceRepository instanceRepository;
 	private SchemaRegistry schemaRegistry;
@@ -37,6 +49,8 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 	private ChangeEventTransformer changeEventTransformer;
 	private CoreTypeFactory coreTypeFactory;
 	private RuleSchemaProvider ruleSchemaProvider;
+	private Branch branch;
+	private OntModel loadedModel = OntModelFactory.createModel();
 	
 	private RuleTriggerObserverFactory observerFactory;;
 	
@@ -78,6 +92,65 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 		// nothing to tear down, we just recreate everything upon a new setup call.
 	}
 
+	public void setupPersistedBranch() throws Exception {
+		
+		var cacheFactory = new RocksDBFactory("./RDFWrapperTestCache/");
+		var eventstoreFactory = new EventStoreFactory();
+		
+		var datasetLoader = new FilebasedDatasetLoader();
+		var modelDataset = datasetLoader.loadDataset(branchURI);
+		
+		if (modelDataset.isEmpty()) throw new RuntimeException(branchURI+" could not be loaded");
+		
+		modelDataset.get().begin(ReadWrite.WRITE);
+		var stateKeeper = new StateKeeperImpl(branchURI, cacheFactory.getCache(), eventstoreFactory.getEventStore(branchURI.toString()));
+		
+		Dataset repoDataset = DatasetFactory.createTxnMem();
+		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		try {
+			branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
+					.setModelReasoner(OntSpecification.OWL2_DL_MEM_RDFS_INF)		
+					.setDataset(modelDataset.get())
+					.setStateKeeper(stateKeeper)
+					.setBranchURI(branchURI)
+					.build();		
+			var model1 = branch.getModel();	
+			loadedModel.add(model1);
+			var cardUtil = new PropertyCardinalityTypes(model1);
+			observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory(cardUtil));
+			var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);
+			var repairService = new RepairService(model1, observer.getRepo());
+			RuleEnabledResolver resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
+			var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, new InMemoryHistoryRepository());
+			branch.appendBranchInternalCommitService(observer);
+			branch.appendBranchInternalCommitService(changeTransformer);
+			
+			//var unfinishedCommit = stateKeeper.loadState();
+			// branch.startCommitHandlers(unfinishedCommit); // first complete other stuff on top
+			
+			
+			instanceRepository = resolver;
+			schemaRegistry = resolver;
+			repairTreeProvider = new RDFRepairTreeProvider(repairService, observer.getRepo(), resolver, observer); 			
+			ruleEvaluationService = resolver;
+			changeEventTransformer = changeTransformer;
+			coreTypeFactory = new CoreTypeFactory(resolver, resolver);
+			ruleSchemaProvider = observer.getFactory();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
 
-
+	public static void resetPersistence() {		
+		try {
+			var cacheFactory = new RocksDBFactory("./branchStatusTestCache/");
+			cacheFactory.resetCache();
+			EventStoreFactory factory = new EventStoreFactory();
+			var branchCache = cacheFactory.getCache();
+			factory.getClient().getStreamMetadata(branchURI.toString()); //throws exception if doesn't exist, then we wont need to delete
+			factory.getClient().deleteStream(branchURI.toString(), DeleteStreamOptions.get()).get();
+		}catch (Exception e) {
+			// ignore
+		}
+	}
 }

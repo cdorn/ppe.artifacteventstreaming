@@ -13,7 +13,9 @@ import org.apache.jena.ontapi.model.OntClass.DataAllValuesFrom;
 import org.apache.jena.ontapi.model.OntClass.ObjectAllValuesFrom;
 import org.apache.jena.ontapi.model.OntDataRange;
 import org.apache.jena.ontapi.model.OntIndividual;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Seq;
@@ -33,6 +35,7 @@ public class ListResourceType {
 	private static final String LIST_REFERENCE_SUPERPROPERTY_URI = LIST_NS+"hasList";
 	public static final Resource LI = ResourceFactory.createResource(RDF.uri+"li");
 			
+	private static final ListSchemaFactory factory = new ListSchemaFactory();
 
 	@Getter // pointing back to container owner
 	private final OntObjectProperty containerProperty;
@@ -45,28 +48,15 @@ public class ListResourceType {
 	
 	public ListResourceType(OntModel model) {		
 		this.m = model;
-		listClass = createListBaseClass();	
-		containerProperty = createContainerProperty();		
-		listReferenceSuperProperty = m.createObjectProperty(LIST_REFERENCE_SUPERPROPERTY_URI);
-		listReferenceSuperProperty.addRange(listClass);
+		factory.addSchemaToModel(model);
+		listClass = model.getOntClass(RDF.Seq);	
+		containerProperty = model.getObjectProperty(CONTAINER_PROPERTY_URI);	
+		listReferenceSuperProperty = m.getObjectProperty(LIST_REFERENCE_SUPERPROPERTY_URI);		
 		initHierarchyCache();
 	}
-	
-	private OntClass createListBaseClass() {
-		OntClass superClass = m.getOntClass(RDF.Seq);
-		if (superClass == null)
-			superClass = m.createOntClass(RDF.Seq.getURI());	
-		return superClass;
-	}
-	
-	private OntObjectProperty createContainerProperty() {
-		var prop = m.createObjectProperty(CONTAINER_PROPERTY_URI);
-		prop.addDomain(listClass);
-		return prop;
-	}
-	
+			
 	private void initHierarchyCache() {
-		listClass.subClasses().forEach(subClass -> subclassesCache.add(subClass));
+		listClass.subClasses().forEach(subclassesCache::add);
 	}
 	
 	public OntObjectProperty addObjectListProperty(OntClass resource, String listPropertyURI, OntClass valueType) {
@@ -140,15 +130,15 @@ public class ListResourceType {
 	}
 	
 	public boolean isListContainer(OntIndividual ontInd) {
-		return ontInd.classes(true).anyMatch(type -> subclassesCache.contains(type));
-		//return ontInd.classes(true).anyMatch(type -> listClass.hasSubClass(type, true));
+		return ontInd.classes(true).anyMatch(subclassesCache::contains);
+		//return ontInd.classes(true).anyMatch(type -> listClass.hasSubClass(type, true)); Too slow
 	}
 
 	public boolean wasListContainer(List<Resource> delTypes) {
 		return delTypes.stream().anyMatch(type -> type.getURI().equals(getListClass().getURI()) || 
-				subclassesCache.stream().map(clazz -> clazz.asResource()).anyMatch(clazz -> clazz.equals(type))  );
+				subclassesCache.stream().map(RDFNode::asResource).anyMatch(clazz -> clazz.equals(type))  );
 	//	return delTypes.stream().anyMatch(type -> type.getURI().equals(getListClass().getURI()) || 
-	//			getListClass().subClasses(true).map(clazz -> clazz.asResource()).anyMatch(clazz -> clazz.equals(type))  );
+	//			getListClass().subClasses(true).map(clazz -> clazz.asResource()).anyMatch(clazz -> clazz.equals(type))  ); Too slow
 	}
 	
 	
@@ -186,4 +176,39 @@ public class ListResourceType {
 		return props;
 	}
 
+	
+	private static class ListSchemaFactory extends SchemaFactory {
+
+		public static final String LISTONTOLOGY = "listontology";
+		private final OntModel model;
+
+		public ListSchemaFactory() {
+			this.model = loadOntologyFromFilesystem(LISTONTOLOGY);			
+			initTypes();			
+			super.writeOntologyToFilesystemn(model, LISTONTOLOGY);
+		}				
+
+		private void initTypes() {
+			var listClass = model.getOntClass(RDF.Seq);
+			if (listClass == null) {
+				listClass = model.createOntClass(RDF.Seq.getURI());
+			}
+						
+			var containerProperty = model.getObjectProperty(CONTAINER_PROPERTY_URI);
+			if (containerProperty == null) {
+				containerProperty = model.createObjectProperty(CONTAINER_PROPERTY_URI);
+				containerProperty.addDomain(listClass);
+			}
+			
+			var listReferenceSuperProperty = model.getObjectProperty(LIST_REFERENCE_SUPERPROPERTY_URI);
+			if (listReferenceSuperProperty == null) {
+				listReferenceSuperProperty = model.createObjectProperty(LIST_REFERENCE_SUPERPROPERTY_URI);
+				listReferenceSuperProperty.addRange(listClass);
+			}
+		}
+		
+		public void addSchemaToModel(Model modelToAddOntologyTo) {
+			modelToAddOntologyTo.add(model);		
+		} 
+	}
 }

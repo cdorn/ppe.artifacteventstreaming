@@ -1,6 +1,7 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
 import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -78,7 +79,15 @@ public class RuleRepository {
 	
 	protected RDFRuleDefinition storeRuleDefinition(@NonNull OntObject definition) {	
 		var key = definition.getURI();
-		return definitions.computeIfAbsent(key, k -> new RDFRuleDefinitionImpl(definition, factory));	
+		if (key == null) { // an anonymous node
+			var iter = definition.listProperties();
+			var stmts = new ArrayList<String>();
+			while (iter.hasNext()) {
+				stmts.add(iter.next().toString());
+			}
+			return null;
+		} else		
+			return definitions.computeIfAbsent(key, k -> new RDFRuleDefinitionImpl(definition, factory));	
 	}
 	
 	public void removeRuleDefinition(@NonNull String ruleDefinitionURI) {

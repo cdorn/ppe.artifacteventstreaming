@@ -28,8 +28,8 @@ public class PropertyCardinalityTypes {
 	private SingleResourceType singleType;
 
 	public PropertyCardinalityTypes(OntModel model) {
-		mapType = new MapResourceType(model); //TODO make these from ontology
-		listType = new ListResourceType(model);
+		mapType = new MapResourceType(model); 
+		listType = new ListResourceType(model); 
 		singleType = new SingleResourceType(model);
 	}
 

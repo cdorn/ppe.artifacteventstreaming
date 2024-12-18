@@ -62,13 +62,14 @@ public class StatementJsonDeserializer extends StdDeserializer<Statement> {
 	}
 	
 	boolean isValidURL(String url)  {
-	    try {
-	    	 var uri = new URI(url);	    
-		     uri.toURL();
-		     return true;	   
-	    } catch (URISyntaxException | MalformedURLException e) {
-	        return false;
-	    }
+		return url.startsWith("http"); //FIXME: better but performant way to check this.
+//	    try {
+//	    	 var uri = new URI(url);	    
+//		     uri.toURL();
+//		     return true;	   
+//	    } catch (URISyntaxException | MalformedURLException e) {
+//	        return false;
+//	    }
 	}
 	
 }

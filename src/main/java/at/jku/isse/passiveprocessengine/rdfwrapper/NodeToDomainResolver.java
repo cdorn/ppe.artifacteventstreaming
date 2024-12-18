@@ -195,7 +195,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		}						
 		Named ontClass = model.createOntClass(arg0);
 		if (typeIndex.containsKey(ontClass))  {
-			return null; // already have this class definition, not creating another wrapper around
+			return typeIndex.get(ontClass); // already have this class definition, not creating another wrapper around
 		} else { 
 			ontClass.addProperty(RDF.type, metaClass);
 			for (var superClass : superClasses) {
@@ -221,6 +221,9 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 
 	@Override
 	public Optional<PPEInstanceType> findNonDeletedInstanceTypeByFQN(String arg0) {
+		if (!isValidURL(arg0)) {
+			arg0 = BASE_NS+arg0;
+		}	
 		Named ontClass = model.getOntClass(arg0);
 		if (ontClass == null) return Optional.empty();
 		var type = typeIndex.get(ontClass);

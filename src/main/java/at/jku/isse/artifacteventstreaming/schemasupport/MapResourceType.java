@@ -1,12 +1,9 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
-import java.nio.file.attribute.AclEntryType;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Stream;
-
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntDataRange;
@@ -15,26 +12,28 @@ import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.sparql.pfunction.library.container;
 import org.apache.jena.vocabulary.XSD;
 
 import lombok.Getter;
 
-public class MapResourceType {
+public class MapResourceType  {
 
 	public static final String OBJECT_VALUE = "objectValue";
 	public static final String LITERAL_VALUE = "literalValue";
 	private static final String ENTRY_TYPE = "EntryType";
-	public static String MAP_NS = "http://at.jku.isse.map#";	
+	public static final String MAP_NS = "http://at.jku.isse.map#";	
 	public static final String ENTRY_TYPE_URI = MAP_NS+ENTRY_TYPE;
-	public static final String KEY_PROPERTY = MAP_NS+"key";
+	public static final String KEY_PROPERTY_URI = MAP_NS+"key";
 	public static final String LITERAL_VALUE_PROPERTY_URI = MAP_NS+LITERAL_VALUE;
 	public static final String OBJECT_VALUE_PROPERTY_URI = MAP_NS+OBJECT_VALUE;
-	private static final String CONTAINER_PROPERTY_URI = MAP_NS+"containerRef";
-	private static final String MAP_REFERENCE_SUPERPROPERTY_URI = MAP_NS+"mapRef";
+	public static final String CONTAINER_PROPERTY_URI = MAP_NS+"containerRef";
+	public static final String MAP_REFERENCE_SUPERPROPERTY_URI = MAP_NS+"mapRef";
+	
+	private static MapSchemaFactory factory = new MapSchemaFactory();
 	
 	@Getter
 	private final OntDataProperty keyProperty;
@@ -49,42 +48,25 @@ public class MapResourceType {
 	
 	@Getter
 	private final OntClass mapEntryClass;
-	private final OntModel m;
 	private final Set<OntClass> subclassesCache = new HashSet<>();
 	
+	private final OntModel localModel;
+	
 	public MapResourceType(OntModel model) {		
-		this.m = model;
-		mapEntryClass = m.createOntClass(ENTRY_TYPE_URI);
-		keyProperty = createKeyProperty();
-		literalValueProperty = createLiteralValueProperty();
-		objectValueProperty = createObjectValueProperty();
-		containerProperty = m.createObjectProperty(CONTAINER_PROPERTY_URI);
-		mapReferenceSuperProperty = m.createObjectProperty(MAP_REFERENCE_SUPERPROPERTY_URI);	
-		mapReferenceSuperProperty.addRange(mapEntryClass);
+		this.localModel = model;
+		factory.addSchemaToModel(model);
+				
+		mapEntryClass = model.getOntClass(ENTRY_TYPE_URI);
+		keyProperty = model.getDataProperty(KEY_PROPERTY_URI);
+		literalValueProperty = model.getDataProperty(LITERAL_VALUE_PROPERTY_URI);
+		objectValueProperty = model.getObjectProperty(OBJECT_VALUE_PROPERTY_URI);
+		containerProperty = model.getObjectProperty(CONTAINER_PROPERTY_URI);
+		mapReferenceSuperProperty = model.getObjectProperty(MAP_REFERENCE_SUPERPROPERTY_URI);			
 		initHierarchyCache();
 	}		
-	
-	private OntDataProperty createKeyProperty() {
-		OntDataProperty keyProp = m.createDataProperty(KEY_PROPERTY);
-		keyProp.addDomain(mapEntryClass);
-		keyProp.addRange(m.getDatatype(XSD.xstring));
-		return keyProp;
-	}
-	
-	private OntDataProperty createLiteralValueProperty() {
-		OntDataProperty literalValueProp = m.createDataProperty(LITERAL_VALUE_PROPERTY_URI);
-		literalValueProp.addDomain(mapEntryClass);
-		return literalValueProp;
-	}
-	
-	private OntObjectProperty.Named createObjectValueProperty() {		
-		OntObjectProperty.Named objectValueProp = m.createObjectProperty(OBJECT_VALUE_PROPERTY_URI);
-		objectValueProp.addDomain(mapEntryClass);
-		return objectValueProp;
-	}
-	
+			
 	private void initHierarchyCache() {
-		mapEntryClass.subClasses().forEach(subClass -> subclassesCache.add(subClass));
+		mapEntryClass.subClasses().forEach(subclassesCache::add);
 	}
 	
 	public static boolean isEntryProperty(OntRelationalProperty property) {
@@ -99,7 +81,7 @@ public class MapResourceType {
 	
 	public OntObjectProperty addLiteralMapProperty(OntClass resource, String propertyURI, OntDataRange valueType) {
 		OntModel model = resource.getModel();
-		var p = model.getDataProperty(propertyURI);
+		var p = model.getObjectProperty(propertyURI);
 		if (p == null) {
 			OntClass mapType = model.createOntClass(propertyURI+ENTRY_TYPE);
 			mapType.addSuperClass(mapEntryClass);
@@ -149,7 +131,7 @@ public class MapResourceType {
 	
 	public boolean wasMapEntry(List<Resource> delTypes) {
 		return delTypes.stream().anyMatch(type -> type.getURI().equals(getMapEntryClass().getURI()) || 
-				subclassesCache.stream().map(clazz -> clazz.asResource()).anyMatch(clazz -> clazz.equals(type))  );
+				subclassesCache.stream().map(RDFNode::asResource).anyMatch(clazz -> clazz.equals(type))  );
 	}
 
 	public List<Property> findMapReferencePropertiesBetween(Resource subject, OntObject mapEntry) {
@@ -157,11 +139,63 @@ public class MapResourceType {
 		var iter = subject.getModel().listStatements(subject, null, mapEntry);
 		while (iter.hasNext()) {
 			props.add(iter.next().getPredicate());
-		}
-		
+		}		
 		if (props.size() > 1) {
 			props.remove(mapReferenceSuperProperty.asProperty());
 		}
 		return props;
+	}
+	
+	private static class MapSchemaFactory extends SchemaFactory {
+		
+		public static final String MAPONTOLOGY = "mapontology";
+		private final OntModel model;
+		
+		public MapSchemaFactory() {
+			this.model = loadOntologyFromFilesystem(MAPONTOLOGY);			
+			initTypes();			
+			super.writeOntologyToFilesystemn(model, MAPONTOLOGY);
+		}				
+		
+		private void initTypes() {
+			var mapEntryClass = model.getOntClass(ENTRY_TYPE_URI);
+			if (mapEntryClass == null) {
+				mapEntryClass = model.createOntClass(ENTRY_TYPE_URI);
+			}
+			
+			var keyProp = model.getDataProperty(KEY_PROPERTY_URI);
+			if (keyProp == null) {
+				keyProp = model.createDataProperty(KEY_PROPERTY_URI);
+				keyProp.addDomain(mapEntryClass);
+				keyProp.addRange(model.getDatatype(XSD.xstring));
+			}
+			
+			var literalValueProp = model.getDataProperty(LITERAL_VALUE_PROPERTY_URI);
+			if (literalValueProp == null) {
+				literalValueProp = model.createDataProperty(LITERAL_VALUE_PROPERTY_URI);			
+				literalValueProp.addDomain(mapEntryClass);
+			}
+			
+			var objectValueProp = model.getObjectProperty(OBJECT_VALUE_PROPERTY_URI);
+			if (objectValueProp == null) {
+				objectValueProp = model.createObjectProperty(OBJECT_VALUE_PROPERTY_URI);
+				objectValueProp.addDomain(mapEntryClass);
+			}
+			
+			var containerProperty = model.getObjectProperty(CONTAINER_PROPERTY_URI);
+			if (containerProperty == null) {
+				containerProperty = model.createObjectProperty(CONTAINER_PROPERTY_URI);
+			}
+			
+			var mapReferenceSuperProperty = model.getObjectProperty(MAP_REFERENCE_SUPERPROPERTY_URI);
+			if (mapReferenceSuperProperty == null) {
+				mapReferenceSuperProperty = model.createObjectProperty(MAP_REFERENCE_SUPERPROPERTY_URI);
+				mapReferenceSuperProperty.addRange(mapEntryClass);
+			}
+		}
+
+		public void addSchemaToModel(Model modelToAddOntologyTo) {
+			modelToAddOntologyTo.add(model);		
+		} 
 	}
 }

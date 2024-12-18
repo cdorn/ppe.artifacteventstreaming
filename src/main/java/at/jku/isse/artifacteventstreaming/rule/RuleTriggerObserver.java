@@ -208,25 +208,22 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 		var res = stmt.getResource();
 		if (res.getURI() != null && res.getURI().startsWith(OWL2.NS))
 			return;
-		
+
 		var subject = stmt.getSubject();
 		if (subject.canAs(OntClass.class)) {
 			if (isAboutRuleDefinitionType(stmt)) { // a new rule was created
 				var def = repo.storeRuleDefinition(subject.as(OntObject.class));				
 				addRulesToMetadata(rulesToReevaluate, repo.getRulesToEvaluateUponRuleDefinitionActivation(def), stmt); 
-				createdResourceURIs.add(subject);
-				return;
-			} else { //other type creation ignored
-				return;
-			}
+				createdResourceURIs.add(subject);				
+			} 
 		} else if (isAboutRuleEvaluationType(stmt)) {// if a rule evaluation object created, ignore that 
-				createdResourceURIs.add(subject);
-				return;
-		} else 
-		// regular individual  created
-		if (subject.canAs(OntIndividual.class)) {
+			createdResourceURIs.add(subject);		
+		} else { 
+			// regular individual  created
+			if (subject.canAs(OntIndividual.class)) {
 				addRulesToMetadata(rulesToReevaluate, repo.getRulesAffectedByCreation(subject.as(OntIndividual.class)), stmt);
-		} // in any case, ignore further on				
+			} // in any case, ignore further on
+		}
 	}
 	
 	private void processRuleContextTypeOrExpressionAddition(Statement stmt, Map<RuleEvaluationWrapperResource, RuleEvaluationIterationMetadata> rulesToReevaluate, Set<Resource> createdResourceURIs) {

@@ -80,7 +80,7 @@ public class BranchBuilder {
 	/**
 	 * if not used, by default the 'main' branch will be created.
 	 */
-	public BranchBuilder setBrancURI(@NonNull URI branchURI) {		
+	public BranchBuilder setBranchURI(@NonNull URI branchURI) {		
 		this.branchURI = branchURI;
 		return this;
 	}

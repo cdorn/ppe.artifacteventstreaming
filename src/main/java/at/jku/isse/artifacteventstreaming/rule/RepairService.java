@@ -25,9 +25,12 @@ public class RepairService {
 	}				
 
 	private void initProperties() {
-		repairablePredicateProperty = model.createObjectProperty(RuleSchemaFactory.uri+"repairablePredicate");
-		repairablePredicateProperty.addDomain(model.createOntClass(OWL2.Class.getURI()));
-		repairablePredicateProperty.addRange(model.createOntClass(RDF.Property.getURI()));
+		repairablePredicateProperty = model.getObjectProperty(RuleSchemaFactory.uri+"repairablePredicate");
+		if (repairablePredicateProperty == null) {
+			repairablePredicateProperty = model.createObjectProperty(RuleSchemaFactory.uri+"repairablePredicate");		
+			repairablePredicateProperty.addDomain(model.createOntClass(OWL2.Class.getURI()));
+			repairablePredicateProperty.addRange(model.createOntClass(RDF.Property.getURI()));
+		}
 	}
 
 	public boolean isPropertyRepairable(@NonNull OntClass type, @NonNull Property property) {
