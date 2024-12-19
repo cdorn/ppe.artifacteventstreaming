@@ -361,8 +361,8 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 			return localInst;
 		else { 
 			var indiv = node.as(OntIndividual.class);
-			if (indiv.isAnon() && ruleRepo != null) { // mode with rule repo
-				var evalWrapper = ruleRepo.getEvaluations().get(indiv.getId());
+			if (ruleRepo != null) { // mode with rule repo
+				var evalWrapper = ruleRepo.getEvaluations().get(indiv.getURI());
 				if (evalWrapper != null)
 					return new RDFRuleResultWrapper(evalWrapper.getRuleEvalObj(), this, ruleRepo); //FIXME: we are created new wrappers every time, but if we cache, we wont know when they need to be deleted					
 			} 

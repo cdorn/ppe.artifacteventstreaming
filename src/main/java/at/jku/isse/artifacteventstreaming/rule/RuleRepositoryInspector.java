@@ -82,7 +82,7 @@ public class RuleRepositoryInspector {
 		Set<String> evals = new HashSet<>();
 		while(iterRule.hasNext()) { //property
 			//var ruleRes = iterRule.next().getResource().as(OntIndividual.class);
-			evals.add(iterRule.next().getResource().getId().toString());
+			evals.add(iterRule.next().getResource().getURI());
 		}
 		System.out.println(String.format("Scope: %s with property %s in rule evals: %s", instName, propName, evals.toString() ));
 	}

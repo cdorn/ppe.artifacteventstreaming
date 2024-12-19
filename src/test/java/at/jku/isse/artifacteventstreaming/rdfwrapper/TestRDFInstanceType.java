@@ -87,7 +87,18 @@ class TestRDFInstanceType {
 	void testFindType() {
 		assertEquals(typeBase, resolver.findAllInstanceTypesByFQN(typeBase.getId()).iterator().next());
 		assertEquals(typeChild, resolver.findAllInstanceTypesByFQN(typeChild.getId()).iterator().next());
-		assertEquals(5, resolver.getAllNonDeletedInstanceTypes().size());
+		var types = resolver.getAllNonDeletedInstanceTypes();
+		types.stream().forEach(type -> System.out.println(type.getId()));
+		/*
+		  http://isse.jku.at/artifactstreaming/rdfwrapper#MetaClass
+			http://isse.jku.at/artifactstreaming/rdfwrapper#propertyMetadataEntryType
+			http://at.jku.isse.test#issue
+			http://at.jku.isse.test#artifact
+			http://at.jku.isse.map#EntryType
+			http://www.w3.org/1999/02/22-rdf-syntax-ns#Seq
+
+		 * */
+		assertEquals(6, types.size());
 	}
 	
 	@Test
@@ -95,7 +106,7 @@ class TestRDFInstanceType {
 		assertEquals(typeBase, resolver.findAllInstanceTypesByFQN(typeBase.getId()).iterator().next());
 		typeBase.markAsDeleted();
 		assertTrue(resolver.findAllInstanceTypesByFQN(typeBase.getId()).isEmpty());
-		assertEquals(3, resolver.getAllNonDeletedInstanceTypes().size());
+		assertEquals(4, resolver.getAllNonDeletedInstanceTypes().size());
 	}
 	
 	@Test

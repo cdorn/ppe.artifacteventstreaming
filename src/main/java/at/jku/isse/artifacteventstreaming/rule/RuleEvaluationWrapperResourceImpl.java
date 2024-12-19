@@ -38,10 +38,15 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	 * @return a new evaluation object wrapper, ensuring that the evaluation and context element point to the same rule scope. 
 	 */
 	public static RuleEvaluationWrapperResourceImpl create(@NonNull RuleSchemaProvider factory, @NonNull RDFRuleDefinition def, @NonNull OntIndividual contextInstance) {
-		var evalObj = def.getRuleDefinition().createIndividual();	
+		var uri = createEvalURI(def, contextInstance);
+		var evalObj = def.getRuleDefinition().createIndividual(uri);	
 		evalObj.addLabel(def.getName());
 		addAddRuleEvaluationToNewOrExistingScope(contextInstance, evalObj, factory); // just to make sure that the context scope is set (no effect if already so)
 		return new RuleEvaluationWrapperResourceImpl(def, evalObj, contextInstance, factory);
+	}
+	
+	private static String createEvalURI(@NonNull RDFRuleDefinition def, @NonNull OntIndividual contextInstance) {
+		return def.getRuleDefinition().getURI()+"::"+contextInstance.getLocalName()+"::"+contextInstance.getURI().hashCode(); // we assume here that context instance come from the same namespace, hence are distinguishable based on their localname, but add the hashcode of the uri to be on a safer side
 	}
 	
 	private static void addAddRuleEvaluationToNewOrExistingScope(OntIndividual subject, OntIndividual ruleEval, RuleSchemaProvider factory) {
@@ -251,10 +256,9 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	@Override
 	public Object getEvaluationResult() {
 		if (result == null && getEvaluationError().length() == 0) { // never evaluated so far
-			return evaluate();
-		} else {
-			return result;
-		}
+			 evaluate();
+		} 
+		return result;		
 	}
 
 	@Override

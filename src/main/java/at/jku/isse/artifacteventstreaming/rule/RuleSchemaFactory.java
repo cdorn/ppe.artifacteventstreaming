@@ -63,7 +63,7 @@ public class RuleSchemaFactory extends SchemaFactory {
 		this.propertyCardinalityTypes = schemaUtil;
 		initTypes();
 		model.setNsPrefix("rules", uri);
-		super.writeOntologyToFilesystemn(model, RULEONTOLOGY);
+		super.writeOntologyToFilesystem(model, RULEONTOLOGY);
 	}
 
 	private void initTypes() {		
@@ -75,9 +75,20 @@ public class RuleSchemaFactory extends SchemaFactory {
 	}
 
 	private void initOntClasses() {
-		definitionType = model.createOntClass(ruleDefinitionURI);
-		resultBaseType = model.createOntClass(ruleEvaluationResultBaseTypeURI);
-		ruleScopeCollection = model.createOntClass(ruleScopePartURI);
+		
+		definitionType = model.getOntClass(ruleDefinitionURI);
+		if (definitionType == null)
+			definitionType = model.createOntClass(ruleDefinitionURI);
+		
+		resultBaseType = model.getOntClass(ruleEvaluationResultBaseTypeURI);
+		if (resultBaseType == null) {
+			resultBaseType = model.createOntClass(ruleEvaluationResultBaseTypeURI);
+			resultBaseType.addDisjointClass(definitionType);
+		}
+		
+		ruleScopeCollection = model.getOntClass(ruleScopePartURI);
+		if (ruleScopeCollection == null)
+			ruleScopeCollection = model.createOntClass(ruleScopePartURI);
 	}
 
 	private void initDefinitionTypeProperties() {
@@ -160,12 +171,17 @@ public class RuleSchemaFactory extends SchemaFactory {
 			hasRuleScope = model.createObjectProperty(elementHasRuleScopeURI);
 			hasRuleScope.addRange(ruleScopeCollection);
 		}
-
 		// usingElementProperty.addInverseProperty(hasRuleScope); //we dont want this as inverse, as if we remove instance, then this backlink would be gone as well.
 	}
 
 
-	public void addRuleSchemaToModel(Model modelToAddOntologyTo) {
-		modelToAddOntologyTo.add(model);		
+	public void addRuleSchemaToModel(OntModel modelToAddOntologyTo) {
+		//modelToAddOntologyTo.add(model); this will add new anonymous nodes (which we dont want to duplicate, hence
+		// we only add the model when the main class is not present.
+		if (modelToAddOntologyTo.getOntClass(ruleDefinitionURI) == null) {
+			modelToAddOntologyTo.add(model);
+		}
+		//FIXME: there is still the problem that two models that get augmented here, at different times (e.g., upon a restart) will have different anonymous ids
+		// as the ids are not persisted in the ttl file.
 	}
 }

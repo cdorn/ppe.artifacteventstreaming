@@ -135,7 +135,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 			var def = wrapper.getRuleDef().getRuleDefinition();
 			var evals =  repo.getEvaluations();
 			return def.individuals()
-				.map(eval -> evals.get(eval.getId()))
+				.map(eval -> evals.get(eval.getURI()))
 				.filter(Objects::nonNull)
 				.map(evalWrapper -> {
 					var result = evalWrapper.isConsistent();
@@ -159,7 +159,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 			var indiv = rdfEl.getInstance();
 			var evals =  repo.getEvaluations();
 			inspector.getEvalWrappersFromScopes(indiv).stream()
-				.map(evalObj -> evals.get(evalObj.getId()))
+				.map(evalObj -> evals.get(evalObj.getURI()))
 				.forEach(evalWrapper -> {
 					var result = evalWrapper.isConsistent();
 					var error = evalWrapper.getEvaluationError();

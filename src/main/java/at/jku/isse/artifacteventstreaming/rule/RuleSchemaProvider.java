@@ -1,9 +1,12 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
+import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFDataMgr;
 
 import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 import lombok.Getter;
@@ -26,7 +29,6 @@ public class RuleSchemaProvider {
 	
 	@Getter private OntDataProperty isEnabledProperty;
 	
-	// subclass of Bag
 	@Getter private OntClass ruleScopeCollection;
 	@Getter private OntObjectProperty usingPredicateProperty;
 	@Getter private OntObjectProperty usingElementProperty;
@@ -43,10 +45,10 @@ public class RuleSchemaProvider {
 	
 	public RuleSchemaProvider(OntModel model, RuleSchemaFactory schemaFactory) {
 		super();
-		schemaFactory.addRuleSchemaToModel(model);
-		this.schemaFactory = schemaFactory;
-		this.model = model;
 		model.setNsPrefix("rules", uri);
+		schemaFactory.addRuleSchemaToModel(model);		
+		this.schemaFactory = schemaFactory;
+		this.model = model;		
 		modelAccess = new RDFModelAccess(model, schemaFactory.getPropertyCardinalityTypes());
 		initTypes();
 	}

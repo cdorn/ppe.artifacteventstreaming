@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Test;
 import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.ChangeListener;
 
 class OntologyModelTest {
@@ -147,16 +148,17 @@ class OntologyModelTest {
 	void testSeq() {
 		OntModel m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM );
 		m.register(new ChangeListener());
-		var listFactory = new ListResourceType(m);
+		var singleType = new SingleResourceType(m);
+		var listFactory = new ListResourceType(m, singleType);
 		
 		OntClass artifactType = m.createOntClass(NS+"artifact");
 		OntIndividual art1 = artifactType.createIndividual(NS+"art1");
 		var successorProp = listFactory.addObjectListProperty(artifactType, NS+"hasSuccessor", artifactType);
-		
+		var seq = listFactory.getOrCreateSequenceFor(art1, successorProp);
 		
 		OntIndividual art2 = artifactType.createIndividual(NS+"art2");
-		Seq seq = m.createSeq(NS+"seq");											
-		assertTrue(listFactory.isListContainer(seq.as(OntIndividual.class)));
+		//Seq seq = m.createSeq(NS+"seq");											
+		assertTrue(listFactory.isListCollection(seq.as(OntIndividual.class)));
 		
 		seq.add(art2);		
 		art1.addProperty(successorProp.asProperty(), seq);
@@ -167,7 +169,8 @@ class OntologyModelTest {
 	void testPropertyName() {
 		OntModel m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM );
 		OntClass artifactType = m.createOntClass(NS+"artifact");		
-		var listFactory = new ListResourceType(m);
+		var singleType = new SingleResourceType(m);
+		var listFactory = new ListResourceType(m, singleType);
 		var successorProp = listFactory.addObjectListProperty(artifactType, NS+"hasSuccessor", artifactType);
 		
 		artifactType.declaredProperties().forEach(prop -> System.out.println(prop.getLocalName()));

@@ -3,14 +3,22 @@ package at.jku.isse.artifacteventstreaming.schemasupport;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.jena.datatypes.xsd.XSDDatatype;
+import org.apache.jena.ontapi.impl.OntGraphModelImpl;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntDataRange;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
+import org.apache.jena.ontapi.model.OntProperty;
+import org.apache.jena.rdf.model.AnonId;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.vocabulary.OWL2;
+import org.apache.jena.vocabulary.RDF;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.replay.StatementAugmentationSession.StatementWrapper;
@@ -28,65 +36,54 @@ public class PropertyCardinalityTypes {
 	private SingleResourceType singleType;
 
 	public PropertyCardinalityTypes(OntModel model) {
-		mapType = new MapResourceType(model); 
-		listType = new ListResourceType(model); 
 		singleType = new SingleResourceType(model);
+		mapType = new MapResourceType(model); 
+		listType = new ListResourceType(model, singleType); 		
 	}
 
+	/**
+	 * @deprecated Use {@link at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType#createBaseDataPropertyType(at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes,String,OntClass,OntDataRange)} instead
+	 */
 	public OntDataProperty createBaseDataPropertyType(String propUri, OntClass domain, OntDataRange range ) {
-		return createBaseDataPropertyType(domain.getModel(), propUri, List.of(domain), range);
+		return singleType.createBaseDataPropertyType(propUri, domain, range);
 	}
 	
+	/**
+	 * @deprecated Use {@link at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType#createBaseDataPropertyType(OntModel,String,List<OntClass>,OntDataRange)} instead
+	 */
 	public OntDataProperty createBaseDataPropertyType(@NonNull OntModel model, @NonNull String propUri, @NonNull List<OntClass> domains, @NonNull OntDataRange range ) {
-		if (model.getDataProperty(propUri) != null)
-			return null;
-		var prop = model.createDataProperty(propUri);
-		domains.forEach(prop::addDomain);		
-		prop.addRange(range);			
-		return prop;	
+		return singleType.createBaseDataPropertyType(model, propUri, domains, range);
 	}
 
+	/**
+	 * @deprecated Use {@link at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType#createBaseObjectPropertyType(String,OntClass,OntClass)} instead
+	 */
 	public OntObjectProperty createBaseObjectPropertyType(@NonNull String propUri, @NonNull OntClass domain, @NonNull OntClass range ) {
-		if (domain.getModel().getObjectProperty(propUri) != null)
-			return null;
-		var prop = domain.getModel().createObjectProperty(propUri);
-		prop.addRange(range);
-		prop.addDomain(domain);	
-		return prop;
+		return singleType.createBaseObjectPropertyType(propUri, domain, range);
 	}
 
 
 
+	/**
+	 * @deprecated Use {@link at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType#createSingleDataPropertyType(at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes,String,OntClass,OntDataRange)} instead
+	 */
 	public OntDataProperty createSingleDataPropertyType(@NonNull String propURI, @NonNull OntClass domain, @NonNull OntDataRange range) {
-		var prop = createBaseDataPropertyType(propURI, domain, range);
-		if (prop != null) {
-			var maxOneProp = domain.getModel().createDataMaxCardinality(prop, 1, null);
-			domain.addSuperClass(maxOneProp);
-			singleType.getSingleLiteralProperty().addSubProperty(prop);
-		}
-		return prop;
+		return singleType.createSingleDataPropertyType(propURI, domain, range);
 	}
 	
+	/**
+	 * @deprecated Use {@link at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType#createSingleDataPropertyType(at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes,String,List<OntClass>,OntDataRange)} instead
+	 */
 	public OntDataProperty createSingleDataPropertyType(@NonNull String propURI, @NonNull List<OntClass> domains, @NonNull OntDataRange range) {
-		var localModel = domains.get(0).getModel();
-		var prop = createBaseDataPropertyType(localModel, propURI, domains, range);
-		if (prop != null) {
-			var maxOneProp = localModel.createDataMaxCardinality(prop, 1, null);
-			domains.forEach(domain -> domain.addSuperClass(maxOneProp));			
-			singleType.getSingleLiteralProperty().addSubProperty(prop);
-		}
-		return prop;
+		return singleType.createSingleDataPropertyType(propURI, domains, range);
 	}
 
 
+	/**
+	 * @deprecated Use {@link at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType#createSingleObjectPropertyType(at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes,String,OntClass,OntClass)} instead
+	 */
 	public OntObjectProperty createSingleObjectPropertyType(@NonNull String propURI, @NonNull OntClass domain, @NonNull OntClass range) {
-		var prop = createBaseObjectPropertyType(propURI, domain, range);
-		if (prop != null) {
-			var maxOneProp = domain.getModel().createObjectMaxCardinality(prop, 1, null);
-			domain.addSuperClass(maxOneProp);
-			singleType.getSingleObjectProperty().addSubProperty(prop);
-		}
-		return prop;
+		return singleType.createSingleObjectPropertyType(propURI, domain, range);
 	}
 
 	public Optional<Resource> getCurrentListOwner(OntIndividual list) {
@@ -100,4 +97,7 @@ public class PropertyCardinalityTypes {
 			.map(Statement::getResource)
 			.findAny();
 	}
+	
+	
+	
 }

@@ -1,6 +1,7 @@
 package at.jku.isse.passiveprocessengine.rdfwrapper;
 
 import org.apache.jena.ontapi.model.OntIndividual;
+import org.apache.jena.vocabulary.OWL2;
 
 import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
 import at.jku.isse.passiveprocessengine.core.PPEInstance;
@@ -20,9 +21,17 @@ public class RDFRuleResultWrapper extends RDFInstance implements RuleResult {
 	}
 	
 	@Override
+	public String getName() {
+		return element.getLabel();		
+	}
+	
+	@Override
 	public PPEInstanceType getInstanceType() {
 		var types = element.as(OntIndividual.class).classes(true).toList();
-		var optType = types.stream().filter(type -> !type.equals(ruleRepo.getFactory().getDefinitionType())).findFirst();
+		var optType = types.stream()
+				.filter(type -> !type.getURI().equals(OWL2.NamedIndividual.getURI()))
+				.filter(type -> !type.equals(ruleRepo.getFactory().getDefinitionType()))
+				.findFirst();
 		if (optType.isPresent()) {
 			var type = resolver.findNonDeletedInstanceTypeByFQN(optType.get().getURI());
 			if (type.isPresent() && type.get() instanceof RuleDefinition def)

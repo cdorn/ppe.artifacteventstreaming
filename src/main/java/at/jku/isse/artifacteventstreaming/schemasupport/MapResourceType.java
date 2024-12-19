@@ -50,10 +50,7 @@ public class MapResourceType  {
 	private final OntClass mapEntryClass;
 	private final Set<OntClass> subclassesCache = new HashSet<>();
 	
-	private final OntModel localModel;
-	
 	public MapResourceType(OntModel model) {		
-		this.localModel = model;
 		factory.addSchemaToModel(model);
 				
 		mapEntryClass = model.getOntClass(ENTRY_TYPE_URI);
@@ -154,7 +151,7 @@ public class MapResourceType  {
 		public MapSchemaFactory() {
 			this.model = loadOntologyFromFilesystem(MAPONTOLOGY);			
 			initTypes();			
-			super.writeOntologyToFilesystemn(model, MAPONTOLOGY);
+			super.writeOntologyToFilesystem(model, MAPONTOLOGY);
 		}				
 		
 		private void initTypes() {
@@ -165,6 +162,7 @@ public class MapResourceType  {
 			
 			var keyProp = model.getDataProperty(KEY_PROPERTY_URI);
 			if (keyProp == null) {
+				
 				keyProp = model.createDataProperty(KEY_PROPERTY_URI);
 				keyProp.addDomain(mapEntryClass);
 				keyProp.addRange(model.getDatatype(XSD.xstring));

@@ -43,47 +43,44 @@ public class ListResourceType {
 	private final OntObjectProperty listReferenceSuperProperty;
 	@Getter
 	private final OntClass listClass;
-	private final OntModel m;
+	private final SingleResourceType singleType;	
 	private final Set<OntClass> subclassesCache = new HashSet<>();
 	
-	public ListResourceType(OntModel model) {		
-		this.m = model;
+	public ListResourceType(OntModel model, SingleResourceType singleType) {			
+		this.singleType = singleType;
 		factory.addSchemaToModel(model);
 		listClass = model.getOntClass(RDF.Seq);	
 		containerProperty = model.getObjectProperty(CONTAINER_PROPERTY_URI);	
-		listReferenceSuperProperty = m.getObjectProperty(LIST_REFERENCE_SUPERPROPERTY_URI);		
+		listReferenceSuperProperty = model.getObjectProperty(LIST_REFERENCE_SUPERPROPERTY_URI);		
 		initHierarchyCache();
 	}
 			
 	private void initHierarchyCache() {
-		listClass.subClasses().forEach(subclassesCache::add);
+		listClass.subClasses().forEach(subclassesCache::add);	
 	}
 	
 	public OntObjectProperty addObjectListProperty(OntClass resource, String listPropertyURI, OntClass valueType) {
 		OntModel model = resource.getModel();
-		var prop = model.getObjectProperty(listPropertyURI);
+		OntObjectProperty prop = model.getObjectProperty(listPropertyURI);
 		if (prop == null) {		
 			// create the specific class for this list
-			OntClass listType = m.createOntClass(listPropertyURI+LIST_TYPE_NAME);
+			OntClass listType = model.createOntClass(listPropertyURI+LIST_TYPE_NAME);
 			listType.addSuperClass(listClass);			
-			// create the property that points to this list type		
-			prop = model.createObjectProperty(listPropertyURI);						
-			prop.addDomain(resource);
-			prop.addRange(listType);
-			// ensure we only point to one list only
-			var maxOneList = m.createObjectMaxCardinality(prop, 1, listType);
-			resource.addSuperClass(maxOneList);	
+			// create the property that points to this list type // ensure we only point to one list only
+			prop = singleType.createBaseObjectPropertyType(listPropertyURI, resource, listType);  
+			var maxOneProp = singleType.getMaxOneObjectCardinalityRestriction(model, prop, listType);
+			resource.addSuperClass(maxOneProp);
 			
 			// now also restrict the list content to be of valueType, and property to be a subproperty of 'li'			
 			var liProp = model.createObjectProperty(listPropertyURI+OBJECT_LIST_NAME);
 			liProp.addProperty(RDFS.subPropertyOf, LI);
 			liProp.addDomain(listType);
 			liProp.addRange(valueType);
-			ObjectAllValuesFrom restr = m.createObjectAllValuesFrom(liProp, valueType);
+			ObjectAllValuesFrom restr = model.createObjectAllValuesFrom(liProp, valueType);
 			// add the restriction to the list type
 			listType.addSuperClass(restr);
 			listReferenceSuperProperty.addSubProperty(prop);	
-			subclassesCache.add(resource);
+			subclassesCache.add(listType);
 			return prop;
 		} else 
 			return null; //as we cannot guarantee that the property that was identified is an OntObjectProperty		
@@ -91,29 +88,26 @@ public class ListResourceType {
 	
 	public OntObjectProperty addLiteralListProperty(OntClass resource, String listPropertyURI, OntDataRange valueType) {
 		OntModel model = resource.getModel();
-		var prop = model.getObjectProperty(listPropertyURI);
+		OntObjectProperty prop = model.getObjectProperty(listPropertyURI);
 		if (prop == null) {		
 			// create the specific class for this list
-			OntClass listType = m.createOntClass(listPropertyURI+LIST_TYPE_NAME);
+			OntClass listType = model.createOntClass(listPropertyURI+LIST_TYPE_NAME);
 			listType.addSuperClass(listClass);			
-			// create the property that points to this list type		
-			prop = model.createObjectProperty(listPropertyURI);						
-			prop.addDomain(resource);
-			prop.addRange(listType);
-			// ensure we only point to one list only
-			var maxOneList = m.createObjectMaxCardinality(prop, 1, listType);
-			resource.addSuperClass(maxOneList);	
+			// create the property that points to this list type // ensure we only point to one list only
+			prop = singleType.createBaseObjectPropertyType(listPropertyURI, resource, listType);  
+			var maxOneProp = singleType.getMaxOneObjectCardinalityRestriction(model, prop, listType);
+			resource.addSuperClass(maxOneProp);
 			
 			// now also restrict the list content to be of valueType, and property to be a subproperty of 'li'			
 			var liProp = model.createDataProperty(listPropertyURI+LITERAL_LIST_NAME);
 			liProp.addProperty(RDFS.subPropertyOf, LI);
 			liProp.addDomain(listType);
 			liProp.addRange(valueType);
-			DataAllValuesFrom restr = m.createDataAllValuesFrom(liProp, valueType);
+			DataAllValuesFrom restr = model.createDataAllValuesFrom(liProp, valueType);
 			// add the restriction to the list type
 			listType.addSuperClass(restr);
 			listReferenceSuperProperty.addSubProperty(prop);	
-			subclassesCache.add(resource);
+			subclassesCache.add(listType);
 			return prop;
 		} else 
 			return null; //as we cannot guarantee that the property that was identified is an OntObjectProperty		
@@ -129,12 +123,12 @@ public class ListResourceType {
 		return false;
 	}
 	
-	public boolean isListContainer(OntIndividual ontInd) {
+	public boolean isListCollection(OntIndividual ontInd) {
 		return ontInd.classes(true).anyMatch(subclassesCache::contains);
 		//return ontInd.classes(true).anyMatch(type -> listClass.hasSubClass(type, true)); Too slow
 	}
 
-	public boolean wasListContainer(List<Resource> delTypes) {
+	public boolean wasListCollection(List<Resource> delTypes) {
 		return delTypes.stream().anyMatch(type -> type.getURI().equals(getListClass().getURI()) || 
 				subclassesCache.stream().map(RDFNode::asResource).anyMatch(clazz -> clazz.equals(type))  );
 	//	return delTypes.stream().anyMatch(type -> type.getURI().equals(getListClass().getURI()) || 
@@ -185,7 +179,7 @@ public class ListResourceType {
 		public ListSchemaFactory() {
 			this.model = loadOntologyFromFilesystem(LISTONTOLOGY);			
 			initTypes();			
-			super.writeOntologyToFilesystemn(model, LISTONTOLOGY);
+			super.writeOntologyToFilesystem(model, LISTONTOLOGY);
 		}				
 
 		private void initTypes() {

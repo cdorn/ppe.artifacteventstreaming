@@ -170,7 +170,7 @@ public class TransformationSession extends StatementAugmentationSession {
 		if (obj.isLiteral()) return false;
 		if (obj.canAs(OntIndividual.class)) { // perhaps a mapEntry or list
 			var ind = obj.as(OntIndividual.class);
-			return resolver.getCardinalityUtil().getMapType().isMapEntry(ind) || resolver.getCardinalityUtil().getListType().isListContainer(ind);
+			return resolver.getCardinalityUtil().getMapType().isMapEntry(ind) || resolver.getCardinalityUtil().getListType().isListCollection(ind);
 		} // Seq is an OntInd
 		return false;
 	}

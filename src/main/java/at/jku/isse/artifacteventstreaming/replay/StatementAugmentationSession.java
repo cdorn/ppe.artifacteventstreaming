@@ -1,6 +1,5 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -13,7 +12,6 @@ import java.util.stream.Stream;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
-import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
@@ -92,7 +90,7 @@ public class StatementAugmentationSession {
 		// instance or map (list/seq/bag is an ont individual)
 		if (schemaUtils.getMapType().isMapEntry(ontInd)) {		// a map entry was inserted or updated
 			processMapEntry(ontInd, stmts, false);
-		} else if (schemaUtils.getListType().isListContainer(ontInd)) { 	// list entry added/removed/reordered
+		} else if (schemaUtils.getListType().isListCollection(ontInd)) { 	// list entry added/removed/reordered
 			processListContainer(ontInd, stmts, false);
 		} else { 	// --> could also be adding a new list to the owner, or new mapentry to the owner, or removing from the owner
 		// else something (e.g., single value) added/removed from individual, might be a set
@@ -105,7 +103,7 @@ public class StatementAugmentationSession {
 		// reomved instance or map (list/seq/bag is an ont individual)
 		if (schemaUtils.getMapType().wasMapEntry(delTypes)) { 		// a map entry was removed
 			processMapEntry(ontInd, stmts, true);
-		} else if (schemaUtils.getListType().wasListContainer(delTypes)) { // list removed
+		} else if (schemaUtils.getListType().wasListCollection(delTypes)) { // list removed
 			processListContainer(ontInd, stmts, true);
 		} else {
 			// here we can't filter out removal of deleted containment elements as their type is no longer accessible, 

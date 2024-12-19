@@ -60,7 +60,7 @@ public class RuleDefinitionBuilder {
 		var ruleEvalType = factory.getDefinitionType().getModel().createOntClass(ruleURI);
 		ruleEvalType.addSuperClass(factory.getResultBaseType());
 		// then treat this as a instance of definition
-		var ruleDef = factory.getDefinitionType().getModel().createIndividual(ruleURI);
+		var ruleDef = factory.getDefinitionType().createIndividual(ruleURI);
 		RDFRuleDefinitionImpl rule = new RDFRuleDefinitionImpl(ruleDef, factory, ruleExpression, contextType);
 		if (description != null)
 			rule.setDescription(description);

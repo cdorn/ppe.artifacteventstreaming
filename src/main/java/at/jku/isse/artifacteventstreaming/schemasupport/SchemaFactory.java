@@ -26,7 +26,7 @@ public class SchemaFactory {
 		return model;
 	}
 	
-	public void writeOntologyToFilesystemn(Model model, String ontologyName) {				
+	public void writeOntologyToFilesystem(Model model, String ontologyName) {				
 		String fullName = "ontologies/"+ontologyName+".ttl" ;		
 		try {
 			var output = new FileOutputStream(fullName);

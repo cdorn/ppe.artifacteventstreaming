@@ -103,6 +103,7 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 		if (modelDataset.isEmpty()) throw new RuntimeException(branchURI+" could not be loaded");
 		
 		modelDataset.get().begin(ReadWrite.WRITE);
+		
 		var stateKeeper = new StateKeeperImpl(branchURI, cacheFactory.getCache(), eventstoreFactory.getEventStore(branchURI.toString()));
 		
 		Dataset repoDataset = DatasetFactory.createTxnMem();
@@ -116,22 +117,27 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 					.build();		
 			var model1 = branch.getModel();	
 			loadedModel.add(model1);
+			System.out.println("loaded model of size: "+model1.size());
 			var cardUtil = new PropertyCardinalityTypes(model1);
+			System.out.println("Size after carditnality types build: "+model1.size());
 			observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory(cardUtil));
+			System.out.println("Size after observer factory build: "+model1.size());
 			var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);
+			System.out.println("Size after observer build: "+model1.size());
 			var repairService = new RepairService(model1, observer.getRepo());
 			RuleEnabledResolver resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
 			var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, new InMemoryHistoryRepository());
 			branch.appendBranchInternalCommitService(observer);
 			branch.appendBranchInternalCommitService(changeTransformer);
-			
+			System.out.println("Size after prepare listeners: "+model1.size());
 			//var unfinishedCommit = stateKeeper.loadState();
 			// branch.startCommitHandlers(unfinishedCommit); // first complete other stuff on top
 			
 			
 			instanceRepository = resolver;
 			schemaRegistry = resolver;
-			repairTreeProvider = new RDFRepairTreeProvider(repairService, observer.getRepo(), resolver, observer); 			
+			repairTreeProvider = new RDFRepairTreeProvider(repairService, observer.getRepo(), resolver, observer);
+			System.out.println("Size after repair tree build: "+model1.size());
 			ruleEvaluationService = resolver;
 			changeEventTransformer = changeTransformer;
 			coreTypeFactory = new CoreTypeFactory(resolver, resolver);
