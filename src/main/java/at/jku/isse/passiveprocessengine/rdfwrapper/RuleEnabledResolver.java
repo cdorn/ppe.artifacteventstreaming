@@ -44,8 +44,25 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 		this.ruleSchema = ruleSchema;
 		this.repo = repo;
 		this.inspector = new RuleRepositoryInspector(ruleSchema);
+		initOverride();
 	}
 
+	@Override
+	protected void init() {
+		//overriding, below
+	}
+	
+	protected void initOverride() {
+		var ruleDefinitions = ruleSchema.getDefinitionType().individuals().map(indiv -> indiv.getURI()).collect(Collectors.toSet());
+		model.classes()
+			.filter(ontClass -> !ruleDefinitions.contains(ontClass.getURI())) // we dont want to cache rule definitons as instance types but rule definitions via rule repo
+			.forEach(ontClass -> typeIndex.put(ontClass, new RDFInstanceType(ontClass, this)));
+		var ruleEvalWrappers = ruleSchema.getResultBaseType().individuals().collect(Collectors.toSet()); // we dont want to cache the result resources
+		model.individuals()
+			.filter(indiv -> !ruleEvalWrappers.contains(indiv))
+			.forEach(indiv -> instanceIndex.put(indiv, new RDFInstance(indiv, this)));
+	}
+	
 	@Override
 	public RuleDefinition createInstance(PPEInstanceType type, String ruleName, String ruleExpression) {
 		OntClass ctxType = (OntClass) resolveTypeToClassOrDatarange(type);

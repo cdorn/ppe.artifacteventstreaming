@@ -69,9 +69,9 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		init();		
 	}
 	
-	private void init() {
+	protected void init() {
 		model.classes().forEach(ontClass -> typeIndex.put(ontClass, new RDFInstanceType(ontClass, this)));
-		//list all individuals via ontClass.individuals()
+		model.individuals().forEach(indiv -> instanceIndex.put(indiv, new RDFInstance(indiv, this)));
 	}
 	
 	private OntClass createMetaClass(OntModel model2) {
@@ -360,9 +360,9 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		if (localInst != null)
 			return localInst;
 		else { 
-			var indiv = node.as(OntIndividual.class);
+			//var indiv = node.as(OntIndividual.class);
 			if (ruleRepo != null) { // mode with rule repo
-				var evalWrapper = ruleRepo.getEvaluations().get(indiv.getURI());
+				var evalWrapper = ruleRepo.getEvaluations().get(node.getURI());
 				if (evalWrapper != null)
 					return new RDFRuleResultWrapper(evalWrapper.getRuleEvalObj(), this, ruleRepo); //FIXME: we are created new wrappers every time, but if we cache, we wont know when they need to be deleted					
 			} 

@@ -4,6 +4,7 @@ import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.vocabulary.OWL2;
 
 import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.passiveprocessengine.core.PPEInstance;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
 import at.jku.isse.passiveprocessengine.core.RuleDefinition;
@@ -44,7 +45,7 @@ public class RDFRuleResultWrapper extends RDFInstance implements RuleResult {
 
 	@Override
 	public Boolean isConsistent() {
-		return super.getTypedProperty("ruleHasConsistentResult", Boolean.class, false);
+		return super.getTypedProperty(RuleSchemaFactory.ruleHasConsistentResultURI, Boolean.class, false);
 	}
 
 	@Override
