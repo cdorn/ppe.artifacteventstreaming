@@ -42,7 +42,7 @@ public class PropertyCardinalityTypes {
 	}
 
 	/**
-	 * @deprecated Use {@link at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType#createBaseDataPropertyType(at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes,String,OntClass,OntDataRange)} instead
+	 * @deprecated Use {@link at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType#createBaseDataPropertyType(String,OntClass,OntDataRange)} instead
 	 */
 	public OntDataProperty createBaseDataPropertyType(String propUri, OntClass domain, OntDataRange range ) {
 		return singleType.createBaseDataPropertyType(propUri, domain, range);
@@ -65,14 +65,14 @@ public class PropertyCardinalityTypes {
 
 
 	/**
-	 * @deprecated Use {@link at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType#createSingleDataPropertyType(at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes,String,OntClass,OntDataRange)} instead
+	 * @deprecated Use {@link at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType#createSingleDataPropertyType(String,OntClass,OntDataRange)} instead
 	 */
 	public OntDataProperty createSingleDataPropertyType(@NonNull String propURI, @NonNull OntClass domain, @NonNull OntDataRange range) {
 		return singleType.createSingleDataPropertyType(propURI, domain, range);
 	}
 	
 	/**
-	 * @deprecated Use {@link at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType#createSingleDataPropertyType(at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes,String,List<OntClass>,OntDataRange)} instead
+	 * @deprecated Use {@link at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType#createSingleDataPropertyType(String,List<OntClass>,OntDataRange)} instead
 	 */
 	public OntDataProperty createSingleDataPropertyType(@NonNull String propURI, @NonNull List<OntClass> domains, @NonNull OntDataRange range) {
 		return singleType.createSingleDataPropertyType(propURI, domains, range);
@@ -80,7 +80,7 @@ public class PropertyCardinalityTypes {
 
 
 	/**
-	 * @deprecated Use {@link at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType#createSingleObjectPropertyType(at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes,String,OntClass,OntClass)} instead
+	 * @deprecated Use {@link at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType#createSingleObjectPropertyType(String,OntClass,OntClass)} instead
 	 */
 	public OntObjectProperty createSingleObjectPropertyType(@NonNull String propURI, @NonNull OntClass domain, @NonNull OntClass range) {
 		return singleType.createSingleObjectPropertyType(propURI, domain, range);

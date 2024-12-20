@@ -1,11 +1,17 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
 import java.util.List;
+import java.util.Optional;
 
+import org.apache.jena.ontapi.OntModelFactory;
+import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
+import org.apache.jena.query.Dataset;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.tdb2.TDB2Factory;
 import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
@@ -14,7 +20,7 @@ import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes
 import at.jku.isse.artifacteventstreaming.schemasupport.SchemaFactory;
 import lombok.Getter;
 
-public class RuleSchemaFactory extends SchemaFactory {
+public class RuleSchemaFactory {
 
 	private static final String RULEONTOLOGY = "ruleontology";
 
@@ -56,14 +62,25 @@ public class RuleSchemaFactory extends SchemaFactory {
 	private OntObjectProperty havingScopePartProperty;
 
 	private final OntModel model;
+	private final Dataset ontology;
 	@Getter private final PropertyCardinalityTypes propertyCardinalityTypes;
 
 	public RuleSchemaFactory(PropertyCardinalityTypes schemaUtil) {
-		this.model = loadOntologyFromFilesystem(RULEONTOLOGY);
 		this.propertyCardinalityTypes = schemaUtil;
+		this.ontology = loadOntologyFromFilesystem();
+		ontology.begin(ReadWrite.WRITE);
+		this.model = OntModelFactory.createModel(ontology.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		initTypes();
 		model.setNsPrefix("rules", uri);
-		super.writeOntologyToFilesystem(model, RULEONTOLOGY);
+		ontology.commit();
+		ontology.close();
+	}
+
+	private Dataset loadOntologyFromFilesystem() {
+		String directory = "ontologies/"+RULEONTOLOGY ;
+		Dataset dataset = TDB2Factory.connectDataset(directory) ;
+		if (dataset == null) throw new RuntimeException("Cannot load rule ontology dataset");
+		return dataset;
 	}
 
 	private void initTypes() {		
@@ -179,9 +196,11 @@ public class RuleSchemaFactory extends SchemaFactory {
 		//modelToAddOntologyTo.add(model); this will add new anonymous nodes (which we dont want to duplicate, hence
 		// we only add the model when the main class is not present.
 		if (modelToAddOntologyTo.getOntClass(ruleDefinitionURI) == null) {
+			ontology.begin(ReadWrite.READ);
 			modelToAddOntologyTo.add(model);
+			ontology.end();
 		}
-		//FIXME: there is still the problem that two models that get augmented here, at different times (e.g., upon a restart) will have different anonymous ids
-		// as the ids are not persisted in the ttl file.
+		//FixedBy DB usage: there is still the problem that two models that get augmented here, at different times (e.g., upon a restart) will have different anonymous ids
+		// as the ids are not persisted in the ttl file. --> TDB2 does maintain anonIds and we create replicatable unique anon ids
 	}
 }

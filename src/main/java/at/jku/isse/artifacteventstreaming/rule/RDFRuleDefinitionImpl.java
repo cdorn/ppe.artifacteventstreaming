@@ -12,8 +12,9 @@ import at.jku.isse.designspace.rule.arl.expressions.RootExpression;
 import at.jku.isse.designspace.rule.arl.parser.ArlParser;
 import at.jku.isse.designspace.rule.arl.parser.ArlType;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 
-
+@Slf4j
 public class RDFRuleDefinitionImpl implements RDFRuleDefinition {
 
 	private final OntObject ontObject;
@@ -30,23 +31,35 @@ public class RDFRuleDefinitionImpl implements RDFRuleDefinition {
 		setRuleExpression(expression);
 	}
 	
-	protected RDFRuleDefinitionImpl(@NonNull OntObject ruleDefinition
+	public static RDFRuleDefinitionImpl rebuildRDFRuleDefinitionImpl(@NonNull OntObject ruleDefinition
+								, @NonNull RuleSchemaProvider factory) {
+		var def = new RDFRuleDefinitionImpl(ruleDefinition, factory);
+		if (!def.reloadContextAndExpressionSuccessful()) {
+			def = null;
+			return null;
+		} else
+			return def;
+	}
+	
+	private RDFRuleDefinitionImpl(@NonNull OntObject ruleDefinition
 			, @NonNull RuleSchemaProvider factory) {
 			this.ontObject = ruleDefinition;
 			this.factory = factory;				
-			reloadContextAndExpression();
 	}
 	
-	protected void reloadContextAndExpression() {
+	protected boolean reloadContextAndExpressionSuccessful() {
 		var expression = getRuleExpression();
 		if (expression == null || expression.length() == 0) {
-			setExpressionError("Cannot load rule definition from Rule Definition "+ontObject.getURI()+" as it does not have a rule expression");				
+			log.warn("Cannot load rule definition from Rule Definition "+ontObject.getURI()+" as it does not have a rule expression");			
+			return false;
 		} else {
 			var contextType = getRDFContextType();
 			if (contextType == null) {
-				setExpressionError("Cannot load rule definition from Rule Definition "+ontObject.getURI()+" as it does not reference a context type");
+				log.warn("Cannot load rule definition from Rule Definition "+ontObject.getURI()+" as it does not reference a context type");
+				return false;
 			} else {
 				generateSyntaxTree(expression);
+				return true;
 			}
 		}
 	}
