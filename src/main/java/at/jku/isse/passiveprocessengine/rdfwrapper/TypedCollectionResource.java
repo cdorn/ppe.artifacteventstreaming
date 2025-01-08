@@ -39,9 +39,9 @@ public abstract class TypedCollectionResource {
 				return false;
 			}
 			var ontInd = node.asResource().as(OntIndividual.class);
-			if (ontInd.getURI().equals(objectType.getURI()))
+			if (ontInd.getURI().equals(objectType.getURI())) // TODO: doesnt make sense to check the new value to the type?!
 				return true;			
-			var superClasses = RDFElement.getSuperTypesAndSuperclasses(ontInd); 
+			var superClasses = RDFElement.getSuperTypesAndSuperclasses(ontInd); //TODO: performance improvement necessary, reuse assignable in RDFELement
 			if (superClasses.stream().noneMatch(clazz -> clazz.equals(this.objectType))) {// not a valid subclass
 				return false;
 			}

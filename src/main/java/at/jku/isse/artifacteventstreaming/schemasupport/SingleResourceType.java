@@ -1,8 +1,11 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.jena.datatypes.xsd.XSDDatatype;
+import org.apache.jena.graph.Node;
 import org.apache.jena.ontapi.impl.OntGraphModelImpl;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
@@ -11,13 +14,17 @@ import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntProperty;
+import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.ontapi.model.OntObjectProperty.Named;
 import org.apache.jena.rdf.model.AnonId;
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 
 import lombok.Getter;
 import lombok.NonNull;
@@ -35,31 +42,62 @@ public class SingleResourceType {
 	@Getter
 	private final OntDataProperty singleLiteralProperty;
 	
+	private final Set<OntRelationalProperty> objectSubpropertyCache = new HashSet<>();
+	private final Set<OntRelationalProperty> dataSubpropertyCache = new HashSet<>();
+	
+	private final Set<String> propertyCache = new HashSet<>();
+	
 	public SingleResourceType(OntModel model) {
 		factory.addSchemaToModel(model);	
 		singleObjectProperty = model.getObjectProperty(SINGLE_OBJECT_URI);
 		singleLiteralProperty = model.getDataProperty(SINGEL_LITERAL_URI);
+		fillCaches(model);		
+	}
+	
+	private void fillCaches(OntModel model) {		
+		var iter = model.listResourcesWithProperty(RDF.type, RDF.Nodes.Property);
+		while (iter.hasNext()) {
+			propertyCache.add(iter.next().getURI());
+		}
+		singleObjectProperty.subProperties().forEach(objectSubpropertyCache::add);
+		singleLiteralProperty.subProperties().forEach(dataSubpropertyCache::add);
+	}
+	
+	public boolean isSingleProperty(OntRelationalProperty prop) {
+		return dataSubpropertyCache.contains(prop) || objectSubpropertyCache.contains(prop);
+	}
+	
+	/*
+	 * checks if a property exists for that URI, if that property has been created via this object.
+	 * */
+	public boolean existsPrimaryProperty(String uri) {
+		//return model.getGraph().contains(ResourceFactory.createResource(uri).asNode(), RDF.Nodes.type, Node.ANY);
+		return propertyCache.contains(uri);
 	}
 	
 	public OntDataProperty createBaseDataPropertyType(String propUri, OntClass domain, OntDataRange range ) {
 		return createBaseDataPropertyType(domain.getModel(), propUri, List.of(domain), range);
 	}
 
-	public OntDataProperty createBaseDataPropertyType(@NonNull OntModel model, @NonNull String propUri, @NonNull List<OntClass> domains, @NonNull OntDataRange range ) {
-		if (model.getDataProperty(propUri) != null)
+	public OntDataProperty createBaseDataPropertyType(@NonNull OntModel model, @NonNull String propUri, @NonNull List<OntClass> domains, @NonNull OntDataRange range ) {				
+		//if (model.getDataProperty(propUri) != null)
+		if (existsPrimaryProperty(propUri))
 			return null;
 		var prop = model.createDataProperty(propUri);
 		domains.forEach(prop::addDomain);		
 		prop.addRange(range);			
+		propertyCache.add(propUri);
 		return prop;	
 	}
 
 	public OntObjectProperty createBaseObjectPropertyType(@NonNull String propUri, @NonNull OntClass domain, @NonNull OntClass range ) {
-		if (domain.getModel().getObjectProperty(propUri) != null)
+		//if (domain.getModel().getObjectProperty(propUri) != null)
+		if (existsPrimaryProperty(propUri))
 			return null;
 		var prop = domain.getModel().createObjectProperty(propUri);
 		prop.addRange(range);
-		prop.addDomain(domain);	
+		prop.addDomain(domain);
+		propertyCache.add(propUri);
 		return prop;
 	}
 
@@ -67,8 +105,9 @@ public class SingleResourceType {
 		var prop = createBaseDataPropertyType(propURI, domain, range);
 		if (prop != null) {
 			var maxOneProp = getMaxOneDataCardinalityRestriction(domain.getModel(), prop, range);
-			domain.addSuperClass(maxOneProp);
+			domain.addProperty(RDFS.subClassOf, maxOneProp);
 			getSingleLiteralProperty().addSubProperty(prop);
+			dataSubpropertyCache.add(prop);
 		}
 		return prop;
 	}
@@ -78,8 +117,9 @@ public class SingleResourceType {
 		var prop = createBaseDataPropertyType(localModel, propURI, domains, range);
 		if (prop != null) {
 			var maxOneProp = getMaxOneDataCardinalityRestriction(localModel, prop, range);
-			domains.forEach(domain -> domain.addSuperClass(maxOneProp));			
+			domains.forEach(domain -> domain.addProperty(RDFS.subClassOf, maxOneProp));			//domain.addSuperClass(maxOneProp)
 			getSingleLiteralProperty().addSubProperty(prop);
+			dataSubpropertyCache.add(prop);
 		}
 		return prop;
 	}
@@ -88,21 +128,23 @@ public class SingleResourceType {
 		var prop = createBaseObjectPropertyType(propURI, domain, range);
 		if (prop != null) {
 			var maxOneProp = getMaxOneObjectCardinalityRestriction(domain.getModel(), prop, range);
-			domain.addSuperClass(maxOneProp);
+			//domain.addSuperClass(maxOneProp);
+			domain.addProperty(RDFS.subClassOf, maxOneProp);			
 			getSingleObjectProperty().addSubProperty(prop);
+			objectSubpropertyCache.add(prop);
 		}
 		return prop;
 	}
 
 	
-	public OntClass getMaxOneObjectCardinalityRestriction(OntModel model, OntProperty onProperty, OntClass type) {
-		var restr = createQualifiedMaxOneRestriction(model, onProperty, type);
-		return ((OntGraphModelImpl)model).getNodeAs(restr.asNode(), OntClass.ObjectMaxCardinality.class);
+	public Resource getMaxOneObjectCardinalityRestriction(OntModel model, OntProperty onProperty, OntClass type) {
+		return createQualifiedMaxOneRestriction(model, onProperty, type);
+		//return ((OntGraphModelImpl)model).getNodeAs(restr.asNode(), OntClass.ObjectMaxCardinality.class);
 	}
 	
-	public OntClass getMaxOneDataCardinalityRestriction(OntModel model, OntProperty onProperty, OntDataRange type) {
-		var restr = createQualifiedMaxOneRestriction(model, onProperty, type);
-		return ((OntGraphModelImpl)model).getNodeAs(restr.asNode(), OntClass.DataMaxCardinality.class);
+	public Resource getMaxOneDataCardinalityRestriction(OntModel model, OntProperty onProperty, OntDataRange type) {
+		return createQualifiedMaxOneRestriction(model, onProperty, type);
+		//return ((OntGraphModelImpl)model).getNodeAs(restr.asNode(), OntClass.DataMaxCardinality.class);
 	}
 	
 	private Resource createQualifiedMaxOneRestriction(OntModel model, OntProperty onProperty, OntObject rangeOrClass) {

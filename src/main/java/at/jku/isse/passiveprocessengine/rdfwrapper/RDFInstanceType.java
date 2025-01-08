@@ -1,25 +1,22 @@
 package at.jku.isse.passiveprocessengine.rdfwrapper;
 
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntClass.CardinalityRestriction;
 import org.apache.jena.ontapi.model.OntClass.ValueRestriction;
-import org.apache.jena.ontapi.model.OntDataProperty;
-import org.apache.jena.ontapi.model.OntObjectProperty;
-import org.apache.jena.ontapi.model.OntObjectProperty.Named;
-import org.apache.jena.ontapi.model.OntProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
-
-import com.ctc.wstx.shaded.msv_core.util.Uri;
 
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
@@ -29,24 +26,53 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 
 	@Getter
 	protected final OntClass type;
-	
-	//protected final Map<OntProperty, RDFPropertyType> propWrappers = new HashMap<>();
 	protected final Map<String, RDFPropertyType> propWrappers = new HashMap<>();
+	@Getter
+	protected final Set<OntClass> allSuperClasses = new HashSet<>();
 	
-	public RDFInstanceType(OntClass element, NodeToDomainResolver resolver) {
+	public RDFInstanceType(OntClass element,  NodeToDomainResolver resolver) {
 		super(element, resolver);
 		this.type = element;
-		// cache super properties
+		// cache super properties, we assume no super properties are added/removed after a subclass has been defined.
 		cacheSuperProperties();
-		
+		element.superClasses()
+			.filter(superClass -> !(superClass instanceof CardinalityRestriction))
+			.filter(superClass -> !(superClass instanceof ValueRestriction))
+			.forEach(allSuperClasses::add); // we assume no changes of the super class hierarchy
 	}
 
 	private void cacheSuperProperties() {
-		type.asNamed().declaredProperties()
-		.filter(OntRelationalProperty.class::isInstance)
-		.map(OntRelationalProperty.class::cast)
-		.forEach(this::insertAndReturn);
+		var model = type.getModel();
+		var predicates = getExplicitlyDeclaredProperties(type, false);		
+		predicates.stream().map(res -> model.getProperty(res.getURI()))
+			.map(pred -> pred.as(OntRelationalProperty.class))
+			.forEach(this::insertAndReturn);
 	}
+
+	protected static Collection<Resource> getExplicitlyDeclaredProperties(OntClass type, boolean direct) {
+		var local = getExplicitlyDeclaredLocalProperties(type);
+		if (!direct) {
+			local.addAll(
+				type.superClasses()
+				.filter(superClass -> !(superClass instanceof CardinalityRestriction))
+				.filter(superClass -> !(superClass instanceof ValueRestriction))
+				.flatMap(superType -> getExplicitlyDeclaredLocalProperties(superType).stream())
+				.toList()
+				);
+		}
+		return local;
+	}
+	
+	private static Collection<Resource> getExplicitlyDeclaredLocalProperties(OntClass type) {
+		var model = type.getModel();
+		var iter = model.listResourcesWithProperty(RDFS.domain, type);
+		List<Resource> predicates = new LinkedList<>();
+		while (iter.hasNext()) {
+			predicates.add(iter.next());
+		}
+		return predicates;
+	}
+	
 	
 	@Override
 	public void setInstanceType(PPEInstanceType arg0) {
@@ -119,20 +145,8 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	private OntRelationalProperty createBasePropertyType(String arg0, PPEInstanceType arg1) {
 		var propUri = makePropertyURI(arg0);
 		if (BuildInType.isAtomicType(arg1)) {
-//			if (this.element.getModel().getDataProperty(propUri) != null)
-//				return null;
-//			var prop = this.element.getModel().createDataProperty(propUri);
-//			prop.addRange(resolver.resolveAtomicInstanceType(arg1));
-//			prop.addDomain(this.type);	
-//			return prop;
 			return resolver.getCardinalityUtil().createBaseDataPropertyType(propUri, this.type, resolver.resolveAtomicInstanceType(arg1));
 		} else {
-//			if (this.element.getModel().getObjectProperty(propUri) != null)
-//				return null;
-//			var prop = this.element.getModel().createObjectProperty(propUri);
-//			prop.addRange((OntClass) resolver.resolveTypeToClassOrDatarange(arg1));
-//			prop.addDomain(this.type);	
-//			return prop;
 			return resolver.getCardinalityUtil().createBaseObjectPropertyType(propUri, this.type, (OntClass)resolver.resolveTypeToClassOrDatarange(arg1));
 		}
 	}
@@ -158,24 +172,6 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 			return insertAndReturn(prop);
 		else 
 			return null;
-//		var prop = createBasePropertyType(arg0, arg1);		
-//		if (prop == null)
-//			return null;
-//		else {
-////			
-//			if (BuildInType.isAtomicType(arg1)) {
-//				 resolver.getCardinalityUtil().createSingleDataPropertyType(arg0, this.type, resolver.resolveAtomicInstanceType(arg1));
-//				
-//				var maxOneProp = this.element.getModel().createDataMaxCardinality((OntDataProperty) prop, 1, null);
-//				this.type.addSuperClass(maxOneProp);		
-//				resolver.getSingleType().getSingleLiteralProperty().addSubProperty((OntDataProperty) prop);
-//			} else {
-//				var maxOneProp = this.element.getModel().createObjectMaxCardinality((OntObjectProperty) prop, 1, null);
-//				this.type.addSuperClass(maxOneProp);
-//				resolver.getSingleType().getSingleObjectProperty().addSubProperty((OntObjectProperty) prop);
-//			}
-//			return insertAndReturn(prop);
-//		}
 	}
 
 	@Override
@@ -196,35 +192,50 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 
 	@Override
 	public List<String> getPropertyNamesIncludingSuperClasses() {
-		return type.asNamed().declaredProperties()
-			.map(Resource::getLocalName)
-			.toList();
+		return propWrappers.values().stream().map(propW -> propW.getProperty().getLocalName()).toList(); 
+//			getExplicitlyDeclaredProperties(type).stream() // We use cached proeprties instead
+//			.map(Resource::getLocalName)
+//			.toList();
 	}
 
 	@Override
 	public PPEPropertyType getPropertyType(String uri) {
-		var pType = NodeToDomainResolver.isValidURL(uri) ?
-			propWrappers.get(uri):
-		    propWrappers.values().stream().filter(propType -> propType.getProperty().getLocalName().equals(uri)).findAny().orElse(null);
-		if (pType != null) return pType;
+		var pType = findExistingType(uri);
+		//if (pType != null) return pType;
+		return pType; // as we cached the properties upon creation, 
+		//there should be no way we missed any new properties to be added, 
+		// unless the super type received new properties!
 		
-		Optional<OntRelationalProperty> optProp = null;
-		if (NodeToDomainResolver.isValidURL(uri)) {
-			optProp = type.asNamed().declaredProperties()
-					.filter(prop -> prop.getURI().equals(uri)) 
-					.filter(OntRelationalProperty.class::isInstance)
-					.map(OntRelationalProperty.class::cast)
-					.findFirst();	
-		} else {
-			optProp = type.asNamed().declaredProperties()
-					.filter(prop -> prop.getLocalName().equals(uri)) 
-					.filter(OntRelationalProperty.class::isInstance)
-					.map(OntRelationalProperty.class::cast)
-					.findFirst();
-		}				
-		return optProp.map(prop -> propWrappers.computeIfAbsent( prop.getURI(), k -> new RDFPropertyType(prop, resolver))).orElse(null) ;
+		// this below is very inefficient:
+		//Optional<OntRelationalProperty> optProp = NodeToDomainResolver.isValidURL(uri) ? findByURI(uri) : findByLocalName(uri);					
+		//return optProp.map(prop -> propWrappers.computeIfAbsent( prop.getURI(), k -> new RDFPropertyType(prop, resolver))).orElse(null) ;
 	}
 
+	private RDFPropertyType findExistingType(String uri) {
+		return NodeToDomainResolver.isValidURL(uri) ?
+				propWrappers.get(uri):
+			    propWrappers.values().stream().filter(propType -> propType.getProperty().getLocalName().equals(uri)).findAny().orElse(null);
+	}
+	
+//	private Optional<OntRelationalProperty> findByLocalName(String localName) {
+//		return //type.asNamed().declaredProperties()
+//				getExplicitlyDeclaredProperties(type, false).stream()
+//				.filter(prop -> prop.getLocalName().equals(localName)) 
+//				.filter(OntRelationalProperty.class::isInstance)
+//				.map(OntRelationalProperty.class::cast)
+//				.findFirst();
+//	}
+//	
+//	private Optional<OntRelationalProperty> findByURI(String uri) {
+//		return //type.asNamed().declaredProperties()
+//				getExplicitlyDeclaredProperties(type, false).stream()
+//				.filter(prop -> prop.getURI().equals(uri)) 
+//				.filter(OntRelationalProperty.class::isInstance)
+//				.map(OntRelationalProperty.class::cast)
+//				.findFirst();	
+//	}
+	
+	
 	@Override
 	public boolean hasPropertyType(String arg0) {
 		return getPropertyType(arg0) != null;

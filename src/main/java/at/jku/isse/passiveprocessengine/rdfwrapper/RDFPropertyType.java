@@ -61,6 +61,12 @@ public class RDFPropertyType implements PPEPropertyType {
 		return property.getLocalName();
 	}
 
+	@Override
+	public void setName(String name) {
+		throw new RuntimeException("Cannot change name of property");
+	}
+	
+	
 	/**
 	 * We make some assumptions here:
 	 * if no restriction found, then we assume this property is a set
@@ -76,14 +82,14 @@ public class RDFPropertyType implements PPEPropertyType {
 		
 		if (property instanceof OntDataProperty dataProp) {
 			//single or set
-			if (singleType.getSingleLiteralProperty().hasSubProperty(dataProp, false)) {
+			if (singleType.isSingleProperty(dataProp)) {
 				cardinality = CARDINALITIES.SINGLE;
 			} else {
 				cardinality = CARDINALITIES.SET;
 			}						
 			valueObj = getValueTypeFromProperty(property);			
 		} else if (property instanceof OntObjectProperty objProp) {
-			if (singleType.getSingleObjectProperty().hasSubProperty(objProp, false)) {
+			if (singleType.isSingleProperty(objProp)) {
 				cardinality = CARDINALITIES.SINGLE;
 				valueObj = getValueTypeFromProperty(property);
 			} else if (listBaseType.getListReferenceSuperProperty().hasSubProperty(objProp, false)) {
@@ -212,7 +218,7 @@ public class RDFPropertyType implements PPEPropertyType {
 		if (optList.isPresent()) {
 			// check for ValueRestriction for case of list
 			var listType = optList.get();
-			var optProperty = listType.declaredProperties(true)
+			var optProperty = RDFInstanceType.getExplicitlyDeclaredProperties(listType, true).stream()
 			.filter(OntRelationalProperty.class::isInstance)
 			.map(OntRelationalProperty.class::cast)
 			.filter(ListResourceType::isLiProperty)
@@ -252,7 +258,7 @@ public class RDFPropertyType implements PPEPropertyType {
 		} else if (rdfType instanceof OntClass.Named named) {
 			
 			if (arg0 instanceof RDFInstance inst) {
-				return inst.getInstance().hasOntClass(named, false);
+				return inst.isInstanceOf(named);
 			} else if (arg0 instanceof RDFInstanceType instType) {
 				return instType.getType().as(OntIndividual.class).hasOntClass(named, false);
 			} else {

@@ -52,7 +52,7 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 	private Branch branch;
 	private OntModel loadedModel = OntModelFactory.createModel();
 	
-	private RuleTriggerObserverFactory observerFactory;;
+	private RuleTriggerObserverFactory observerFactory;
 	
 	@Override
 	public void setup() {

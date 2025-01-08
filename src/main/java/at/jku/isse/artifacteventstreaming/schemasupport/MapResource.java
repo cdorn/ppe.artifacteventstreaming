@@ -13,9 +13,14 @@ import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntObjectProperty.Named;
+import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.ontapi.impl.objects.OntStatementImpl;
 import org.apache.jena.rdf.model.StmtIterator;
+import org.apache.jena.rdf.model.impl.StatementImpl;
+import org.apache.jena.vocabulary.RDF;
 
 import at.jku.isse.passiveprocessengine.rdfwrapper.ResourceMismatchException;
 
@@ -34,16 +39,17 @@ public class MapResource implements Map<String, RDFNode> {
 		loadMap(mapOwner.listProperties(mapEntryProperty), mapType).stream().forEach(entry -> map.put(entry.getKey(), entry.getValue()));
 	}
 
-	public static MapResource asMapResource(OntObject mapOwner, OntObjectProperty.Named mapEntryProperty, MapResourceType mapType) throws ResourceMismatchException {
-		
+	public static MapResource asUnsafeMapResource(OntObject mapOwner, OntObjectProperty.Named mapEntryProperty, MapResourceType mapType) throws ResourceMismatchException {
+			return new MapResource(mapOwner, mapEntryProperty, mapType);
+	}
+
+	public static MapResource asMapResource(OntObject mapOwner, OntObjectProperty.Named mapEntryProperty, MapResourceType mapType) throws ResourceMismatchException {		
 		if (mapType.isMapEntrySubclass(mapEntryProperty)) {
 			return new MapResource(mapOwner, mapEntryProperty, mapType);
 		}
 		else
 			throw new ResourceMismatchException(String.format("Provided property %s is not in range of a %s", mapEntryProperty.getURI(), MapResourceType.ENTRY_TYPE_URI));		
 	}
-
-	
 	
 	public static Collection<Entry<String, Statement>> loadMap(StmtIterator iter, MapResourceType mapType) {							
 		List<Entry<String, Statement>> entries = new ArrayList<>();
@@ -73,8 +79,7 @@ public class MapResource implements Map<String, RDFNode> {
 	
 	private RDFNode getValueFromStatement(Statement stmt) {
 		if (stmt.getPredicate().equals(mapType.getLiteralValueProperty())) {
-			var value = stmt.getLiteral();
-			return value;
+			return stmt.getLiteral();
 		} else if (stmt.getPredicate().equals(mapType.getObjectValueProperty())) {
 			return stmt.getObject();
 		}
@@ -104,34 +109,50 @@ public class MapResource implements Map<String, RDFNode> {
 	
 	public RDFNode put(String key, RDFNode node) {
 		// check if we are actually supposed to put that node into the hashtable
-
 		Statement prevStmt = map.remove(key);
 		if (prevStmt != null) {												
 			var newStmt = prevStmt.changeObject(node);
 			map.put(key,  newStmt);
 			return getValueFromStatement(prevStmt);
 		} else {
-			OntIndividual entry = mapType.getMapEntryClass().createIndividual(); //FIXME: we should create a childclass instance, not from the base class, but could work
+			var entry = createEntry(); 
 			addBackReference(entry);
 			entry.addLiteral(mapType.getKeyProperty(), key);
-			Statement newStmt = null;
-			if (node.isLiteral()) {
-				entry.addProperty(mapType.getLiteralValueProperty(), node);
-				newStmt = entry.listProperties(mapType.getLiteralValueProperty()).next();
-			} else {
-				entry.addProperty(mapType.getObjectValueProperty(), node);
-				newStmt = entry.listProperties(mapType.getObjectValueProperty()).next();
-			}			
-			map.put(key,  newStmt);
-			mapOwner.addProperty(mapEntryProperty, entry);
+			setValue(key, entry, node);
+			addForwardReference(mapOwner, entry);
 			return null;
 		}
 	}
 
-	private void addBackReference(OntIndividual entry) {
+	private Resource createEntry() {
+		return mapType.getMapEntryClass().getModel().createResource().addProperty( RDF.type, mapType.getMapEntryClass() );
+		//return mapType.getMapEntryClass().createIndividual() --> too slow
+	}
+	
+	private void addBackReference(Resource entry) {
 		entry.addProperty(mapType.getContainerProperty().asProperty(), this.mapOwner);
 	}
 
+	private void addForwardReference(OntObject mapOwner, Resource entry) {
+		mapOwner.addProperty(mapEntryProperty, entry);
+	}
+	
+	private void setValue(String key, Resource entry, RDFNode node) {
+		Statement newStmt = null;
+		if (node.isLiteral()) {
+			entry.addProperty(mapType.getLiteralValueProperty(), node);
+			newStmt = createStatement(entry, mapType.getLiteralValueProperty(), node);
+		} else {
+			entry.addProperty(mapType.getObjectValueProperty(), node);
+			newStmt = createStatement(entry, mapType.getObjectValueProperty(), node);				
+		}			
+		map.put(key,  newStmt);
+	}
+	
+	private Statement createStatement(Resource entry, Property predicate, RDFNode node) {
+		return new StatementImpl(entry, predicate, node);
+	}
+	
 	@Override
 	public int size() {
 		return map.size();

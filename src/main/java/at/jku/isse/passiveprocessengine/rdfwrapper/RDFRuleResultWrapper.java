@@ -17,7 +17,7 @@ public class RDFRuleResultWrapper extends RDFInstance implements RuleResult {
 	private final RuleRepository ruleRepo;
 	
 	public RDFRuleResultWrapper(OntIndividual element, NodeToDomainResolver resolver, RuleRepository ruleRepo) {
-		super(element, resolver);
+		super(element, null, resolver);
 		this.ruleRepo = ruleRepo;
 	}
 	
@@ -28,17 +28,19 @@ public class RDFRuleResultWrapper extends RDFInstance implements RuleResult {
 	
 	@Override
 	public PPEInstanceType getInstanceType() {
-		var types = element.as(OntIndividual.class).classes(true).toList();
-		var optType = types.stream()
-				.filter(type -> !type.getURI().equals(OWL2.NamedIndividual.getURI()))
-				.filter(type -> !type.equals(ruleRepo.getFactory().getDefinitionType()))
-				.findFirst();
-		if (optType.isPresent()) {
-			var type = resolver.findNonDeletedInstanceTypeByFQN(optType.get().getURI());
-			if (type.isPresent() && type.get() instanceof RuleDefinition def)
-				return def;
+		if (super.instanceType == null) {
+			var types = element.as(OntIndividual.class).classes(true).toList();
+			var optType = types.stream()
+					.filter(type -> !type.getURI().equals(OWL2.NamedIndividual.getURI()))
+					.filter(type -> !type.equals(ruleRepo.getFactory().getDefinitionType()))
+					.findFirst();
+			if (optType.isPresent()) {
+				var type = resolver.findNonDeletedInstanceTypeByFQN(optType.get().getURI());
+				if (type.isPresent() && type.get() instanceof RuleDefinition def)
+					instanceType = def;
+			}
 		}
-		return null;
+		return super.instanceType;
 	}
 
 

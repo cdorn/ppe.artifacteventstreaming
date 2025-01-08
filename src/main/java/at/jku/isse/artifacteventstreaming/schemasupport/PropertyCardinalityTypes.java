@@ -37,7 +37,7 @@ public class PropertyCardinalityTypes {
 
 	public PropertyCardinalityTypes(OntModel model) {
 		singleType = new SingleResourceType(model);
-		mapType = new MapResourceType(model); 
+		mapType = new MapResourceType(model, singleType); 
 		listType = new ListResourceType(model, singleType); 		
 	}
 

@@ -66,7 +66,7 @@ class ResourceAsHashMapTest {
 											.addLiteral(literalValueProp, "LiteralAndObjectsMixed"));
 		
 		// simple way to manipulate a map
-		Map<String, RDFNode> map = MapResource.asMapResource(art1, hasMapProp, mapTypeDef);			
+		Map<String, RDFNode> map = MapResource.asUnsafeMapResource(art1, hasMapProp, mapTypeDef);			
 		map.put("SelfKey2", art2);
 		map.put("someother", m.createTypedLiteral("test2"));
 		map.put("SampleKeyRefToArt2", art3);
@@ -91,7 +91,7 @@ class ResourceAsHashMapTest {
 		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
 		assertEquals(0, map.size());
 		
-		Map<String, RDFNode> newMap = MapResource.asMapResource(art1, hasMapProp, mapTypeDef);
+		Map<String, RDFNode> newMap = MapResource.asUnsafeMapResource(art1, hasMapProp, mapTypeDef);
 		assertEquals(0, newMap.size());
 	}
 

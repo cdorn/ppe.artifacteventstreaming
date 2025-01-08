@@ -1,8 +1,10 @@
 package at.jku.isse.passiveprocessengine.rdfwrapper;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -17,9 +19,11 @@ import org.apache.jena.ontapi.model.OntClass.CardinalityRestriction;
 import org.apache.jena.ontapi.model.OntClass.ValueRestriction;
 import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import at.jku.isse.passiveprocessengine.core.BuildInType;
+import at.jku.isse.passiveprocessengine.core.PPEInstance;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.CARDINALITIES;
 import lombok.Getter;
@@ -31,8 +35,15 @@ public class RDFElement {
 
 	@Getter
 	protected final OntObject element;
+	protected PPEInstanceType instanceType;
 	protected final NodeToDomainResolver resolver;
+	
+	// caches are filled as they are accessed
+//	protected final Map<String, Map<String, Object>> mapPropertyCache = new HashMap<>();
+//	protected final Map<String, List<Object>> listPropertyCache = new HashMap<>();
+//	protected final Map<String, Set<Object>> setPropertyCache = new HashMap<>();
 
+	
 	private boolean isDeleted = false; // in case someone holds on to wrapper object
 
 	public String getId() {
@@ -43,13 +54,18 @@ public class RDFElement {
 	}
 
 	public String getName() {
-		if (element.isAnon()) {
-			return element.getLabel();
-		} else {
+		var label = element.getLabel();		
+		if (label == null) {
 			return element.getLocalName();
+		} else {
+			return label;
 		}
 	}
-	
+		
+	public void setName(String name) {
+		element.removeAll(RDFS.label);
+		element.addLabel(Objects.toString(name));		
+	}
 
 	public void markAsDeleted() {
 		this.isDeleted = true;
@@ -85,29 +101,22 @@ public class RDFElement {
 	
 
 	public PPEInstanceType getInstanceType() {
-//		if (element.canAs(OntClass.class)) {
-//			var optType = element.as(OntClass.class).superClasses(true)
-//					.filter(superClass -> !(superClass instanceof CardinalityRestriction))
-//					.filter(superClass -> !(superClass instanceof ValueRestriction))
-//					.findFirst();
-//			if (optType.isPresent()) {
-//				return resolver.resolveToType(optType.get());
-//			}
-//		} else
-			
-		if(element.canAs(OntIndividual.class)) {
-			var optType = element.as(OntIndividual.class).classes(true).findFirst();
+		if (instanceType == null && element.canAs(OntIndividual.class)) {	
+			var optType = resolveInstanceType();
 			if (optType.isPresent()) {
-				return resolver.resolveToType(optType.get());
-			}
+				instanceType = resolver.resolveToType(optType.get());
+			} else {
+				throw new RuntimeException("Instance "+this.getId()+" has no instance type");
+			}			
 		}
-		// else we treat as untyped		
-//		var stmt = element.getProperty(RDF.type); // for now an arbitrary one of there are potentially multiple ones		
-//		if (stmt != null) {
-//			var node = stmt.getObject();
-//			return resolver.resolveToType(node);
-//		}
-		return null;
+		return instanceType;
+	}
+	
+	private Optional<OntClass> resolveInstanceType() {
+		return element.as(OntIndividual.class).classes(true).findFirst();
+		//					.filter(superClass -> !(superClass instanceof CardinalityRestriction))
+		//					.filter(superClass -> !(superClass instanceof ValueRestriction))	
+		
 	}
 	
 	public static Set<OntClass> getSuperTypesAndSuperclasses(OntIndividual ind) {
@@ -122,14 +131,14 @@ public class RDFElement {
 	/**
 	 * Expects fully qualified named properties , i.e., as they are used at the RDF layer
 	 */
-	public void setSingleProperty(String property, Object value) {
-		var prop = resolveProperty(property, CARDINALITIES.SINGLE);
-		element.removeAll(prop.asProperty());
-		if (value instanceof RDFElement inst && value != null) { // then a resource and not a literal
+	public void setSingleProperty(String property, Object value) {		
+			var prop = resolveProperty(property, CARDINALITIES.SINGLE);
+			element.removeAll(prop.asProperty());
+			if (value instanceof RDFElement inst && value != null) { // then a resource and not a literal
 				element.addProperty(prop.asProperty(), inst.getElement());
-		} else if (value != null) {
-			element.addLiteral(prop.asProperty(),  value);
-		}
+			} else if (value != null) {
+				element.addLiteral(prop.asProperty(),  value);
+			}		
 	}
 
 	public String makePropertyURI(String propertyLocalName) {
@@ -178,8 +187,7 @@ public class RDFElement {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public <T> T getTypedProperty(@NonNull String property, @NonNull Class<T> clazz) {
-		
+	public <T> T getTypedProperty(@NonNull String property, @NonNull Class<T> clazz) {		
 		Optional<RDFPropertyType> optProp = resolveToPropertyType(property);
 		if (optProp.isEmpty()) 
 			throw new IllegalArgumentException(String.format("Property %s does not exist on element %s", property, element.getURI()));
@@ -206,7 +214,7 @@ public class RDFElement {
 	private Object getPropertyAsMap(@NonNull RDFPropertyType prop) {
 		var named = (OntObjectProperty.Named) prop.getProperty();
 		try { // lets not cache anything
-			return new MapWrapper(resolver.resolveTypeToClassOrDatarange(prop.getInstanceType()), resolver, MapResource.asMapResource(this.element, named, resolver.getCardinalityUtil().getMapType()));
+			return new MapWrapper(resolver.resolveTypeToClassOrDatarange(prop.getInstanceType()), resolver, MapResource.asUnsafeMapResource(this.element, named, resolver.getCardinalityUtil().getMapType()));
 		} catch (ResourceMismatchException e) {
 			throw new IllegalArgumentException(e.getMessage());
 		}

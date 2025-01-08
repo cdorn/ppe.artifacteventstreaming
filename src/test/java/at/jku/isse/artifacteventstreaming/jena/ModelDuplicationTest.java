@@ -47,7 +47,7 @@ class ModelDuplicationTest {
 		// lets create some instances:
 		OntIndividual art1 = artifactType.createIndividual(NS+"art1");
 		OntIndividual art2 = artifactType.createIndividual(NS+"art2");
-		Map<String, RDFNode> map = MapResource.asMapResource(art1, hasMapProp, mapTypeDef);			
+		Map<String, RDFNode> map = MapResource.asUnsafeMapResource(art1, hasMapProp, mapTypeDef);			
 		map.put("key2", art2);		
 		
 		//create a deep copy:
@@ -57,7 +57,7 @@ class ModelDuplicationTest {
 		OntIndividual art1copy = copy.getIndividual(NS+"art1");		
 		OntIndividual art3copy = artifactTypeCopy.createIndividual(NS+"art3");
 		MapResourceType mapTypeDef2 = new MapResourceType(copy);
-		Map<String, RDFNode> mapCopy = MapResource.asMapResource(art1copy, hasMapPropCopy, mapTypeDef2);			
+		Map<String, RDFNode> mapCopy = MapResource.asUnsafeMapResource(art1copy, hasMapPropCopy, mapTypeDef2);			
 		assertEquals(map.size(), mapCopy.size());
 		
 		mapCopy.clear();		

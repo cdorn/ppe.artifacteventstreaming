@@ -9,6 +9,9 @@ import java.util.stream.Collectors;
 
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.vocabulary.OWL2;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
@@ -55,12 +58,19 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 	protected void initOverride() {
 		var ruleDefinitions = ruleSchema.getDefinitionType().individuals().map(indiv -> indiv.getURI()).collect(Collectors.toSet());
 		model.classes()
-			.filter(ontClass -> !ruleDefinitions.contains(ontClass.getURI())) // we dont want to cache rule definitons as instance types but rule definitions via rule repo
-			.forEach(ontClass -> typeIndex.put(ontClass, new RDFInstanceType(ontClass, this)));
-		var ruleEvalWrappers = ruleSchema.getResultBaseType().individuals().collect(Collectors.toSet()); // we dont want to cache the result resources
-		model.individuals()
-			.filter(indiv -> !ruleEvalWrappers.contains(indiv))
-			.forEach(indiv -> instanceIndex.put(indiv, new RDFInstance(indiv, this)));
+			.filter(ontClass -> !ontClass.getNameSpace().equals(RDF.uri))
+			.filter(ontClass -> !ontClass.getNameSpace().equals(RDFS.uri))
+			.filter(ontClass -> !ontClass.getNameSpace().equals(OWL2.NS))	
+			.filter(ontClass -> !ruleDefinitions.contains(ontClass.getURI())) // we dont want to cache rule definitons as instance types but rule definitions via rule repo			
+			.forEach(ontClass -> { 
+			var type = typeIndex.put(ontClass, new RDFInstanceType(ontClass, this));
+			ontClass.individuals(true).forEach(indiv -> instanceIndex.put(indiv.getURI(), new RDFInstance(indiv, type, this)));
+		} );
+		
+//		var ruleEvalWrappers = ruleSchema.getResultBaseType().individuals().collect(Collectors.toSet()); // we dont want to cache the result resources
+//		model.individuals()
+//			.filter(indiv -> !ruleEvalWrappers.contains(indiv))
+//			.forEach(indiv -> instanceIndex.put(indiv, new RDFInstance(indiv, this)));
 	}
 	
 	@Override
@@ -123,7 +133,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 						repairTree.flattenRepairTree();
 						rootRepairNode = repairTree;
 					}
-					var ctxWrapper = instanceIndex.computeIfAbsent(instance, k -> new RDFInstance(instance, this));
+					var ctxWrapper = instanceIndex.computeIfAbsent(instance.getURI(), k -> new RDFInstance(instance, null, this));
 					return new ResultEntry(ctxWrapper, result, error, rootEvalNode, rootRepairNode);
 				})
 				.collect(Collectors.toSet());	
@@ -158,7 +168,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 					var result = evalWrapper.isConsistent();
 					var error = evalWrapper.getEvaluationError();
 					var ctx = evalWrapper.getContextInstance();
-					var ctxWrapper = instanceIndex.computeIfAbsent(ctx, k -> new RDFInstance(ctx, this));
+					var ctxWrapper = instanceIndex.computeIfAbsent(ctx.getURI(), k -> new RDFInstance(ctx, null, this));
 					var evalRoot = evalWrapper.getDelegate().getEvaluationTree();
 					var repairRoot = evalWrapper.getDelegate().getRepairTree();
 					return new ResultEntry(ctxWrapper, result, error, evalRoot, repairRoot);
@@ -181,7 +191,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 					var result = evalWrapper.isConsistent();
 					var error = evalWrapper.getEvaluationError();
 					var ctx = evalWrapper.getContextInstance();
-					var ctxWrapper = instanceIndex.computeIfAbsent(ctx, k -> new RDFInstance(ctx, this));
+					var ctxWrapper = instanceIndex.computeIfAbsent(ctx.getURI(), k -> new RDFInstance(ctx, null, this));
 					var evalRoot = evalWrapper.getDelegate().getEvaluationTree();
 					var repairRoot = evalWrapper.getDelegate().getRepairTree();
 					var entry = new ResultEntry(ctxWrapper, result, error, evalRoot, repairRoot);

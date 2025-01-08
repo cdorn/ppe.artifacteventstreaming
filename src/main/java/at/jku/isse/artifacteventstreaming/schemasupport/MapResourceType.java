@@ -49,10 +49,11 @@ public class MapResourceType  {
 	@Getter
 	private final OntClass mapEntryClass;
 	private final Set<OntClass> subclassesCache = new HashSet<>();
+	private SingleResourceType singleType;
 	
-	public MapResourceType(OntModel model) {		
+	public MapResourceType(OntModel model, SingleResourceType singleType) {		
 		factory.addSchemaToModel(model);
-				
+		this.singleType = singleType;
 		mapEntryClass = model.getOntClass(ENTRY_TYPE_URI);
 		keyProperty = model.getDataProperty(KEY_PROPERTY_URI);
 		literalValueProperty = model.getDataProperty(LITERAL_VALUE_PROPERTY_URI);
@@ -78,48 +79,44 @@ public class MapResourceType  {
 	
 	public OntObjectProperty addLiteralMapProperty(OntClass resource, String propertyURI, OntDataRange valueType) {
 		OntModel model = resource.getModel();
-		var p = model.getObjectProperty(propertyURI);
-		if (p == null) {
-			OntClass mapType = model.createOntClass(propertyURI+ENTRY_TYPE);
-			mapType.addSuperClass(mapEntryClass);
-			subclassesCache.add(mapType);
-
-			OntDataProperty valueProp = model.createDataProperty(propertyURI+LITERAL_VALUE);
-			valueProp.addSuperProperty(literalValueProperty);
-			valueProp.addDomain(mapType);
-			valueProp.addRange(valueType);
-
-			OntObjectProperty hasMap = model.createObjectProperty(propertyURI);
-			hasMap.addDomain(resource);
-			hasMap.addRange(mapType);
-			mapReferenceSuperProperty.addSubProperty(hasMap);			
-			return hasMap;
+		if (singleType.existsPrimaryProperty(propertyURI)) {
+			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty		
 		}
-		else 
-			return null; //as we cannot guarantee that the property that was identified is an OntObjectProperty
+		OntClass mapType = model.createOntClass(propertyURI+ENTRY_TYPE);
+		mapType.addSuperClass(mapEntryClass);
+		subclassesCache.add(mapType);
+
+		OntDataProperty valueProp = model.createDataProperty(propertyURI+LITERAL_VALUE);
+		valueProp.addSuperProperty(literalValueProperty);
+		valueProp.addDomain(mapType);
+		valueProp.addRange(valueType);
+
+		OntObjectProperty hasMap = model.createObjectProperty(propertyURI);
+		hasMap.addDomain(resource);
+		hasMap.addRange(mapType);
+		mapReferenceSuperProperty.addSubProperty(hasMap);			
+		return hasMap;
 	}
-	
+
 	public OntObjectProperty addObjectMapProperty(OntClass resource, String propertyURI, OntClass valueType) {
 		OntModel model = resource.getModel();
-		var p = model.getObjectProperty(propertyURI);
-		if (p == null) {
-			OntClass mapType = model.createOntClass(propertyURI+ENTRY_TYPE);
-			mapType.addSuperClass(mapEntryClass);
-			subclassesCache.add(mapType);
-
-			OntObjectProperty valueProp = model.createObjectProperty(propertyURI+OBJECT_VALUE);
-			valueProp.addSuperProperty(objectValueProperty);
-			valueProp.addDomain(mapType);
-			valueProp.addRange(valueType);
-
-			OntObjectProperty hasMap = model.createObjectProperty(propertyURI);
-			hasMap.addDomain(resource);
-			hasMap.addRange(mapType);
-			mapReferenceSuperProperty.addSubProperty(hasMap);	
-			return hasMap;
+		if (singleType.existsPrimaryProperty(propertyURI)) {
+			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty		
 		}
-		else 
-			return null; //as we cannot guarantee that the property that was identified is an OntObjectProperty
+		OntClass mapType = model.createOntClass(propertyURI+ENTRY_TYPE);
+		mapType.addSuperClass(mapEntryClass);
+		subclassesCache.add(mapType);
+
+		OntObjectProperty valueProp = model.createObjectProperty(propertyURI+OBJECT_VALUE);
+		valueProp.addSuperProperty(objectValueProperty);
+		valueProp.addDomain(mapType);
+		valueProp.addRange(valueType);
+
+		OntObjectProperty hasMap = model.createObjectProperty(propertyURI);
+		hasMap.addDomain(resource);
+		hasMap.addRange(mapType);
+		mapReferenceSuperProperty.addSubProperty(hasMap);	
+		return hasMap;
 	}
 	
 	public boolean isMapEntry(OntIndividual ontInd) {

@@ -22,6 +22,7 @@ import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.shared.Lock;
 import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 import org.apache.jena.vocabulary.XSD;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
@@ -43,14 +44,14 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository, AbstractionMapper {
 
-	public static String BASE_NS = "http://isse.jku.at/artifactstreaming/rdfwrapper#";
-	public static String propertyMetadataPredicate = BASE_NS+"propertyMetadata";
+	public static final String BASE_NS = "http://isse.jku.at/artifactstreaming/rdfwrapper#";
+	public static final String propertyMetadataPredicate = BASE_NS+"propertyMetadata";
 	
 	protected final OntModel model;
 	protected final Dataset dataset;
 	protected final RuleRepository ruleRepo;		
 	protected final Map<OntClass, RDFInstanceType> typeIndex = new HashMap<>();	
-	protected final Map<OntIndividual, RDFInstance> instanceIndex = new HashMap<>();	
+	protected final Map<String, RDFInstance> instanceIndex = new HashMap<>();	
 	protected final Branch branch;
 	protected final OntClass metaClass;
 	protected long commitSessionCounter = 1;
@@ -70,8 +71,14 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	}
 	
 	protected void init() {
-		model.classes().forEach(ontClass -> typeIndex.put(ontClass, new RDFInstanceType(ontClass, this)));
-		model.individuals().forEach(indiv -> instanceIndex.put(indiv, new RDFInstance(indiv, this)));
+		model.classes()
+		.filter(ontClass -> !ontClass.getNameSpace().equals(RDF.uri))
+		.filter(ontClass -> !ontClass.getNameSpace().equals(RDFS.uri))
+		.filter(ontClass -> !ontClass.getNameSpace().equals(OWL2.NS))
+		.forEach(ontClass -> { 
+			var type = typeIndex.put(ontClass, new RDFInstanceType(ontClass, this));
+			ontClass.individuals(true).forEach(indiv -> instanceIndex.put(indiv.getURI(), new RDFInstance(indiv, type, this)));
+		} );		
 	}
 	
 	private OntClass createMetaClass(OntModel model2) {
@@ -310,7 +317,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		if (arg1 instanceof RDFInstanceType type) {
 			var individual = model.createIndividual(id, type.getType());
 			individual.addLabel(individual.getLocalName());
-			return instanceIndex.computeIfAbsent(individual, k -> new RDFInstance(k, this));
+			return instanceIndex.computeIfAbsent(individual.getURI(), k -> new RDFInstance(individual, type, this));
 		}
 		else 
 			throw new RuntimeException("PPEInstance object not a RDFInstance but "+arg1.getClass());
@@ -321,19 +328,22 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	 */
 	@Override
 	public Optional<PPEInstance> findInstanceById(@NonNull String arg0) {
-		var res = ResourceFactory.createResource(arg0);
-		if (model.contains(res, RDF.type)) {
-			var indiv = model.getIndividual(res);
-			return Optional.ofNullable(instanceIndex.computeIfAbsent(indiv, k -> new RDFInstance(k, this)));
-		} else
-			return Optional.empty();
+		// as we are caching all individuals, lets just search our cache
+		return Optional.ofNullable(instanceIndex.get(null));
+		
+//		var res = ResourceFactory.createResource(arg0);
+//		if (model.contains(res, RDF.type)) {
+//			var indiv = model.getIndividual(res);
+//			return Optional.ofNullable(instanceIndex.computeIfAbsent(indiv, k -> new RDFInstance(k, this)));
+//		} else
+//			return Optional.empty();
 	}
 
 	@Override
 	public Set<PPEInstance> getAllInstancesOfTypeOrSubtype(@NonNull PPEInstanceType arg0) {
 		if (arg0 instanceof RDFInstanceType type) {
 			return type.getType().individuals()
-			.map(el -> instanceIndex.computeIfAbsent(el, k->new RDFInstance(k, this)))
+			.map(el -> instanceIndex.computeIfAbsent(el.getURI(), k->new RDFInstance(el, type, this)))
 			.collect(Collectors.toSet());
 		}
 		else 

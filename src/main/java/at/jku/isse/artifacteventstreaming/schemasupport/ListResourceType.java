@@ -61,56 +61,54 @@ public class ListResourceType {
 	
 	public OntObjectProperty addObjectListProperty(OntClass resource, String listPropertyURI, OntClass valueType) {
 		OntModel model = resource.getModel();
-		OntObjectProperty prop = model.getObjectProperty(listPropertyURI);
-		if (prop == null) {		
-			// create the specific class for this list
-			OntClass listType = model.createOntClass(listPropertyURI+LIST_TYPE_NAME);
-			listType.addSuperClass(listClass);			
-			// create the property that points to this list type // ensure we only point to one list only
-			prop = singleType.createBaseObjectPropertyType(listPropertyURI, resource, listType);  
-			var maxOneProp = singleType.getMaxOneObjectCardinalityRestriction(model, prop, listType);
-			resource.addSuperClass(maxOneProp);
-			
-			// now also restrict the list content to be of valueType, and property to be a subproperty of 'li'			
-			var liProp = model.createObjectProperty(listPropertyURI+OBJECT_LIST_NAME);
-			liProp.addProperty(RDFS.subPropertyOf, LI);
-			liProp.addDomain(listType);
-			liProp.addRange(valueType);
-			ObjectAllValuesFrom restr = model.createObjectAllValuesFrom(liProp, valueType);
-			// add the restriction to the list type
-			listType.addSuperClass(restr);
-			listReferenceSuperProperty.addSubProperty(prop);	
-			subclassesCache.add(listType);
-			return prop;
-		} else 
-			return null; //as we cannot guarantee that the property that was identified is an OntObjectProperty		
+		if (singleType.existsPrimaryProperty(listPropertyURI)) {
+			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty		
+		}
+		// create the specific class for this list
+		OntClass listType = model.createOntClass(listPropertyURI+LIST_TYPE_NAME);
+		listType.addSuperClass(listClass);			
+		// create the property that points to this list type // ensure we only point to one list only
+		var prop = singleType.createBaseObjectPropertyType(listPropertyURI, resource, listType);  
+		var maxOneProp = singleType.getMaxOneObjectCardinalityRestriction(model, prop, listType);
+		resource.addProperty(RDFS.subClassOf, maxOneProp);
+		
+		// now also restrict the list content to be of valueType, and property to be a subproperty of 'li'			
+		var liProp = model.createObjectProperty(listPropertyURI+OBJECT_LIST_NAME);
+		liProp.addProperty(RDFS.subPropertyOf, LI);
+		liProp.addDomain(listType);
+		liProp.addRange(valueType);
+		ObjectAllValuesFrom restr = model.createObjectAllValuesFrom(liProp, valueType);
+		// add the restriction to the list type
+		listType.addSuperClass(restr);
+		listReferenceSuperProperty.addSubProperty(prop);	
+		subclassesCache.add(listType);
+		return prop;		
 	}
 	
 	public OntObjectProperty addLiteralListProperty(OntClass resource, String listPropertyURI, OntDataRange valueType) {
 		OntModel model = resource.getModel();
-		OntObjectProperty prop = model.getObjectProperty(listPropertyURI);
-		if (prop == null) {		
-			// create the specific class for this list
-			OntClass listType = model.createOntClass(listPropertyURI+LIST_TYPE_NAME);
-			listType.addSuperClass(listClass);			
-			// create the property that points to this list type // ensure we only point to one list only
-			prop = singleType.createBaseObjectPropertyType(listPropertyURI, resource, listType);  
-			var maxOneProp = singleType.getMaxOneObjectCardinalityRestriction(model, prop, listType);
-			resource.addSuperClass(maxOneProp);
-			
-			// now also restrict the list content to be of valueType, and property to be a subproperty of 'li'			
-			var liProp = model.createDataProperty(listPropertyURI+LITERAL_LIST_NAME);
-			liProp.addProperty(RDFS.subPropertyOf, LI);
-			liProp.addDomain(listType);
-			liProp.addRange(valueType);
-			DataAllValuesFrom restr = model.createDataAllValuesFrom(liProp, valueType);
-			// add the restriction to the list type
-			listType.addSuperClass(restr);
-			listReferenceSuperProperty.addSubProperty(prop);	
-			subclassesCache.add(listType);
-			return prop;
-		} else 
-			return null; //as we cannot guarantee that the property that was identified is an OntObjectProperty		
+		if (singleType.existsPrimaryProperty(listPropertyURI)) {
+			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty		
+		}	
+		// create the specific class for this list
+		OntClass listType = model.createOntClass(listPropertyURI+LIST_TYPE_NAME);
+		listType.addSuperClass(listClass);			
+		// create the property that points to this list type // ensure we only point to one list only
+		var prop = singleType.createBaseObjectPropertyType(listPropertyURI, resource, listType);  
+		var maxOneProp = singleType.getMaxOneObjectCardinalityRestriction(model, prop, listType);
+		resource.addProperty(RDFS.subClassOf, maxOneProp);
+
+		// now also restrict the list content to be of valueType, and property to be a subproperty of 'li'			
+		var liProp = model.createDataProperty(listPropertyURI+LITERAL_LIST_NAME);
+		liProp.addProperty(RDFS.subPropertyOf, LI);
+		liProp.addDomain(listType);
+		liProp.addRange(valueType);
+		DataAllValuesFrom restr = model.createDataAllValuesFrom(liProp, valueType);
+		// add the restriction to the list type
+		listType.addSuperClass(restr);
+		listReferenceSuperProperty.addSubProperty(prop);	
+		subclassesCache.add(listType);
+		return prop;
 	}
 
 	public static boolean isLiProperty(OntRelationalProperty prop) {
