@@ -66,6 +66,7 @@ class TestCommitToChangeEvents {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);			
 		BranchImpl branch = (BranchImpl) new BranchBuilder(new URI(NS+"repo"), repoDataset, repoModel )	
+				.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF)
 				.setBranchLocalName("branch1")
 				.build();		
 		m = branch.getModel();		
@@ -78,17 +79,20 @@ class TestCommitToChangeEvents {
 		listener = new PPEChangeListener();
 		transformer = new CommitChangeEventTransformer("Transformer", repoModel, resolver, new InMemoryHistoryRepository());
 		transformer.registerWithWorkspace(listener);
-		m.register(aggr);
+		//m.register(aggr);
+		aggr.registerWithModel(m);
 		m.setNsPrefix("isse", NS);
 		m.setNsPrefix("map", MAP_NS);
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
 		typeBase = resolver.createNewInstanceType(NS+"artifact");
+		parent = typeBase.createSinglePropertyType("parent", typeBase);
+		
 		typeChild = resolver.createNewInstanceType(NS+"issue", typeBase);
 		mapOfArt = typeChild.createMapPropertyType("mapOfArt", BuildInType.STRING, typeBase);
 		listOfString = typeChild.createListPropertyType("listOfString", BuildInType.STRING);
 		setOfBaseArt = typeChild.createSetPropertyType("setOfBaseArt", typeBase);
-		parent = typeBase.createSinglePropertyType("parent", typeBase);
+		
 
 		
 	}

@@ -7,23 +7,16 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
-import org.apache.jena.ontapi.model.OntClass.CardinalityRestriction;
-import org.apache.jena.ontapi.model.OntClass.ValueRestriction;
 import org.apache.jena.rdf.model.StmtIterator;
-import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import at.jku.isse.passiveprocessengine.core.BuildInType;
-import at.jku.isse.passiveprocessengine.core.PPEInstance;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.CARDINALITIES;
 import lombok.Getter;
@@ -31,7 +24,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-public class RDFElement {
+public abstract class RDFElement {
 
 	@Getter
 	protected final OntObject element;
@@ -39,9 +32,8 @@ public class RDFElement {
 	protected final NodeToDomainResolver resolver;
 	
 	// caches are filled as they are accessed
-//	protected final Map<String, Map<String, Object>> mapPropertyCache = new HashMap<>();
-//	protected final Map<String, List<Object>> listPropertyCache = new HashMap<>();
-//	protected final Map<String, Set<Object>> setPropertyCache = new HashMap<>();
+	protected final Map<String, TypedCollectionResource> collectionPropertyCache = new HashMap<>();
+
 
 	
 	private boolean isDeleted = false; // in case someone holds on to wrapper object
@@ -100,33 +92,34 @@ public class RDFElement {
 	}
 	
 
-	public PPEInstanceType getInstanceType() {
-		if (instanceType == null && element.canAs(OntIndividual.class)) {	
-			var optType = resolveInstanceType();
-			if (optType.isPresent()) {
-				instanceType = resolver.resolveToType(optType.get());
-			} else {
-				throw new RuntimeException("Instance "+this.getId()+" has no instance type");
-			}			
-		}
-		return instanceType;
-	}
+	public abstract PPEInstanceType getInstanceType();
+	//{
+//		if (instanceType == null && element.canAs(OntIndividual.class)) {	
+//			var optType = resolveInstanceType();
+//			if (optType.isPresent()) {
+//				instanceType = resolver.resolveToType(optType.get());
+//			} else {
+//				throw new RuntimeException("Instance "+this.getId()+" has no instance type");
+//			}			
+//		}
+//		return instanceType;
+//	}
 	
-	private Optional<OntClass> resolveInstanceType() {
-		return element.as(OntIndividual.class).classes(true).findFirst();
-		//					.filter(superClass -> !(superClass instanceof CardinalityRestriction))
-		//					.filter(superClass -> !(superClass instanceof ValueRestriction))	
-		
-	}
+//	private Optional<OntClass> resolveInstanceType() {
+//		return element.as(OntIndividual.class).classes(true).findFirst();
+//		//					.filter(superClass -> !(superClass instanceof CardinalityRestriction))
+//		//					.filter(superClass -> !(superClass instanceof ValueRestriction))	
+//		
+//	}
 	
-	public static Set<OntClass> getSuperTypesAndSuperclasses(OntIndividual ind) {
-		var types = ind.classes(true);		// perhaps replace this with RDFS Reasoner if this is a performance problem here
-		var superClasses = ind.classes(true).flatMap(type -> type.superClasses()
-											.filter(superClass -> !(superClass instanceof CardinalityRestriction))
-											.filter(superClass -> !(superClass instanceof ValueRestriction))
-											  );
-		return Stream.concat(types, superClasses).collect(Collectors.toSet());
-	}
+//	public static Set<OntClass> getSuperTypesAndSuperclasses(OntIndividual ind) {
+//		var types = ind.classes(true);		// perhaps replace this with RDFS Reasoner if this is a performance problem here
+//		var superClasses = ind.classes(true).flatMap(type -> type.superClasses()
+//											.filter(superClass -> !(superClass instanceof CardinalityRestriction))
+//											.filter(superClass -> !(superClass instanceof ValueRestriction))
+//											  );
+//		return Stream.concat(types, superClasses).collect(Collectors.toSet());
+//	}
 
 	/**
 	 * Expects fully qualified named properties , i.e., as they are used at the RDF layer
@@ -213,20 +206,18 @@ public class RDFElement {
 	
 	private Object getPropertyAsMap(@NonNull RDFPropertyType prop) {
 		var named = (OntObjectProperty.Named) prop.getProperty();
-		try { // lets not cache anything
-			return new MapWrapper(resolver.resolveTypeToClassOrDatarange(prop.getInstanceType()), resolver, MapResource.asUnsafeMapResource(this.element, named, resolver.getCardinalityUtil().getMapType()));
-		} catch (ResourceMismatchException e) {
-			throw new IllegalArgumentException(e.getMessage());
-		}
+		return collectionPropertyCache.computeIfAbsent(prop.getId(),  k -> new MapWrapper(resolver.resolveTypeToClassOrDatarange(prop.getInstanceType()), 
+																							resolver, 
+																							MapResource.asUnsafeMapResource(this.element, named, resolver.getCardinalityUtil().getMapType()))); 					
 	}
 
 	private Object getPropertyAsList(@NonNull RDFPropertyType prop) {
 		var named = (OntObjectProperty.Named) prop.getProperty();
-		return new ListWrapper(this.element, named, resolver, resolver.resolveTypeToClassOrDatarange(prop.getInstanceType()));
+		return collectionPropertyCache.computeIfAbsent(prop.getId(),  k -> new ListWrapper(this.element, named, resolver, resolver.resolveTypeToClassOrDatarange(prop.getInstanceType())));
 	}
 	
 	private Object getPropertyAsSet(@NonNull RDFPropertyType prop) {
-		return new SetWrapper(this.element, prop.getProperty(), resolver, resolver.resolveTypeToClassOrDatarange(prop.getInstanceType()));
+		return collectionPropertyCache.computeIfAbsent(prop.getId(),  k -> new SetWrapper(this.element, prop.getProperty(), resolver, resolver.resolveTypeToClassOrDatarange(prop.getInstanceType())));
 	}
 
 	private Object getSingleProperty(@NonNull RDFPropertyType prop) {

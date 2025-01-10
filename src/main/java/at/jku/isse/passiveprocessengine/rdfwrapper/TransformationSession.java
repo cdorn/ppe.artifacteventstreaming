@@ -63,9 +63,9 @@ public class TransformationSession extends StatementAugmentationSession {
 	@Override
 	protected void handleMapValueChanges(List<StatementWrapper> stmts, Property prop, Resource owner) {
 		super.handleMapValueChanges(stmts, prop, owner);
-		RDFInstance changeSubject = (RDFInstance) resolver.resolveToRDFElement(owner);
-		
-		updates.addAll(stmts.stream()
+		RDFElement changeElement = resolver.resolveToRDFElement(owner);
+		if (changeElement instanceof RDFInstance changeSubject) {
+			updates.addAll(stmts.stream()
 				.filter(wrapper -> isMapValueProperty(wrapper.stmt().getPredicate()))
 				.map(wrapper -> {
 						var value = resolver.convertFromRDF(wrapper.stmt().getObject());
@@ -76,6 +76,7 @@ public class TransformationSession extends StatementAugmentationSession {
 						}
 				})
 				.toList());
+		} // currently abstraction layer cannot handle changes to RDFInstanceTypes
 	}
 	
 	private boolean isMapValueProperty(Property property) {

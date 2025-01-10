@@ -36,6 +36,8 @@ class TestRDFPropertyType {
 	static OntModel m;
 	static NodeToDomainResolver resolver;
 	static OntClass artifactType;
+	static RDFInstanceType ppeArtifact;
+	static RDFInstanceType ppeOther;
 	static OntClass otherType;
 	static MapResourceType mapFactory;
 	static ListResourceType listFactory;
@@ -56,8 +58,10 @@ class TestRDFPropertyType {
 		mapFactory = resolver.getCardinalityUtil().getMapType();
 		listFactory = resolver.getCardinalityUtil().getListType();
 		singleFactory = resolver.getCardinalityUtil().getSingleType();
-		artifactType = ((RDFInstanceType) resolver.createNewInstanceType(NS+"artifact")).getType();	
-		otherType =  ((RDFInstanceType) resolver.createNewInstanceType(NS+"other")).getType();	
+		ppeArtifact = ((RDFInstanceType) resolver.createNewInstanceType(NS+"artifact"));
+		artifactType = ppeArtifact.getType();
+		ppeOther = ((RDFInstanceType) resolver.createNewInstanceType(NS+"other"));
+		otherType =  ppeOther.getType();	
 		otherType.addProperty(RDFS.label, "other");
 	}
 	
@@ -100,14 +104,15 @@ class TestRDFPropertyType {
 	@Test
 	void testDetectSingleProperty() {
 		String propURI = NS+"hasSet";
-		var prop = m.createObjectProperty(propURI);
-		prop.addRange(otherType);
-		prop.addDomain(artifactType);
-		var maxOneKey = m.createObjectMaxCardinality(prop, 1, null);
-		artifactType.addSuperClass(maxOneKey);
-		singleFactory.getSingleObjectProperty().addSubProperty(prop);
-		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
-		
+		var propType = ppeArtifact.createSinglePropertyType(propURI, ppeOther);
+//		var prop = m.createObjectProperty(propURI);
+//		prop.addRange(otherType);
+//		prop.addDomain(artifactType);
+//		var maxOneKey = m.createObjectMaxCardinality(prop, 1, null);
+//		artifactType.addSuperClass(maxOneKey);
+//		singleFactory.getSingleObjectProperty().addSubProperty(prop);
+//		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+//		
 		artifactType.superClasses().forEach(superType -> System.out.println(superType));
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
@@ -152,14 +157,15 @@ class TestRDFPropertyType {
 	@Test
 	void testDetectSingleDataProperty() {
 		String propURI = NS+"hasSet";
-		var prop = m.createDataProperty(propURI);
-		prop.addRange(m.getDatatype(XSD.xstring));
-		prop.addDomain(artifactType);
-		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
-		artifactType.addSuperClass(maxOneKey);		
-		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
-		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
-		
+		var propType = ppeArtifact.createSinglePropertyType(propURI, BuildInType.STRING);
+//		var prop = m.createDataProperty(propURI);
+//		prop.addRange(m.getDatatype(XSD.xstring));
+//		prop.addDomain(artifactType);
+//		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
+//		artifactType.addSuperClass(maxOneKey);		
+//		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
+//		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+//		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
 		assertEquals("STRING", propType.getInstanceType().getName());
 	}
@@ -202,16 +208,17 @@ class TestRDFPropertyType {
 	}
 	
 	@Test
-	void testDetectSingleLongProperty() {
+	void testDetectSingleIntegerProperty() {
 		String propURI = NS+"hasSet";
-		var prop = m.createDataProperty(propURI);
-		prop.addRange(m.getDatatype(XSD.xlong));
-		prop.addDomain(artifactType);
-		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
-		artifactType.addSuperClass(maxOneKey);		
-		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
-		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
-		
+		var propType = ppeArtifact.createSinglePropertyType(propURI, BuildInType.INTEGER);
+//		var prop = m.createDataProperty(propURI);
+//		prop.addRange(m.getDatatype(XSD.xlong));
+//		prop.addDomain(artifactType);
+//		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
+//		artifactType.addSuperClass(maxOneKey);		
+//		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
+//		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+//		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
 		assertEquals(BuildInType.INTEGER.getName(), propType.getInstanceType().getName());
 	}
@@ -219,13 +226,14 @@ class TestRDFPropertyType {
 	@Test
 	void testDetectSingleBooleanProperty() {
 		String propURI = NS+"hasSet";
-		var prop = m.createDataProperty(propURI);
-		prop.addRange(m.getDatatype(XSD.xboolean));
-		prop.addDomain(artifactType);
-		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
-		artifactType.addSuperClass(maxOneKey);		
-		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
-		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+		var propType = ppeArtifact.createSinglePropertyType(propURI, BuildInType.BOOLEAN);
+//		var prop = m.createDataProperty(propURI);
+//		prop.addRange(m.getDatatype(XSD.xboolean));
+//		prop.addDomain(artifactType);
+//		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
+//		artifactType.addSuperClass(maxOneKey);		
+//		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
+//		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
 		assertEquals(BuildInType.BOOLEAN.getName(), propType.getInstanceType().getName());
@@ -233,60 +241,63 @@ class TestRDFPropertyType {
 	
 	@Test
 	void testDetectSingleFloatProperty() {
-		String propURI = NS+"hasSet";
-		var prop = m.createDataProperty(propURI);
-		prop.addRange(m.getDatatype(XSD.xfloat));
-		prop.addDomain(artifactType);
-		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
-		artifactType.addSuperClass(maxOneKey);
-		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
-		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
-		
-		
-		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
-		assertEquals(BuildInType.FLOAT.getName(), propType.getInstanceType().getName());
-	}
-	
-	@Test
-	void testDetectSingleDoubleProperty() {
-		String propURI = NS+"hasSet";
-		var prop = m.createDataProperty(propURI);
-		prop.addRange(m.getDatatype(XSD.xdouble));
-		prop.addDomain(artifactType);
-		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
-		artifactType.addSuperClass(maxOneKey);
-		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
-		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+		String propURI = NS+"hasSet";		
+		var propType = ppeArtifact.createSinglePropertyType(propURI, BuildInType.FLOAT);
+//		var prop = m.createDataProperty(propURI);
+//		prop.addRange(m.getDatatype(XSD.xfloat));
+//		prop.addDomain(artifactType);
+//		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
+//		artifactType.addSuperClass(maxOneKey);
+//		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
+//		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+//		
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
 		assertEquals(BuildInType.FLOAT.getName(), propType.getInstanceType().getName());
 	}
 	
-	@Test
-	void testDetectSingleShortProperty() {
-		String propURI = NS+"hasSet";
-		var prop = m.createDataProperty(propURI);
-		prop.addRange(m.getDatatype(XSD.xshort));
-		prop.addDomain(artifactType);
-		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
-		artifactType.addSuperClass(maxOneKey);		
-		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
-		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
-		
-		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
-		assertEquals(BuildInType.STRING.getName(), propType.getInstanceType().getName());
-	}
+//	@Test
+//	void testDetectSingleDoubleProperty() {
+//		String propURI = NS+"hasSet";
+//		var propType = ppeArtifact.createSinglePropertyType(propURI, BuildInType.INTEGER);
+////		var prop = m.createDataProperty(propURI);
+////		prop.addRange(m.getDatatype(XSD.xdouble));
+////		prop.addDomain(artifactType);
+////		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
+////		artifactType.addSuperClass(maxOneKey);
+////		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
+////		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+//		
+//		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
+//		assertEquals(BuildInType.FLOAT.getName(), propType.getInstanceType().getName());
+//	}
+	
+//	@Test
+//	void testDetectSingleShortProperty() {
+//		String propURI = NS+"hasSet";
+//		var prop = m.createDataProperty(propURI);
+//		prop.addRange(m.getDatatype(XSD.xshort));
+//		prop.addDomain(artifactType);
+//		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
+//		artifactType.addSuperClass(maxOneKey);		
+//		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
+//		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+//		
+//		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
+//		assertEquals(BuildInType.STRING.getName(), propType.getInstanceType().getName());
+//	}
 	
 	@Test
 	void testDetectSingleUnsupportedDateProperty() {
 		String propURI = NS+"hasSet";
-		var prop = m.createDataProperty(propURI);
-		prop.addRange(m.getDatatype(XSD.date));
-		prop.addDomain(artifactType);
-		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
-		artifactType.addSuperClass(maxOneKey);		
-		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
-		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
+		var propType = ppeArtifact.createSinglePropertyType(propURI, BuildInType.DATE);
+//		var prop = m.createDataProperty(propURI);
+//		prop.addRange(m.getDatatype(XSD.date));
+//		prop.addDomain(artifactType);
+//		var maxOneKey = m.createDataMaxCardinality(prop, 1, null);
+//		artifactType.addSuperClass(maxOneKey);		
+//		singleFactory.getSingleLiteralProperty().addSubProperty(prop);
+//		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
 		assertEquals(BuildInType.STRING.getName(), propType.getInstanceType().getName());

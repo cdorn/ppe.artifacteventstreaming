@@ -71,6 +71,7 @@ public class ListResourceType {
 		var prop = singleType.createBaseObjectPropertyType(listPropertyURI, resource, listType);  
 		var maxOneProp = singleType.getMaxOneObjectCardinalityRestriction(model, prop, listType);
 		resource.addProperty(RDFS.subClassOf, maxOneProp);
+		//NOTE: we cannot use createSingleObject... to avoid putting this property into the single property cache as this is a list property
 		
 		// now also restrict the list content to be of valueType, and property to be a subproperty of 'li'			
 		var liProp = model.createObjectProperty(listPropertyURI+OBJECT_LIST_NAME);
@@ -97,7 +98,8 @@ public class ListResourceType {
 		var prop = singleType.createBaseObjectPropertyType(listPropertyURI, resource, listType);  
 		var maxOneProp = singleType.getMaxOneObjectCardinalityRestriction(model, prop, listType);
 		resource.addProperty(RDFS.subClassOf, maxOneProp);
-
+		//NOTE: we cannot use createSingleData... to avoid putting this property into the single property cache as this is a list property
+		
 		// now also restrict the list content to be of valueType, and property to be a subproperty of 'li'			
 		var liProp = model.createDataProperty(listPropertyURI+LITERAL_LIST_NAME);
 		liProp.addProperty(RDFS.subPropertyOf, LI);
@@ -111,7 +113,7 @@ public class ListResourceType {
 		return prop;
 	}
 
-	public static boolean isLiProperty(OntRelationalProperty prop) {
+	public static boolean isLiProperty(Resource prop) {
 		StmtIterator iter = prop.listProperties(RDFS.subPropertyOf);
 		while (iter.hasNext()) {
 			if (iter.next().getResource().equals(LI)) {

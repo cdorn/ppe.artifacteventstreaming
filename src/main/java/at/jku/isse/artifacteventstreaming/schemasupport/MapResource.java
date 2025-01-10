@@ -19,6 +19,7 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.ontapi.impl.objects.OntStatementImpl;
 import org.apache.jena.rdf.model.StmtIterator;
+import org.apache.jena.rdf.model.impl.ModelCom;
 import org.apache.jena.rdf.model.impl.StatementImpl;
 import org.apache.jena.vocabulary.RDF;
 
@@ -39,7 +40,7 @@ public class MapResource implements Map<String, RDFNode> {
 		loadMap(mapOwner.listProperties(mapEntryProperty), mapType).stream().forEach(entry -> map.put(entry.getKey(), entry.getValue()));
 	}
 
-	public static MapResource asUnsafeMapResource(OntObject mapOwner, OntObjectProperty.Named mapEntryProperty, MapResourceType mapType) throws ResourceMismatchException {
+	public static MapResource asUnsafeMapResource(OntObject mapOwner, OntObjectProperty.Named mapEntryProperty, MapResourceType mapType)  {
 			return new MapResource(mapOwner, mapEntryProperty, mapType);
 	}
 
@@ -150,7 +151,7 @@ public class MapResource implements Map<String, RDFNode> {
 	}
 	
 	private Statement createStatement(Resource entry, Property predicate, RDFNode node) {
-		return new StatementImpl(entry, predicate, node);
+		return new StatementImpl(entry, predicate, node, (ModelCom)entry.getModel());
 	}
 	
 	@Override

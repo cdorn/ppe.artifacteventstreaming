@@ -2,6 +2,7 @@ package at.jku.isse.artifacteventstreaming.rdfwrapper;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -46,7 +47,15 @@ class TestRDFInstanceType {
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
 		typeBase = resolver.createNewInstanceType(NS+"artifact");
-		typeChild = resolver.createNewInstanceType(NS+"issue", typeBase);
+		var succ = typeBase.createSinglePropertyType("priority", BuildInType.INTEGER);
+		assertNotNull(succ);		
+		typeChild = resolver.createNewInstanceType(NS+"issue", typeBase);		
+		succ = typeChild.createListPropertyType("listOfArt", typeBase);
+		assertNotNull(succ);
+		
+		var prop = typeBase.createMapPropertyType(NS+"hasMap", BuildInType.STRING, typeChild);
+		//var prop = resolver.getCardinalityUtil().getMapType().addObjectMapProperty(typeBase.getType(), NS+"hasMap", typeChild.getType());
+		assertNotEquals(null, prop);
 	}
 
 	@Test
@@ -59,9 +68,7 @@ class TestRDFInstanceType {
 	
 	@Test
 	void testGetSuperClassInPresenceOfRestrictions() {
-		typeBase.createSinglePropertyType("priority", BuildInType.INTEGER);
-		typeChild.createListPropertyType("listOfArt", typeBase);
-		
+				
 		List<String> names = typeChild.getPropertyNamesIncludingSuperClasses();
 		assertTrue(names.contains("priority"));
 		assertTrue(names.contains("listOfArt"));
@@ -76,9 +83,6 @@ class TestRDFInstanceType {
 		//assertEquals(resolver.resolveToType(null)e.METATYPE, typeChild.getInstanceType());
 		assertEquals(null, typeBase.getParentType());
 		
-		
-		var prop = resolver.getCardinalityUtil().getMapType().addObjectMapProperty(typeBase.getType(), NS+"hasMap", typeChild.getType());
-		assertNotEquals(null, prop);
 		var propType = typeBase.getPropertyType(NS+"hasMap");
 		assertEquals(typeChild, propType.getInstanceType());
 	}
@@ -94,11 +98,9 @@ class TestRDFInstanceType {
 			http://isse.jku.at/artifactstreaming/rdfwrapper#propertyMetadataEntryType
 			http://at.jku.isse.test#issue
 			http://at.jku.isse.test#artifact
-			http://at.jku.isse.map#EntryType
-			http://www.w3.org/1999/02/22-rdf-syntax-ns#Seq
-
+			http://at.jku.isse.map#EntryType			
 		 * */
-		assertEquals(6, types.size());
+		assertEquals(5, types.size());
 	}
 	
 	@Test
@@ -106,7 +108,7 @@ class TestRDFInstanceType {
 		assertEquals(typeBase, resolver.findAllInstanceTypesByFQN(typeBase.getId()).iterator().next());
 		typeBase.markAsDeleted();
 		assertTrue(resolver.findAllInstanceTypesByFQN(typeBase.getId()).isEmpty());
-		assertEquals(4, resolver.getAllNonDeletedInstanceTypes().size());
+		assertEquals(3, resolver.getAllNonDeletedInstanceTypes().size());
 	}
 	
 	@Test

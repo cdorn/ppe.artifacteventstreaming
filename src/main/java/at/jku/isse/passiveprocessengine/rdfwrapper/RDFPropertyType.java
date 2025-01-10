@@ -218,14 +218,13 @@ public class RDFPropertyType implements PPEPropertyType {
 		if (optList.isPresent()) {
 			// check for ValueRestriction for case of list
 			var listType = optList.get();
-			var optProperty = RDFInstanceType.getExplicitlyDeclaredProperties(listType, true).stream()
-			.filter(OntRelationalProperty.class::isInstance)
-			.map(OntRelationalProperty.class::cast)
-			.filter(ListResourceType::isLiProperty)
-			.filter(prop -> prop.ranges().count() > 0)
+			var props = RDFInstanceType.getExplicitlyDeclaredProperties(listType, true);
+			var optProperty = props.stream()			
+			.filter(ListResourceType::isLiProperty)			
 			.findFirst();
 			if (optProperty.isPresent()) {
-				var optObj = optProperty.get().ranges().findFirst();
+				var relProp = optProperty.get().as(OntRelationalProperty.class);
+				var optObj = relProp.ranges().findFirst();
 				if (optObj.isPresent()) {		
 					return optObj.get();
 				}

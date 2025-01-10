@@ -47,8 +47,8 @@ class OntologyModelTest {
 		Reasoner reasoner = ReasonerRegistry.getOWLReasoner();
 		reasoner.bindSchema(m);
 		InfModel infmodel = ModelFactory.createInfModel(reasoner, m);
-		
-		MapResourceType mapType = new MapResourceType(m);
+		SingleResourceType singleType = new SingleResourceType(m);
+		MapResourceType mapType = new MapResourceType(m, singleType);
 		
 		OntClass artifactType = m.createOntClass(NS+"artifact");		
 		OntClass otherType = m.createOntClass(NS+"other");

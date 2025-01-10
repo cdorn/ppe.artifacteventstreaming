@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.ResourceMismatchException;
 
 class ModelDuplicationTest {
@@ -35,7 +36,9 @@ class ModelDuplicationTest {
 		OntModel m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM );
 		m.setNsPrefix("isse", NS);
 		m.setNsPrefix("map", MAP_NS);
-		MapResourceType mapTypeDef = new MapResourceType(m);
+		SingleResourceType singleType = new SingleResourceType(m);
+		
+		MapResourceType mapTypeDef = new MapResourceType(m, singleType);
 		OntClass artifactType = m.createOntClass(NS+"artifactType");		
 		OntClass mapType = mapTypeDef.getMapEntryClass();
 		
@@ -56,7 +59,7 @@ class ModelDuplicationTest {
 		OntObjectProperty.Named hasMapPropCopy = copy.getObjectProperty(NS+"hasMapEntry");
 		OntIndividual art1copy = copy.getIndividual(NS+"art1");		
 		OntIndividual art3copy = artifactTypeCopy.createIndividual(NS+"art3");
-		MapResourceType mapTypeDef2 = new MapResourceType(copy);
+		MapResourceType mapTypeDef2 = new MapResourceType(copy, singleType);
 		Map<String, RDFNode> mapCopy = MapResource.asUnsafeMapResource(art1copy, hasMapPropCopy, mapTypeDef2);			
 		assertEquals(map.size(), mapCopy.size());
 		

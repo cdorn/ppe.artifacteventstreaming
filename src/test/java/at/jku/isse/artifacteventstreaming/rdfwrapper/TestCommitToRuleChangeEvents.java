@@ -102,11 +102,13 @@ class TestCommitToRuleChangeEvents {
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
 		typeBase = resolver.createNewInstanceType(NS+"artifact");
+		parent = typeBase.createSinglePropertyType("parent", typeBase);
+		
 		typeChild = resolver.createNewInstanceType(NS+"issue", typeBase);
-		mapOfArt = typeChild.createMapPropertyType("mapOfArt", BuildInType.STRING, typeBase);
+		mapOfArt = typeChild.createMapPropertyType("mapOfArt", BuildInType.STRING, typeBase);		
 		listOfString = typeChild.createListPropertyType("listOfString", BuildInType.STRING);
 		setOfBaseArt = typeChild.createSetPropertyType("setOfBaseArt", typeBase);
-		parent = typeBase.createSinglePropertyType("parent", typeBase);		
+				
 		branch.commitChanges("InitialCommit");
 	}
 		

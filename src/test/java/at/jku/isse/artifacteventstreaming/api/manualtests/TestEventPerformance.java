@@ -37,7 +37,7 @@ class TestEventPerformance {
 	private static BranchStateCache branchCache;
 			
 	@BeforeEach
-	static void removeStream() {
+	void removeStream() {
 		try {
 			cacheFactory = new RocksDBFactory("./branchStatusTestCache/");
 			cacheFactory.resetCache();
@@ -50,12 +50,12 @@ class TestEventPerformance {
 	}
 	
 	@AfterEach
-	static void clearCache() {
+	void clearCache() {
 		cacheFactory.closeCache();
 	}
 	
 	
-	@Test @Disabled
+	@Test 
 	void test10KEvents10CommitPersistence() throws Exception {	
 		PerBranchEventStore client = factory.getEventStore(repoURI.toString());
 		BranchStateUpdater stateKeeper = new StateKeeperImpl(repoURI, branchCache, client);

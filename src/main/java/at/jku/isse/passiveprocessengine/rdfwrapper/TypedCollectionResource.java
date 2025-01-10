@@ -38,14 +38,14 @@ public abstract class TypedCollectionResource {
 			if (!node.asResource().canAs(OntIndividual.class)) {// not a typed resource
 				return false;
 			}
-			var ontInd = node.asResource().as(OntIndividual.class);
-			if (ontInd.getURI().equals(objectType.getURI())) // TODO: doesnt make sense to check the new value to the type?!
-				return true;			
-			var superClasses = RDFElement.getSuperTypesAndSuperclasses(ontInd); //TODO: performance improvement necessary, reuse assignable in RDFELement
-			if (superClasses.stream().noneMatch(clazz -> clazz.equals(this.objectType))) {// not a valid subclass
-				return false;
-			}
+			//var ontInd = node.asResource().as(OntIndividual.class);
+			//return isInstanceOfClassHierachy(ontInd, objectType); / this is way too slow, needs some caching mechanism.
+			return true;
 		}
 		return true;
+	}
+	
+	protected boolean isInstanceOfClassHierachy(OntIndividual ontInd, OntClass toMatch) {
+		return ontInd.classes().anyMatch(type -> type.equals(toMatch));
 	}
 }

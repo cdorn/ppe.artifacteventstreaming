@@ -41,7 +41,7 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 			.forEach(allSuperClasses::add); // we assume no changes of the super class hierarchy
 	}
 
-	private void cacheSuperProperties() {
+	public void cacheSuperProperties() { //public to allow reindexing
 		var model = type.getModel();
 		var predicates = getExplicitlyDeclaredProperties(type, false);		
 		predicates.stream().map(res -> model.getProperty(res.getURI()))
@@ -73,6 +73,11 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 		return predicates;
 	}
 	
+	
+	@Override
+	public PPEInstanceType getInstanceType() {
+		return resolver.resolveToType(resolver.metaClass);
+	}
 	
 	@Override
 	public void setInstanceType(PPEInstanceType arg0) {
@@ -193,7 +198,7 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	@Override
 	public List<String> getPropertyNamesIncludingSuperClasses() {
 		return propWrappers.values().stream().map(propW -> propW.getProperty().getLocalName()).toList(); 
-//			getExplicitlyDeclaredProperties(type).stream() // We use cached proeprties instead
+//			getExplicitlyDeclaredProperties(type).stream() // We use cached properties instead
 //			.map(Resource::getLocalName)
 //			.toList();
 	}

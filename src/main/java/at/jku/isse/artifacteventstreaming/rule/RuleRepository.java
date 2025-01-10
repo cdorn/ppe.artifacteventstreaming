@@ -83,7 +83,7 @@ public class RuleRepository {
 	}
 	
 	public void removeRuleDefinition(@NonNull String ruleDefinitionURI) {
-		removeRulesAffectedByDeletedRuleDefinition(ruleDefinitionURI);
+		removeRulesAffectedByDeletedRuleDefinition(ruleDefinitionURI, true);
 	}
 	
 	public RDFRuleDefinition findRuleDefinitionForResource(@NonNull OntClass ruleDef) {
@@ -136,10 +136,11 @@ public class RuleRepository {
 	}
 	
 	/**
+	 * @param removeRuleDefinition TODO
 	 * @param def the RuleDefinition to remove including all evaluation instances thereof 
 	 * @return all evaluation instances of that definition that now become stale and wont ever be reactivated because we remove their statements
 	 */
-	public Set<RuleEvaluationWrapperResource> removeRulesAffectedByDeletedRuleDefinition(@NonNull String definitionURI) {
+	public Set<RuleEvaluationWrapperResource> removeRulesAffectedByDeletedRuleDefinition(@NonNull String definitionURI, boolean removeRuleDefinition) {
 		var old = definitions.remove(definitionURI);
 		if (old != null) {
 			// if this is called externally, then the rule definition is gone and the following method cannot access individuals thereof to delete,  			
@@ -152,7 +153,9 @@ public class RuleRepository {
 				.map(ruleEval -> { ruleEval.delete(); return ruleEval; })
 				.map(RuleEvaluationWrapperResource.class::cast)
 				.collect(Collectors.toSet());
-			old.delete();			
+			if (removeRuleDefinition) {
+				old.delete();
+			}
 			return filtered;
 		} else {						
 			return Collections.emptySet();

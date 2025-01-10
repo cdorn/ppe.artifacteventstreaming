@@ -18,6 +18,7 @@ import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.shared.Lock;
 import org.apache.jena.vocabulary.OWL2;
@@ -196,7 +197,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	}
 
 	@Override
-	public RDFInstanceType createNewInstanceType(String arg0, PPEInstanceType... superClasses) {		
+	public RDFInstanceType createNewInstanceType(String arg0, PPEInstanceType... directSuperClasses) {		
 		if (!isValidURL(arg0)) {
 			arg0 = BASE_NS+arg0;
 		}						
@@ -205,7 +206,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 			return typeIndex.get(ontClass); // already have this class definition, not creating another wrapper around
 		} else { 
 			ontClass.addProperty(RDF.type, metaClass);
-			for (var superClass : superClasses) {
+			for (var superClass : directSuperClasses) {
 				if (superClass == null) {
 					log.warn("provided null superclass, ignoring");
 					continue;
@@ -329,7 +330,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	@Override
 	public Optional<PPEInstance> findInstanceById(@NonNull String arg0) {
 		// as we are caching all individuals, lets just search our cache
-		return Optional.ofNullable(instanceIndex.get(null));
+		return Optional.ofNullable(instanceIndex.get(arg0));
 		
 //		var res = ResourceFactory.createResource(arg0);
 //		if (model.contains(res, RDF.type)) {
@@ -354,19 +355,21 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		if (node instanceof OntClass ontClass) {
 			return typeIndex.get(ontClass);
 		} else if (node instanceof OntIndividual indiv) {
-			return findIndividual(indiv);
+			return findIndividual(indiv);		 		
 		} else if (node.canAs(OntClass.class)) {
 			return typeIndex.get(node.as(OntClass.class));
 		} else if (node.canAs(OntIndividual.class)) {
 			return findIndividual(node.as(OntIndividual.class));
+		} else if (node instanceof Resource res) { 
+			return findIndividual(res);
 		} else {			
 			log.warn("Cannot resolve resource node to RDFELement: "+node.toString());
 			return null;
 		}
 	}
 
-	private RDFElement findIndividual(OntIndividual node) {
-		var localInst = instanceIndex.get(node);
+	private RDFElement findIndividual(Resource node) {
+		var localInst = instanceIndex.get(node.getURI());
 		if (localInst != null)
 			return localInst;
 		else { 

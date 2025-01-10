@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Stream;
 
 import com.eventstore.dbclient.AppendToStreamOptions;
 import com.eventstore.dbclient.EventData;
@@ -16,6 +17,7 @@ import com.eventstore.dbclient.ReadStreamOptions;
 import com.eventstore.dbclient.RecordedEvent;
 import com.eventstore.dbclient.ResolvedEvent;
 import com.eventstore.dbclient.StreamNotFoundException;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -37,7 +39,7 @@ public class EventStoreFactory {
 
 	 private final EventStoreDBClient client;
 	 private final JsonMapper jsonMapper = new JsonMapper();
-	 private final static SimpleModule commitModule = new SimpleModule().addAbstractTypeMapping(Commit.class, StatementCommitImpl.class);
+	 private static final SimpleModule commitModule = new SimpleModule().addAbstractTypeMapping(Commit.class, StatementCommitImpl.class);
 	 
 	 public EventStoreFactory() {
 		 EventStoreDBClientSettings settings = EventStoreDBClientSettings.builder()
@@ -46,7 +48,7 @@ public class EventStoreFactory {
 				  .defaultCredentials("admin", "changeit")
 				  .maxDiscoverAttempts(1)
 				  .buildConnectionSettings();
-		client = EventStoreDBClient.create(settings);		
+		client = EventStoreDBClient.create(settings);			
 		StatementJsonSerializer.registerSerializationModule(jsonMapper);	
 		StatementJsonDeserializer.registerDeserializationModule(jsonMapper);		
 		jsonMapper.registerModule(commitModule);
@@ -62,7 +64,19 @@ public class EventStoreFactory {
 	 
 	 @Data
 	 public static class EventMetaData {
+		 
 		 final String commitUUID;		 
+		 final int batchId;
+		 final int totalBatches; 
+		 
+		 public EventMetaData( @JsonProperty("commitUUID") String commitUUID 
+				 ,@JsonProperty("batchId") int batchId
+				, @JsonProperty("totalBatches") int totalBatches) {			
+			this.commitUUID = commitUUID;
+			this.batchId = batchId;
+			this.totalBatches = totalBatches;
+		}
+		
 	 }
 	 
 	 @RequiredArgsConstructor
@@ -78,7 +92,7 @@ public class EventStoreFactory {
 			// for now, we do a inefficient sequential load of all commits and keep them in memory
 			List<Commit> commits = new LinkedList<>();
 			ReadStreamOptions options = ReadStreamOptions.get()
-					.forwards()
+					.forwards() // if this is ever changed, make sure to update batch joining below!!!!!
 					.fromStart();
 			ReadResult result = null;
 			try {
@@ -92,11 +106,21 @@ public class EventStoreFactory {
 			}
 			
 			try {
+				var joiner = new CommitJoiner();
 				for (ResolvedEvent resolvedEvent : result.getEvents()) {
-					RecordedEvent recordedEvent = resolvedEvent.getOriginalEvent();
+					RecordedEvent recordedEvent = resolvedEvent.getOriginalEvent();					
+					EventMetaData metadata = jsonMapper.readValue(recordedEvent.getUserMetadata(), EventMetaData.class);
 					StatementCommitImpl commit = jsonMapper.readValue(recordedEvent.getEventData(), StatementCommitImpl.class);
-					if (commit != null) {
-						commits.add(commit);
+					if (metadata.getTotalBatches() <= 1) {						
+						if (commit != null) {						
+							commits.add(commit);
+						}
+					} else { // multipart
+						joiner.addCommit(commit);
+						if (metadata.getBatchId() == metadata.getTotalBatches()) {// last batch
+							commits.add(joiner.join());
+							joiner = new CommitJoiner(); //reset for next batch
+						}
 					}
 				}	
 			} catch (IOException e) {
@@ -130,7 +154,7 @@ public class EventStoreFactory {
 				result = eventDBclient.readStream(branchURI+INCOMING_COMMITS_STREAM_POSTFIX, options)
 						.get();
 			} catch (ExecutionException | InterruptedException e) {
-				Throwable innerException = e.getCause();
+				Throwable innerException = e.getCause();				
 				if (innerException instanceof StreamNotFoundException) {
 					return Collections.emptyList();
 				}
@@ -154,7 +178,7 @@ public class EventStoreFactory {
 					throw new PersistenceException(msg);
 				}
 			}
-			if (isReverse) {
+			if (Boolean.TRUE.equals(isReverse)) {
 				Collections.reverse(commits); // to the earliest commits are at the beginning
 			}
 			return commits;
@@ -162,30 +186,35 @@ public class EventStoreFactory {
 
 		@Override
 		public void appendCommit(Commit commit) throws PersistenceException {
-			EventMetaData metadata = new EventMetaData(commit.getCommitId());					
+								
 			try {
-				byte[] metaByte = jsonMapper.writeValueAsBytes(metadata);
-				byte[] eventByte = jsonMapper.writeValueAsBytes(commit);
-				long size = metaByte.length + eventByte.length;
-				
-				//TODO: check for commit serialization size to avoid write failures if there are too many statements in a commit!
-				//store via event db
-				EventData eventData = EventData
-						.builderAsBinary("CommitEventType", eventByte) // we cannot use commit UUID as its reused for each branch		
-						.metadataAsBytes(metaByte)
-						.build();
+				var splitter = new CommitSplitter(jsonMapper);
+				List<byte[]> payloads = splitter.split(commit).toList();
+				if (payloads.isEmpty()) { 
+					log.warn("Empty commit "+commit.getCommitId()+", not persisting any events");
+					return;				
+				}
+				for (int i = 0; i < payloads.size(); i++) {
+					EventMetaData metadata = new EventMetaData(commit.getCommitId(), i+1, payloads.size());
+					byte[] metaByte = jsonMapper.writeValueAsBytes(metadata);
+										
+					EventData eventData = EventData
+							.builderAsBinary("CommitEventType", payloads.get(i)) // we cannot use commit UUID as its reused for each branch		
+							.metadataAsBytes(metaByte)
+							.build();
 
-				AppendToStreamOptions options = AppendToStreamOptions.get()
-						.expectedRevision(ExpectedRevision.any());
+					AppendToStreamOptions options = AppendToStreamOptions.get()
+							.expectedRevision(ExpectedRevision.any());
 
-				var result = eventDBclient.appendToStream(branchURI, options, eventData) 
-				.get();			
-				log.trace("Obtained log position upon write: "+result.getLogPosition().toString());
+					var result = eventDBclient.appendToStream(branchURI, options, eventData) 
+							.get();			
+					log.trace("Obtained log position upon write: "+result.getLogPosition().toString());
+				}
 			} catch (JsonProcessingException e) {
 				String msg = String.format("Error serializing commit %s event to branch %s with error %s", commit.getCommitId(), branchURI, e.getMessage()) ;
 				log.warn(msg);
 				throw new PersistenceException(msg);
-			} catch (InterruptedException | ExecutionException e) {
+			} catch (Exception e) {
 				String msg = String.format("Error storing commit %s event to branch %s with error %s", commit.getCommitId(), branchURI, e.getMessage()) ;
 				log.warn(msg);
 				throw new PersistenceException(msg);

@@ -132,7 +132,7 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 		var typeUri = stmt.getResource().getURI();
 		var subject = stmt.getSubject();
 		if (isAboutRuleDefinitionType(stmt)) {
-			repo.removeRulesAffectedByDeletedRuleDefinition(subject.getURI()); // nothing to do with the returned rules eval that are no longer accessible because all related statements are removed
+			repo.removeRulesAffectedByDeletedRuleDefinition(subject.getURI(), true); // nothing to do with the returned rules eval that are no longer accessible because all related statements are removed
 			removedResourceURIs.add(subject);
 		} else if (isAboutRuleEvaluationType(stmt)) { // 
 			repo.removeRulesAffectedByDeletedRuleEvaluation(subject.getURI()); // this is a side effect of a remote rule evaluation removal or rule type removal
@@ -175,8 +175,8 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 	private void processRuleContextTypeOrExpressionRemoval(Statement stmt, Set<Resource> removedResourceURIs) {
 		var subject = stmt.getSubject();
 		if (!removedResourceURIs.contains(subject)) {		
-			repo.removeRulesAffectedByDeletedRuleDefinition(subject.getURI());
-			removedResourceURIs.add(stmt.getSubject());
+			repo.removeRulesAffectedByDeletedRuleDefinition(subject.getURI(), false);
+			//removedResourceURIs.add(stmt.getSubject()) we are not removing the rule definition itself, just the evaluations!
 		}
 	}		
 	
@@ -228,7 +228,7 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 	
 	private void processRuleContextTypeOrExpressionAddition(Statement stmt, Map<RuleEvaluationWrapperResource, RuleEvaluationIterationMetadata> rulesToReevaluate, Set<Resource> createdResourceURIs) {
 		var subject = stmt.getSubject();
-		if (!createdResourceURIs.contains(subject) && subject instanceof OntObject ontObj) {
+		if (!createdResourceURIs.contains(subject) && subject instanceof OntObject ontObj) {					
 			var def = repo.storeRuleDefinition(ontObj);			
 			addRulesToMetadata(rulesToReevaluate, repo.getRulesToEvaluateUponRuleDefinitionActivation(def), stmt); 
 			createdResourceURIs.add(subject);

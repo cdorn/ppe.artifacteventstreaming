@@ -3,8 +3,8 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>at.jku.isse</groupId>
-	<artifactId>artifacteventstreaming.jena</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<artifactId>artifacteventstreaming</artifactId>
+	<version>0.0.5-SNAPSHOT</version>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -18,10 +18,10 @@
 	</properties>
 
 	<distributionManagement>
-		<repository>
-			<id>JKU.ISSE</id>
-			<url>http://3.66.206.6:9999/snapshots</url>
-		</repository>
+        <repository>
+            <id>JKU.ISSE.MAVEN</id>
+             <url>https://isse.jku.at/reposilite/snapshots</url>
+        </repository>
 	</distributionManagement>
 
 	<repositories>
@@ -37,8 +37,8 @@
 		</repository>
 		<!-- own ones -->
 		<repository>
-			<id>JKU.ISSE</id>
-			<url>http://3.66.206.6:9999/snapshots</url>
+			<id>JKU.ISSE.MAVEN</id>
+            <url>https://isse.jku.at/reposilite/snapshots</url>
 			<snapshots>
 				<enabled>true</enabled>
 			</snapshots>
@@ -56,9 +56,12 @@
 			<artifactId>apache-jena-libs</artifactId>
 			<type>pom</type>
 			<version>5.1.0</version>
-
 		</dependency>
-
+		<dependency>
+  			<groupId>at.jku.isse</groupId>
+  			<artifactId>service-rule</artifactId>
+  			<version>6.0.0</version>
+		</dependency>
 		<dependency>
 			<groupId>org.rocksdb</groupId>
 			<artifactId>rocksdbjni</artifactId>

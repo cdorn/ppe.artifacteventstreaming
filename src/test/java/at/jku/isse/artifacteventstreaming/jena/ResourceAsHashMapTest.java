@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.ResourceMismatchException;
 
 class ResourceAsHashMapTest {
@@ -36,7 +37,8 @@ class ResourceAsHashMapTest {
 		OntModel m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM );
 		m.setNsPrefix("isse", NS);
 		m.setNsPrefix("map", MAP_NS);
-		MapResourceType mapTypeDef = new MapResourceType(m);
+		SingleResourceType singleType = new SingleResourceType(m);
+		MapResourceType mapTypeDef = new MapResourceType(m, singleType);
 		OntClass artifactType = m.createOntClass(NS+"artifactType");		
 		OntClass mapType = mapTypeDef.getMapEntryClass();
 		

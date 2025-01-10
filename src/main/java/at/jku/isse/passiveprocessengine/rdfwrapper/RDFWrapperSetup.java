@@ -60,7 +60,7 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		try {
 			var branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
-					.setModelReasoner(OntSpecification.OWL2_DL_MEM_RDFS_INF)		
+					.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF)		
 					.setBranchLocalName("main")
 					.build();		
 			var model1 = branch.getModel();
@@ -110,7 +110,7 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		try {
 			branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
-					.setModelReasoner(OntSpecification.OWL2_DL_MEM_RDFS_INF)		
+					.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF)		
 					.setDataset(modelDataset.get())
 					.setStateKeeper(stateKeeper)
 					.setBranchURI(branchURI)
@@ -149,6 +149,8 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 
 	public static void resetPersistence() {		
 		try {
+			
+			
 			var cacheFactory = new RocksDBFactory("./branchStatusTestCache/");
 			cacheFactory.resetCache();
 			EventStoreFactory factory = new EventStoreFactory();

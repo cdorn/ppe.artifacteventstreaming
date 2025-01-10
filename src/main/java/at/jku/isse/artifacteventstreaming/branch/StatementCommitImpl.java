@@ -41,26 +41,26 @@ public class StatementCommitImpl implements Commit {
 		this.timeStamp = timeStamp;
 	}
 	
-	public StatementCommitImpl(@JsonProperty("originatingBranchId") String branchId
-			, @JsonProperty("commitMessage") String commitMsg
-			, @JsonProperty("precedingCommitId") String precedingCommitId
-			, @JsonProperty("timeStamp") long timeStamp
-			, @JsonProperty("addedStatements") Set<Statement> addedStatements
-			, @JsonProperty("removedStatements") Set<Statement> removedStatements
+	public StatementCommitImpl( String branchId
+			,  String commitMsg
+			,  String precedingCommitId
+			,  long timeStamp
+			,  Set<Statement> addedStatements
+			,  Set<Statement> removedStatements
 			) {
 		this(branchId, commitMsg, precedingCommitId, timeStamp);
 		this.addedStatements.addAll(addedStatements);
 		this.removedStatements.addAll(removedStatements);
 	}
 	
-
-	public StatementCommitImpl( String branchId
-			,  String mergedCommitId
-			, String commitMsg
-			, String precedingCommitId
-			, long timeStamp
-			, Set<Statement> addedStatements
-			, Set<Statement> removedStatements
+	// annotations used for serialization/deserialization
+	public StatementCommitImpl(@JsonProperty("originatingBranchId") String branchId
+			, @JsonProperty("commitId") String mergedCommitId
+			, @JsonProperty("commitMessage") String commitMsg
+			, @JsonProperty("precedingCommitId") String precedingCommitId
+			, @JsonProperty("timeStamp") long timeStamp
+			, @JsonProperty("addedStatements") Set<Statement> addedStatements
+			, @JsonProperty("removedStatements") Set<Statement> removedStatements
 			) {
 		this.commitMessage = commitMsg;
 		this.originatingBranchId = branchId;

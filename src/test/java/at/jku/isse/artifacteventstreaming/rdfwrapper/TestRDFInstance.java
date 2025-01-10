@@ -31,6 +31,7 @@ import at.jku.isse.passiveprocessengine.core.PPEInstanceType.PPEPropertyType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.MapWrapper;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
 
 public class TestRDFInstance {
 
@@ -58,6 +59,7 @@ public class TestRDFInstance {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);			
 		BranchImpl branch = (BranchImpl) new BranchBuilder(new URI(NS+"repo"), repoDataset, repoModel )	
+				.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF)
 				.setBranchLocalName("branch1")
 				.build();		
 		m = branch.getModel();	
@@ -66,16 +68,20 @@ public class TestRDFInstance {
 		resolver = new NodeToDomainResolver(branch, null, cardUtil);
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
-		typeBase = resolver.createNewInstanceType(NS+"artifact");
+		
+		typeBase = resolver.createNewInstanceType(NS+"artifact");		
+		priority = typeBase.createSinglePropertyType(PRIORITY, BuildInType.INTEGER);		
+		listOfString = typeBase.createListPropertyType(LIST_OF_STRING, BuildInType.STRING);		
+		setOfString = typeBase.createSetPropertyType("setOfString", BuildInType.STRING);
+		
 		typeChild = resolver.createNewInstanceType(NS+"issue", typeBase);
-		priority = typeBase.createSinglePropertyType(PRIORITY, BuildInType.INTEGER);
 		mapOfArt = typeChild.createMapPropertyType(MAP_OF_ART, BuildInType.STRING, typeBase);
 		mapOfString = typeChild.createMapPropertyType("mapOfString", BuildInType.STRING, BuildInType.STRING);
 		parent = typeChild.createSinglePropertyType(PARENT, typeBase);		
+		
 		listOfArt = typeBase.createListPropertyType(LIST_OF_ART, typeChild);
-		listOfString = typeBase.createListPropertyType(LIST_OF_STRING, BuildInType.STRING);
 		setOfArt = typeBase.createSetPropertyType("setofArt", typeChild);
-		setOfString = typeBase.createSetPropertyType("setOfString", BuildInType.STRING);
+		((RDFInstanceType)typeChild).cacheSuperProperties();
 	}
 	
 	@Test

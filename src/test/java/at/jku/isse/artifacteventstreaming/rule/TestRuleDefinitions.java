@@ -41,10 +41,9 @@ class TestRuleDefinitions {
 	@BeforeEach
 	void setup() {
 		//THIS OntSpec is important: as without inference, then subproperties and subclass individuals are not correctly inferred
-		// but when using RDFS inference only, then we dont get individual change events due to some deep down graph listener registration problem 
-		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_RDFS_INF ); // needs deep setting of graph listener
-		PropertyCardinalityTypes schemaUtils = new PropertyCardinalityTypes(m);
-		//m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF ); 		
+		//m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_RDFS_INF ); // builtin is much faster that this spec!!!!
+		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF );
+		PropertyCardinalityTypes schemaUtils = new PropertyCardinalityTypes(m);		 	
 		m.setNsPrefix("rules", RuleSchemaFactory.uri);
 		m.setNsPrefix("test", baseURI.toString());
 		artType = m.createOntClass(baseURI+"artType");
@@ -153,7 +152,7 @@ class TestRuleDefinitions {
 		assertEquals(def, repo.findRuleDefinitionForResource(def.getRuleDefinition()));
 		
 		def.delete();
-		var affected = repo.removeRulesAffectedByDeletedRuleDefinition(uri);
+		var affected = repo.removeRulesAffectedByDeletedRuleDefinition(uri, true);
 		assertEquals(0, affected.size());
 		
 		var def2 = getNonRegisteredBasicRuleDefinition();		

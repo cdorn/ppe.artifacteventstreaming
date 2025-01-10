@@ -56,7 +56,8 @@ public class RDFInstance extends RDFElement implements PPEInstance {
 	}
 
 	public boolean isInstanceOf(@NonNull OntClass named) {
-		return ((RDFInstanceType)this.getInstanceType()).getAllSuperClasses().contains(named);		
+		var type = (RDFInstanceType)this.getInstanceType();
+		return type.getType().equals(named) || type.getAllSuperClasses().contains(named);		
 	}
 
 }
