@@ -8,6 +8,7 @@ import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.replay.CommitContainmentAugmenter;
 import at.jku.isse.artifacteventstreaming.replay.PerResourceHistoryRepository;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.passiveprocessengine.core.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.core.ProcessInstanceChangeListener;
 import lombok.extern.slf4j.Slf4j;
@@ -17,10 +18,12 @@ public class CommitChangeEventTransformer extends CommitContainmentAugmenter imp
 
 	ProcessInstanceChangeListener eventSink;
 	NodeToDomainResolver resolver;
+	RuleSchemaProvider ruleSchema;
 	
-	public CommitChangeEventTransformer(String serviceName, OntModel repoModel, NodeToDomainResolver resolver, PerResourceHistoryRepository historyRepo) {
+	public CommitChangeEventTransformer(String serviceName, OntModel repoModel, NodeToDomainResolver resolver, PerResourceHistoryRepository historyRepo, RuleSchemaProvider ruleSchema) {
 		super(serviceName, repoModel, historyRepo, resolver.getCardinalityUtil());
 		this.resolver = resolver;
+		this.ruleSchema = ruleSchema;
 	}	
 	
 	@Override
@@ -38,8 +41,12 @@ public class CommitChangeEventTransformer extends CommitContainmentAugmenter imp
 		super.logIncomingCommit(commit, indexOfNewAddition, indexOfNewRemoval);
 		var addSize = commit.getAddedStatements().size();
 		var remSize = commit.getRemovedStatements().size();
-		var session = new TransformationSession(commit.getAddedStatements().subList(indexOfNewAddition, addSize)
-				, commit.getRemovedStatements().subList(indexOfNewRemoval, remSize), resolver, this.historyRepo);
+		var session = new TransformationSession(
+				commit.getAddedStatements().subList(indexOfNewAddition, addSize)
+				, commit.getRemovedStatements().subList(indexOfNewRemoval, remSize)
+				, resolver
+				, this.historyRepo
+				, this.ruleSchema);
 		try {
 			session.process(commit.getCommitId(), commit.getOriginatingBranchId(), commit.getTimeStamp());
 			if (eventSink != null) {
@@ -48,7 +55,6 @@ public class CommitChangeEventTransformer extends CommitContainmentAugmenter imp
 				eventSink.handleUpdates(updates);
 			}
 		} catch (PersistenceException e) {
-			
 			throw new RuntimeException(e.getMessage());
 		}
 		

@@ -59,7 +59,7 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		try {
-			var branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
+			branch = new BranchBuilder(repoURI, repoDataset, repoModel)
 					.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF)		
 					.setBranchLocalName("main")
 					.build();		
@@ -69,9 +69,12 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 			var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);
 			var repairService = new RepairService(model1, observer.getRepo());
 			RuleEnabledResolver resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
-			var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, new InMemoryHistoryRepository());
+			var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, new InMemoryHistoryRepository(), observer.getFactory());
 			branch.appendBranchInternalCommitService(observer);
 			branch.appendBranchInternalCommitService(changeTransformer);
+			branch.appendBranchInternalCommitService(new LazyLoadingLoopControllerService("LazyLoadingLoopController", repoModel, model1));
+			// add a loop lazy loading controller
+			
 			branch.startCommitHandlers(null);
 			branch.getDataset().begin();
 			
@@ -109,7 +112,7 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		try {
-			branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
+			branch = new BranchBuilder(repoURI, repoDataset, repoModel)
 					.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF)		
 					.setDataset(modelDataset.get())
 					.setStateKeeper(stateKeeper)
@@ -126,9 +129,12 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 			System.out.println("Size after observer build: "+model1.size());
 			var repairService = new RepairService(model1, observer.getRepo());
 			RuleEnabledResolver resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
-			var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, new InMemoryHistoryRepository());
+			var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, new InMemoryHistoryRepository(), observer.getFactory());
 			branch.appendBranchInternalCommitService(observer);
 			branch.appendBranchInternalCommitService(changeTransformer);
+			branch.appendBranchInternalCommitService(new LazyLoadingLoopControllerService("LazyLoadingLoopController", repoModel, model1));
+			// add a loop lazy loading controller
+			
 			System.out.println("Size after prepare listeners: "+model1.size());
 			//var unfinishedCommit = stateKeeper.loadState();
 			// branch.startCommitHandlers(unfinishedCommit); // first complete other stuff on top

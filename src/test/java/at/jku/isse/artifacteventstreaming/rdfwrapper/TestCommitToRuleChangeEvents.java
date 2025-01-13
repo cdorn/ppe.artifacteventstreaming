@@ -90,7 +90,7 @@ class TestCommitToRuleChangeEvents {
 		inspector = new RuleRepositoryInspector(observer.getFactory());
 		//aggr = new StatementAggregator();
 		listener = new PPEChangeListener();
-		transformer = new CommitChangeEventTransformer("Transformer", repoModel, resolver, new InMemoryHistoryRepository());
+		transformer = new CommitChangeEventTransformer("Transformer", repoModel, resolver, new InMemoryHistoryRepository(), observer.getFactory());
 		transformer.registerWithWorkspace(listener);		
 		m.setNsPrefix("isse", NS);
 		m.setNsPrefix("map", MAP_NS);

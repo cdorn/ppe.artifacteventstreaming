@@ -77,7 +77,7 @@ class TestCommitToChangeEvents {
 		resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
 		aggr = new StatementAggregator();
 		listener = new PPEChangeListener();
-		transformer = new CommitChangeEventTransformer("Transformer", repoModel, resolver, new InMemoryHistoryRepository());
+		transformer = new CommitChangeEventTransformer("Transformer", repoModel, resolver, new InMemoryHistoryRepository(), observer.getFactory());
 		transformer.registerWithWorkspace(listener);
 		//m.register(aggr);
 		aggr.registerWithModel(m);

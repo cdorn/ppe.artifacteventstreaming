@@ -16,6 +16,9 @@ import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.AES.OPTYPE;
 import at.jku.isse.artifacteventstreaming.replay.PerResourceHistoryRepository;
 import at.jku.isse.artifacteventstreaming.replay.StatementAugmentationSession;
+import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.passiveprocessengine.core.PPEInstance;
 import at.jku.isse.passiveprocessengine.core.PropertyChange;
 import at.jku.isse.passiveprocessengine.core.PropertyChange.Update;
@@ -26,12 +29,14 @@ import lombok.extern.slf4j.Slf4j;
 public class TransformationSession extends StatementAugmentationSession {
 		
 	private final NodeToDomainResolver resolver;
+	final RuleRepositoryInspector inspector;
 	@Getter private final List<Update> updates = new LinkedList<>();
 
 	public TransformationSession(List<Statement> addedStatements, List<Statement> removedStatements,
-			NodeToDomainResolver resolver, PerResourceHistoryRepository historyRepo) {
+			NodeToDomainResolver resolver, PerResourceHistoryRepository historyRepo, RuleSchemaProvider ruleSchema) {
 		super(addedStatements, removedStatements, resolver.getCardinalityUtil(), historyRepo);
 		this.resolver = resolver;
+		this.inspector = new RuleRepositoryInspector(ruleSchema);
 	}
 	
 	@Override
@@ -129,6 +134,9 @@ public class TransformationSession extends StatementAugmentationSession {
 		stmts = filterOutListOrMapOwnershipAdditions(stmts);
 		var shallowCopy = List.copyOf(stmts);
 		
+		if (inst.isAnon()) { // e.g., rule eval scopes are anonymous nodes
+			processAnonObject(inst, stmts);
+		} else {
 		RDFInstance changeSubject = (RDFInstance) resolver.resolveToRDFElement(inst);
 		if (changeSubject == null) { //typically for schema information
 			return;
@@ -158,6 +166,7 @@ public class TransformationSession extends StatementAugmentationSession {
 			}
 		}).filter(Objects::nonNull)
 		.toList());
+		}
 	}
 	
 	private List<StatementWrapper> filterOutListOrMapOwnershipAdditions(List<StatementWrapper> stmts) {
@@ -165,6 +174,30 @@ public class TransformationSession extends StatementAugmentationSession {
 			var object = wrapper.stmt().getObject();
 			return !isMapEntryOrListContainer(object);
 		}).toList();
+	}
+	
+	private void processAnonObject(OntObject inst, List<StatementWrapper> stmts) {
+		//FIXME: ugly hack to provide scope information to process rule change listener
+		updates.addAll(stmts.stream()
+				.filter(wrapper -> wrapper.stmt().getPredicate().getURI().equals(RuleSchemaFactory.usingPropertyURI)) // we do this only for the usingProperty predicate of a scope, nothing else, its a hack!
+				.map(wrapper -> {
+					var propName = wrapper.stmt().getPredicate().getLocalName();
+					var scope = wrapper.stmt().getSubject();
+					var element = inspector.getElementFromScope(scope); // from scope object to owner instance of that scope
+					if (element != null) {
+						var subject = resolver.convertFromRDF(element);
+						if (subject instanceof PPEInstance instSubject) {
+							if (wrapper.op().equals(AES.OPTYPE.ADD)) {
+								return new PropertyChange.Add(propName, instSubject, wrapper.stmt().getResource().getLocalName());
+							} else {
+								return new PropertyChange.Remove(propName, instSubject, wrapper.stmt().getResource().getLocalName());
+							}
+						}
+					}
+					return null;
+				})
+				.filter(Objects::nonNull)
+				.toList());
 	}
 	
 	private boolean isMapEntryOrListContainer(RDFNode obj) {		
