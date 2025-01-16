@@ -197,19 +197,18 @@ public class EventStoreFactory {
 				for (int i = 0; i < payloads.size(); i++) {
 					EventMetaData metadata = new EventMetaData(commit.getCommitId(), i+1, payloads.size());
 					byte[] metaByte = jsonMapper.writeValueAsBytes(metadata);
-										
 					EventData eventData = EventData
 							.builderAsBinary("CommitEventType", payloads.get(i)) // we cannot use commit UUID as its reused for each branch		
 							.metadataAsBytes(metaByte)
 							.build();
-
 					AppendToStreamOptions options = AppendToStreamOptions.get()
 							.expectedRevision(ExpectedRevision.any());
 
-					var result = eventDBclient.appendToStream(branchURI, options, eventData) 
+					var result = eventDBclient.appendToStream(branchURI, options, eventData) //multiple events cannot be stored here at once, as we run into maxsize !!
 							.get();			
 					log.trace("Obtained log position upon write: "+result.getLogPosition().toString());
 				}
+				
 			} catch (JsonProcessingException e) {
 				String msg = String.format("Error serializing commit %s event to branch %s with error %s", commit.getCommitId(), branchURI, e.getMessage()) ;
 				log.warn(msg);

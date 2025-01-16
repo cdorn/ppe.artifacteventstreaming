@@ -1,5 +1,6 @@
 package at.jku.isse.artifacteventstreaming.api.manualtests;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
@@ -53,7 +54,7 @@ class TestEventPayloadsize {
 	}		
 	
 	
-	@Test 
+	@Test  @Disabled
 	void test10KStmtCommitSplitting() throws Exception {	
 		
 		OntModel m = OntModelFactory.createModel(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF);
@@ -78,7 +79,7 @@ class TestEventPayloadsize {
 		store.appendCommit(commit);
 		
 		List<Commit> allCommits = store.loadAllCommits();
-		assertTrue(allCommits.size() > 0);
+		assertEquals(1, allCommits.size());
 	}
 	
 	
