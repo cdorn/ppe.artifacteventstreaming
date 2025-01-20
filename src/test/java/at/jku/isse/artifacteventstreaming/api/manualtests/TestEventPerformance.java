@@ -55,7 +55,7 @@ class TestEventPerformance {
 	}
 	
 	
-	@Test 
+	@Test @Disabled
 	void test10KEvents10CommitPersistence() throws Exception {	
 		PerBranchEventStore client = factory.getEventStore(repoURI.toString());
 		BranchStateUpdater stateKeeper = new StateKeeperImpl(repoURI, branchCache, client);

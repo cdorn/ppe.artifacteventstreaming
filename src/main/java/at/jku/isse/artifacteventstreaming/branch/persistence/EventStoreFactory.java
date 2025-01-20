@@ -9,8 +9,10 @@ import java.util.stream.Stream;
 
 import com.eventstore.dbclient.AppendToStreamOptions;
 import com.eventstore.dbclient.EventData;
+import com.eventstore.dbclient.EventDataBuilder;
 import com.eventstore.dbclient.EventStoreDBClient;
 import com.eventstore.dbclient.EventStoreDBClientSettings;
+import com.eventstore.dbclient.EventStoreDBProjectionManagementClient;
 import com.eventstore.dbclient.ExpectedRevision;
 import com.eventstore.dbclient.ReadResult;
 import com.eventstore.dbclient.ReadStreamOptions;
@@ -38,6 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 public class EventStoreFactory {
 
 	 private final EventStoreDBClient client;
+	 private final EventStoreDBProjectionManagementClient projectionClient;
 	 private final JsonMapper jsonMapper = new JsonMapper();
 	 private static final SimpleModule commitModule = new SimpleModule().addAbstractTypeMapping(Commit.class, StatementCommitImpl.class);
 	 
@@ -52,10 +55,16 @@ public class EventStoreFactory {
 		StatementJsonSerializer.registerSerializationModule(jsonMapper);	
 		StatementJsonDeserializer.registerDeserializationModule(jsonMapper);		
 		jsonMapper.registerModule(commitModule);
+		
+		projectionClient = EventStoreDBProjectionManagementClient.create(settings);
 	 }
 	 
 	 public EventStoreDBClient getClient() {
 		 return client;
+	 }
+	 
+	 public EventStoreDBProjectionManagementClient getProjectionClient() {
+		 return projectionClient;
 	 }
 	
 	 public PerBranchEventStore getEventStore(String branchURI) {
@@ -197,8 +206,8 @@ public class EventStoreFactory {
 				for (int i = 0; i < payloads.size(); i++) {
 					EventMetaData metadata = new EventMetaData(commit.getCommitId(), i+1, payloads.size());
 					byte[] metaByte = jsonMapper.writeValueAsBytes(metadata);
-					EventData eventData = EventData
-							.builderAsBinary("CommitEventType", payloads.get(i)) // we cannot use commit UUID as its reused for each branch		
+					EventData eventData = EventDataBuilder
+							.json(null, "CommitEventType", payloads.get(i)) // we cannot use commit UUID as its reused for each branch		
 							.metadataAsBytes(metaByte)
 							.build();
 					AppendToStreamOptions options = AppendToStreamOptions.get()
@@ -223,10 +232,10 @@ public class EventStoreFactory {
 		@Override
 		public void appendCommitDelivery(@NonNull CommitDeliveryEvent event) throws PersistenceException {
 			try {
-			EventData eventData = EventData
-					.builderAsBinary("CommitDeliveryType", jsonMapper.writeValueAsBytes(event)) 	
+			EventData eventData = EventDataBuilder
+					.json(null, "CommitDeliveryType", jsonMapper.writeValueAsBytes(event)) 	
 					.build();
-
+			//TODO: as we receive large commits within the framework, we need to also do splitting here!!!
 			AppendToStreamOptions options = AppendToStreamOptions.get()
 					.expectedRevision(ExpectedRevision.any());
 

@@ -54,7 +54,7 @@ class TestEventPayloadsize {
 	}		
 	
 	
-	@Test  @Disabled
+	@Test // @Disabled
 	void test10KStmtCommitSplitting() throws Exception {	
 		
 		OntModel m = OntModelFactory.createModel(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF);
