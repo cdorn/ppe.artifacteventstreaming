@@ -29,13 +29,16 @@ import lombok.Data;
 
 class TestEventStoreProjections {
 
-	public static URI NS = URI.create("eventstoreprojection");
+	public static URI NS = URI.create("http://eventstoreprojection#main");
 	
 	private static EventStoreFactory factory = new EventStoreFactory();
 	
 	String testProjectionName = "testProjection";
 	
 	EventStoreDBProjectionManagementClient projectionClient;
+	// NOTE!!! for testing run eventstore with param: --dev --insecure --run-projections=All
+	// then you can disable all system projection except for event type!
+	
 	
 	@BeforeEach
 	void removeStream() {
@@ -59,7 +62,7 @@ class TestEventStoreProjections {
 		}
 	}
 	
-	private void createTestStreamContent() throws Exception{
+	private void createTestStreamContent(String nsPostfix, int counterOffset) throws Exception{
 		OntModel m = OntModelFactory.createModel(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF);
 		var listener = new StatementAggregator();
 		listener.registerWithModel(m);
@@ -68,21 +71,48 @@ class TestEventStoreProjections {
 		var props = new LinkedList<OntRelationalProperty>();
 		var types = new LinkedList<OntClass>();
 		
-		for (int i = 0; i < 5; i++) {
+		for (int i = counterOffset; i < counterOffset+1; i++) {
 			var type = m.createOntClass(NS+"type"+i);
 			types.add(type);
 			for (int j = 0; j < 1; j++) {
 				props.add(schemaUtils.getListType().addObjectListProperty(type, NS+"prop"+i+"-"+j, type));				
 			}			
 		}
-		var commit = new StatementCommitImpl(NS.toString(), "TestCommit", null, 0, listener.retrieveAddedStatements(), listener.retrieveRemovedStatements());
+		var commit = new StatementCommitImpl(NS.toString()+nsPostfix, "TestCommit", null, 0, listener.retrieveAddedStatements(), listener.retrieveRemovedStatements());
 		EventStoreFactory factory = new EventStoreFactory();
-		var store = factory.getEventStore(NS.toString());
+		var store = factory.getEventStore(NS.toString()+nsPostfix);
 		store.appendCommit(commit);
 		
-		List<Commit> allCommits = store.loadAllCommits();
-		assertEquals(1, allCommits.size());
+		//List<Commit> allCommits = store.loadAllCommits();
+		//assertEquals(1, allCommits.size());
 	}
+	
+	@Test
+	void createTestEvents() throws Exception {
+		createTestStreamContent("1", 0);
+		createTestStreamContent("2", 0);
+		createTestStreamContent("1", 1);
+		createTestStreamContent("1", 2);
+	}
+	
+	String convertionTemplate = "fromStream('$et-CommitEventType')\r\n"
+			+ ".when({\r\n"
+			+ "    $any: function(s, e) {\r\n"
+			+ "        var subjects = \r\n"
+			+ "            new Set(e.body.addedStatements\r\n"
+			+ "           // .filter(stmt => !stmt.predicate.startsWith('http://www.w3.org'))\r\n" // if schema should not be tracked, then enable this line
+			+ "            .filter(stmt => stmt.subject.startsWith('http'))\r\n"
+			+ "            .map(stmt => stmt.subject) );\r\n"
+			+ "        e.body.removedStatements\r\n"
+			+ "           // .filter(stmt => !stmt.predicate.startsWith('http://www.w3.org'))\r\n"
+			+ "            .filter(stmt => stmt.subject.startsWith('http'))\r\n"
+			+ "            .map(stmt => stmt.subject)\r\n"
+			+ "            .forEach(subj => subjects.add(subj))\r\n"
+			+ "        \r\n"
+			+ "        subjects.forEach(subj => \r\n"
+			+ "        linkTo('resource-'+subj, e));\r\n"
+			+ "    }\r\n"
+			+ "})";
 	
 	String projectionTemplate = "fromStream('"+NS.toString()+"')\r\n"
 			+ ".when({\r\n"
@@ -104,8 +134,6 @@ class TestEventStoreProjections {
 	
 	@Test
 	void testCreateProjection() throws Exception {
-		createTestStreamContent();
-		Thread.sleep(500);
 		//String projectionContent = String.format(projectionTemplate, NS.toString());
 		projectionClient.create(testProjectionName, projectionTemplate).get();
 		Thread.sleep(500);
