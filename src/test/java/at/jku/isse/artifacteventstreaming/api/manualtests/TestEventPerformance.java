@@ -7,6 +7,7 @@ import java.net.URI;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -91,8 +92,8 @@ class TestEventPerformance {
 				
 		// now we do manual application
 		stateKeeper2.getHistory().stream().forEach(pastCommit -> {
-			model2.add(pastCommit.getRemovedStatements());
-			model2.add(pastCommit.getAddedStatements());
+			model2.add(pastCommit.getRemovedStatements().stream().map(Statement.class::cast).toList());
+			model2.add(pastCommit.getAddedStatements().stream().map(Statement.class::cast).toList());
 		});
 		long end = System.currentTimeMillis();
 		
@@ -134,8 +135,8 @@ class TestEventPerformance {
 		branch2.startCommitHandlers(null);
 		// now we do manual application
 		stateKeeper2.getHistory().stream().forEach(pastCommit -> {
-			model2.add(pastCommit.getRemovedStatements());
-			model2.add(pastCommit.getAddedStatements());
+			model2.add(pastCommit.getRemovedStatements().stream().map(Statement.class::cast).toList());
+			model2.add(pastCommit.getAddedStatements().stream().map(Statement.class::cast).toList());
 		});
 		long end = System.currentTimeMillis();
 		assert(model2.containsAll(model));

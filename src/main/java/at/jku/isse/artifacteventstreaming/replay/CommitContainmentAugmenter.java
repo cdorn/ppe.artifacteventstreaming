@@ -14,13 +14,11 @@ import at.jku.isse.passiveprocessengine.rdfwrapper.TransformationSession;
 
 public class CommitContainmentAugmenter extends AbstractHandlerBase implements IncrementalCommitHandler {
 
-	protected final PerResourceHistoryRepository historyRepo;
 	protected final PropertyCardinalityTypes cardinalityUtils;
 
 	public CommitContainmentAugmenter(String serviceName, OntModel repoModel,
-			PerResourceHistoryRepository historyRepo, PropertyCardinalityTypes cardinalityUtils) {
+			PropertyCardinalityTypes cardinalityUtils) {
 		super(serviceName, repoModel);
-		this.historyRepo = historyRepo;
 		this.cardinalityUtils = cardinalityUtils;
 	}
 
@@ -39,14 +37,8 @@ public class CommitContainmentAugmenter extends AbstractHandlerBase implements I
 		var addSize = commit.getAddedStatements().size();
 		var remSize = commit.getRemovedStatements().size();
 		var session = new StatementAugmentationSession(commit.getAddedStatements().subList(indexOfNewAddition, addSize)
-				, commit.getRemovedStatements().subList(indexOfNewRemoval, remSize), this.cardinalityUtils, this.historyRepo);
-		try {
-			session.process(commit.getCommitId(), commit.getOriginatingBranchId(), commit.getTimeStamp());
-		} catch (PersistenceException e) {
-			
-			throw new RuntimeException(e.getMessage());
-		}
-		
+				, commit.getRemovedStatements().subList(indexOfNewRemoval, remSize), this.cardinalityUtils);
+			session.process();
 	}
 
 }

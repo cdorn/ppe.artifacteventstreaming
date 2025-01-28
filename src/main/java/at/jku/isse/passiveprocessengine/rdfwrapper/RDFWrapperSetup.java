@@ -69,7 +69,7 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 			var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);
 			var repairService = new RepairService(model1, observer.getRepo());
 			RuleEnabledResolver resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
-			var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, new InMemoryHistoryRepository(), observer.getFactory());
+			var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, observer.getFactory());
 			branch.appendBranchInternalCommitService(observer);
 			branch.appendBranchInternalCommitService(changeTransformer);
 			branch.appendBranchInternalCommitService(new LazyLoadingLoopControllerService("LazyLoadingLoopController", repoModel, model1));
@@ -129,7 +129,7 @@ public class RDFWrapperSetup implements DesignspaceTestSetup {
 			System.out.println("Size after observer build: "+model1.size());
 			var repairService = new RepairService(model1, observer.getRepo());
 			RuleEnabledResolver resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
-			var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, new InMemoryHistoryRepository(), observer.getFactory());
+			var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, observer.getFactory());
 			branch.appendBranchInternalCommitService(observer);
 			branch.appendBranchInternalCommitService(changeTransformer);
 			branch.appendBranchInternalCommitService(new LazyLoadingLoopControllerService("LazyLoadingLoopController", repoModel, model1));

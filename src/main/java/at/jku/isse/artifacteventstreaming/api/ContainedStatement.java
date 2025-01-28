@@ -18,4 +18,10 @@ public interface ContainedStatement extends Statement {
 	 */
 	public Property getContainmentPropertyOrPredicate();
 	
+	/**
+	 * @param container the resource that contains the underlying statement's subject
+	 * @param containingProperty the property that points to the contained resource that is the subject of the underlying statement
+	 */
+	public void augmentWithContainment(Resource container, Property containingProperty);
+	
 }

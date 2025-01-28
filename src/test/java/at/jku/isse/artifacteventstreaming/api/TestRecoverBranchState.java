@@ -32,6 +32,7 @@ import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryStateKeeperFactory;
+import at.jku.isse.artifacteventstreaming.replay.ContainedStatementImpl;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.DelayingDirectBranchCommitStreamer;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.LongRunningNoOpLocalService;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
@@ -141,7 +142,7 @@ class TestRecoverBranchState {
 			// create commit to merge
 			Resource testResource = ResourceFactory.createResource(repoURI+"#art1");
 			Statement stmt = model.createStatement(testResource, RDFS.label, model.createTypedLiteral(1));
-			Commit commit = new StatementCommitImpl(repoURI.toString()+"#someBranch", "Commit to Merge", null, 0, Set.of(stmt), Collections.emptySet());
+			Commit commit = new StatementCommitImpl(repoURI.toString()+"#someBranch", "Commit to Merge", null, 0, Set.of(new ContainedStatementImpl(stmt)), Collections.emptySet());
 			//branch.getDataset().begin();
 			try {
 				 branch.enqueueIncomingCommit(commit);

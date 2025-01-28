@@ -19,8 +19,8 @@ import lombok.Getter;
 @JsonIgnoreProperties(value = { "additionCount", "removalCount", "empty" })
 public class StatementCommitImpl implements Commit {
 
-	private final Set<Statement> addedStatements = new LinkedHashSet<>();
-	private final Set<Statement> removedStatements = new LinkedHashSet<>();
+	private final Set<ContainedStatement> addedStatements = new LinkedHashSet<>();
+	private final Set<ContainedStatement> removedStatements = new LinkedHashSet<>();
 	@Getter
 	private final String commitMessage;
 	@Getter
@@ -45,8 +45,8 @@ public class StatementCommitImpl implements Commit {
 			,  String commitMsg
 			,  String precedingCommitId
 			,  long timeStamp
-			,  Set<Statement> addedStatements
-			,  Set<Statement> removedStatements
+			,  Set<? extends ContainedStatement> addedStatements
+			,  Set<? extends ContainedStatement> removedStatements
 			) {
 		this(branchId, commitMsg, precedingCommitId, timeStamp);
 		this.addedStatements.addAll(addedStatements);
@@ -59,8 +59,8 @@ public class StatementCommitImpl implements Commit {
 			, @JsonProperty("commitMessage") String commitMsg
 			, @JsonProperty("precedingCommitId") String precedingCommitId
 			, @JsonProperty("timeStamp") long timeStamp
-			, @JsonProperty("addedStatements") Set<Statement> addedStatements
-			, @JsonProperty("removedStatements") Set<Statement> removedStatements
+			, @JsonProperty("addedStatements") Set<? extends ContainedStatement> addedStatements
+			, @JsonProperty("removedStatements") Set<? extends ContainedStatement> removedStatements
 			) {
 		this.commitMessage = commitMsg;
 		this.originatingBranchId = branchId;
@@ -76,23 +76,33 @@ public class StatementCommitImpl implements Commit {
 	}
 	
 	@Override
-	public void appendAddedStatements(Set<Statement> stmts) {
+	public void appendAddedStatements(Set<? extends ContainedStatement> stmts) {
 		addedStatements.addAll(stmts);
 	}
 	
 	@Override
-	public void appendRemovedStatement(Set<Statement> stmts) {
+	public void appendRemovedStatement(Set<? extends ContainedStatement> stmts) {
 		removedStatements.addAll(stmts);
 	}
 	
 	@Override
-	public List<Statement> getAddedStatements() {
-		return addedStatements.stream().collect(Collectors.toList());
+	public List<ContainedStatement> getAddedStatements() {
+		return addedStatements.stream().toList();
 	}
 	
 	@Override
-	public List<Statement> getRemovedStatements() {
-		return removedStatements.stream().collect(Collectors.toList());
+	public List<ContainedStatement> getRemovedStatements() {
+		return removedStatements.stream().toList();
+	}
+	
+	@Override
+	public Set<ContainedStatement> getAddedStatementsAsSet() {
+		return addedStatements;
+	}
+	
+	@Override
+	public Set<ContainedStatement> getRemovedStatementsAsSet() {
+		return removedStatements;
 	}
 
 	@Override

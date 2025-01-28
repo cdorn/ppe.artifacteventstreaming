@@ -100,11 +100,9 @@ class TestEventStoreProjections {
 			+ "    $any: function(s, e) {\r\n"
 			+ "        var subjects = \r\n"
 			+ "            new Set(e.body.addedStatements\r\n"
-			+ "           // .filter(stmt => !stmt.predicate.startsWith('http://www.w3.org'))\r\n" // if schema should not be tracked, then enable this line
 			+ "            .filter(stmt => stmt.subject.startsWith('http'))\r\n"
 			+ "            .map(stmt => stmt.subject) );\r\n"
 			+ "        e.body.removedStatements\r\n"
-			+ "           // .filter(stmt => !stmt.predicate.startsWith('http://www.w3.org'))\r\n"
 			+ "            .filter(stmt => stmt.subject.startsWith('http'))\r\n"
 			+ "            .map(stmt => stmt.subject)\r\n"
 			+ "            .forEach(subj => subjects.add(subj))\r\n"

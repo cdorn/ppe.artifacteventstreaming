@@ -2,6 +2,7 @@ package at.jku.isse.artifacteventstreaming.branch.incoming;
 
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDFS;
 
 import at.jku.isse.artifacteventstreaming.api.AbstractHandlerBase;
@@ -31,8 +32,8 @@ public class CompleteCommitMerger extends AbstractHandlerBase {
 	public void handleCommit(Commit commit) {		
 		if (!commit.isEmpty()) {
 			log.debug(String.format("About to apply commit %s with %s additions and %s removals to branch %s", commit.getCommitId(), commit.getAdditionCount(), commit.getRemovalCount(), branch.getBranchId()));
-			branch.getModel().remove(commit.getRemovedStatements()); //first removal, then adding
-			branch.getModel().add(commit.getAddedStatements());
+			branch.getModel().remove(commit.getRemovedStatements().stream().map(Statement.class::cast).toList()); //first removal, then adding
+			branch.getModel().add(commit.getAddedStatements().stream().map(Statement.class::cast).toList());
 			log.debug(String.format("Applied commit %s to branch %s", commit.getCommitId(), branch.getBranchId()));
 		}		
 	}

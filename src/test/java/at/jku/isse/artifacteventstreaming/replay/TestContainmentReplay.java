@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
+import at.jku.isse.artifacteventstreaming.branch.outgoing.CommitToHistoryHandler;
 import at.jku.isse.artifacteventstreaming.rule.MockSchema;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
@@ -46,7 +47,9 @@ class TestContainmentReplay {
 		
 		InMemoryHistoryRepository historyRepo = new InMemoryHistoryRepository();
 		collector = new ReplayEntryCollectorFromHistory(historyRepo, branchURI );
-		CommitContainmentAugmenter augmenter = new CommitContainmentAugmenter(branchURI, m, historyRepo, schemaUtil);
+		//TODO: mock branch
+		var commit2history = new CommitToHistoryHandler(null, historyRepo, null);
+		CommitContainmentAugmenter augmenter = new CommitContainmentAugmenter(branchURI, m, schemaUtil);
 
 		issue1 = schema.createIssue("Issue1");
 		var seq = schemaUtil.getListType().getOrCreateSequenceFor(issue1, schema.getLabelProperty());
@@ -60,6 +63,7 @@ class TestContainmentReplay {
 		
 		var commit1 = new StatementCommitImpl(branchURI , "TestCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
 		augmenter.handleCommit(commit1);
+		commit2history.handleCommit(commit1);
 		
 		issue1.addProperty(schema.getPriorityProperty(), m.createTypedLiteral(2L));
 		issue1.remove(schema.getPriorityProperty(), m.createTypedLiteral(1L));
@@ -69,7 +73,7 @@ class TestContainmentReplay {
 		map.put("Second", m.createTypedLiteral(2));
 		var commit2 = new StatementCommitImpl(branchURI , "TestCommit2", "", 1, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
 		augmenter.handleCommit(commit2);
-		
+		commit2history.handleCommit(commit2);
 		
 		issue1.addProperty(schema.getPriorityProperty(), m.createTypedLiteral(3L));
 		issue1.remove(schema.getPriorityProperty(), m.createTypedLiteral(2L));
@@ -79,7 +83,7 @@ class TestContainmentReplay {
 		map.put("First", m.createTypedLiteral(3));
 		var commit3 = new StatementCommitImpl(branchURI , "TestCommit3", "", 2, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
 		augmenter.handleCommit(commit3);
-		
+		commit2history.handleCommit(commit3);
 	}
 
 	@Test

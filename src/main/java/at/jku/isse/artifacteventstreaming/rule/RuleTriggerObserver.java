@@ -70,8 +70,8 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 	public void handleCommitFromOffset(Commit commit, int indexOfNewAddition, int indexOfNewRemoval) {
 		super.logIncomingCommit(commit, indexOfNewAddition, indexOfNewRemoval);
 		Map<RuleEvaluationWrapperResource, RuleEvaluationIterationMetadata> rulesToReevaluate = new HashMap<>();		
-		List<Statement> removalScope = null;
-		List<Statement> additionScope = null;
+		List<? extends Statement> removalScope = null;
+		List<? extends Statement> additionScope = null;
 		
 		// house keeping first, any rule removed, added, changed, or instance created/deleted that cause rule evaluations to be created or removed		
 		// first we look at removals									
@@ -114,7 +114,7 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 		listeners.stream().forEach(listener -> listener.signalRuleEvaluationFinished(reim));
 	}
 	
-	private void processRemovals(List<Statement> statements, Set<Resource> removedResourceURIs) {		
+	private void processRemovals(List<? extends Statement> statements, Set<Resource> removedResourceURIs) {		
 		Map<Property, List<Statement>> aggrPerProp = statements.stream().collect(Collectors.groupingBy(Statement::getPredicate));
 		aggrPerProp.getOrDefault(RDF.type, Collections.emptyList()).stream()
 						.forEach(stmt -> processTypeRemoval(stmt, removedResourceURIs)); // typically signals either rule removal, or instance removal, or instance retyping
@@ -188,7 +188,7 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 		return false;
 	}
 	
-	private void processAdditions(List<Statement> statements, Map<RuleEvaluationWrapperResource, RuleEvaluationIterationMetadata> rulesToReevaluate, Set<Resource> createdResourceURIs) {
+	private void processAdditions(List<? extends Statement> statements, Map<RuleEvaluationWrapperResource, RuleEvaluationIterationMetadata> rulesToReevaluate, Set<Resource> createdResourceURIs) {
 		
 		Map<Property, List<Statement>> aggrPerProp = statements.stream().collect(Collectors.groupingBy(Statement::getPredicate));
 		
@@ -239,7 +239,7 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 		wrappers.stream().forEach(rule -> rulesMetadata.computeIfAbsent(rule, k -> new RuleEvaluationIterationMetadata(rule)).addOperation(cause));
 	}
 	
-	private void collectRulesToTrigger(List<Statement> additionScope, List<Statement> removalScope, Set<Resource> subjectsToIgnore, Map<RuleEvaluationWrapperResource, RuleEvaluationIterationMetadata> rulesToReevaluate) {		
+	private void collectRulesToTrigger(List<? extends Statement> additionScope, List<? extends Statement> removalScope, Set<Resource> subjectsToIgnore, Map<RuleEvaluationWrapperResource, RuleEvaluationIterationMetadata> rulesToReevaluate) {		
 		
 		additionScope.stream()
 			.filter(stmt -> !subjectsToIgnore.contains(stmt.getSubject()))

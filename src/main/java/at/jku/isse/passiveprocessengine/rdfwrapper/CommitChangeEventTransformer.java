@@ -20,8 +20,8 @@ public class CommitChangeEventTransformer extends CommitContainmentAugmenter imp
 	NodeToDomainResolver resolver;
 	RuleSchemaProvider ruleSchema;
 	
-	public CommitChangeEventTransformer(String serviceName, OntModel repoModel, NodeToDomainResolver resolver, PerResourceHistoryRepository historyRepo, RuleSchemaProvider ruleSchema) {
-		super(serviceName, repoModel, historyRepo, resolver.getCardinalityUtil());
+	public CommitChangeEventTransformer(String serviceName, OntModel repoModel, NodeToDomainResolver resolver, RuleSchemaProvider ruleSchema) {
+		super(serviceName, repoModel, resolver.getCardinalityUtil());
 		this.resolver = resolver;
 		this.ruleSchema = ruleSchema;
 	}	
@@ -45,18 +45,15 @@ public class CommitChangeEventTransformer extends CommitContainmentAugmenter imp
 				commit.getAddedStatements().subList(indexOfNewAddition, addSize)
 				, commit.getRemovedStatements().subList(indexOfNewRemoval, remSize)
 				, resolver
-				, this.historyRepo
 				, this.ruleSchema);
-		try {
-			session.process(commit.getCommitId(), commit.getOriginatingBranchId(), commit.getTimeStamp());
+		
+			session.process();
 			if (eventSink != null) {
 				var updates = session.getUpdates();
 				log.debug(String.format("%s resulted in %s higherlevel events", commit.getCommitMessage(), updates.size()));
 				eventSink.handleUpdates(updates);
 			}
-		} catch (PersistenceException e) {
-			throw new RuntimeException(e.getMessage());
-		}
+		
 		
 	}
 

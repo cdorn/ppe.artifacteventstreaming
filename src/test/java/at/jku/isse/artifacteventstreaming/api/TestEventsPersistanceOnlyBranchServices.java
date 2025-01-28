@@ -11,6 +11,7 @@ import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.vocabulary.RDFS;
@@ -80,7 +81,7 @@ class TestEventsPersistanceOnlyBranchServices {
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		
 		Commit commit = new StatementCommitImpl("", "", "", 0);
-		commit.appendAddedStatements(Set.of(model.createStatement(testResource, RDFS.seeAlso, testResource)));
+		commit.appendAddedStatements(Set.of(new ContainedStatementImpl(model.createStatement(testResource, RDFS.seeAlso, testResource))));
 		
 		String json = jsonMapper.writeValueAsString(commit);
 		StatementCommitImpl commit2 = jsonMapper.readValue(json, StatementCommitImpl.class);
@@ -165,8 +166,8 @@ class TestEventsPersistanceOnlyBranchServices {
 		// now we do manual application of history onto model 
 		stateKeeper2.getHistory().stream().forEach(pastCommit -> {
 			System.out.println("Adding commit: "+pastCommit.getCommitMessage());
-			model2.add(pastCommit.getRemovedStatements());
-			model2.add(pastCommit.getAddedStatements());
+			model2.add(pastCommit.getRemovedStatements().stream().map(Statement.class::cast).toList());
+			model2.add(pastCommit.getAddedStatements().stream().map(Statement.class::cast).toList());
 		});
 		branch2.getDataset().commit();
 		branch2.getDataset().end();

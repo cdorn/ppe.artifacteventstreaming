@@ -81,7 +81,7 @@ class TestBranchWithRules {
 		
 		assertEquals(2,	serviceOut.getReceivedCommits().size());
 		var outCommit = serviceOut.getReceivedCommits().get(1);
-		List<Statement> ruleResultStmts = outCommit.getAddedStatements().stream().filter(stmt -> stmt.getPredicate().equals(observer.getFactory().getEvaluationHasConsistentResultProperty())).toList();
+		List<Statement> ruleResultStmts = outCommit.getAddedStatements().stream().filter(stmt -> stmt.getPredicate().equals(observer.getFactory().getEvaluationHasConsistentResultProperty())).map(Statement.class::cast).toList();
 		assertEquals(3, ruleResultStmts.size());
 		
 		

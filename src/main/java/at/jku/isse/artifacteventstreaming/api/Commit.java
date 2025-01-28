@@ -15,13 +15,17 @@ public interface Commit {
 
 	String getOriginatingBranchId();
 
-	void appendAddedStatements(Set<Statement> stmts);
+	void appendAddedStatements(Set<? extends ContainedStatement> stmts);
 
-	void appendRemovedStatement(Set<Statement> stmts);
+	void appendRemovedStatement(Set<? extends ContainedStatement> stmts);
 
-	List<Statement> getAddedStatements();
+	List<ContainedStatement> getAddedStatements();
 
-	List<Statement> getRemovedStatements();
+	List<ContainedStatement> getRemovedStatements();
+	
+	Set<ContainedStatement> getAddedStatementsAsSet();
+
+	Set<ContainedStatement> getRemovedStatementsAsSet();
 	
 	int getAdditionCount();
 	

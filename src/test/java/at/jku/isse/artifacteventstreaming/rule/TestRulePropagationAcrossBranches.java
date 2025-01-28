@@ -128,7 +128,7 @@ class TestRulePropagationAcrossBranches {
 		var outCommit = serviceOut.getReceivedCommits().get(1);
 		List<Statement> ruleResultStmts = outCommit.getAddedStatements().stream()
 				.filter(stmt -> stmt.getPredicate().equals(observerDest.getFactory().getEvaluationHasConsistentResultProperty()))
-				.toList();
+				.map(Statement.class::cast).toList();
 		assertEquals(3, ruleResultStmts.size());
 		
 		// currently model sizes are not equal, find out why:

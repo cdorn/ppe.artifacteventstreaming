@@ -12,6 +12,8 @@ import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.rdf.model.impl.ModelCom;
 import org.apache.jena.reasoner.InfGraph;
 
+import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
+import at.jku.isse.artifacteventstreaming.replay.ContainedStatementImpl;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -59,14 +61,14 @@ public class StatementAggregator extends StatementListener {
 	}
 
 	
-	public Set<Statement> retrieveAddedStatements() {		
-		var set = addedStatements.stream().collect(Collectors.toSet());
+	public Set<? extends ContainedStatement> retrieveAddedStatements() {		
+		var set = addedStatements.stream().map(ContainedStatementImpl::new).collect(Collectors.toSet());
 		addedStatements.clear();
 		return set;
 	}
 	
-	public Set<Statement> retrieveRemovedStatements() {
-		var set = removedStatements.stream().collect(Collectors.toSet());
+	public Set<? extends ContainedStatement> retrieveRemovedStatements() {
+		var set = removedStatements.stream().map(ContainedStatementImpl::new).collect(Collectors.toSet());
 		removedStatements.clear();
 		return set;
 	}

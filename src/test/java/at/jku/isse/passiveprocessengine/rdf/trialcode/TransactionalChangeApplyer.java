@@ -20,21 +20,21 @@ public class TransactionalChangeApplyer extends StatementListener {
 	@Override
 	public void addedStatement(Statement s) {
 		System.out.println("ADDED TO TRANSACTION"+s.toString());
-		transactionScope.appendAddedStatements(Set.of(s));
+		transactionScope.appendAddedStatements(Set.of(new ContainedStatementImpl(s)));
 	}
 
 	@Override
 	public void removedStatement(Statement s) {
 		System.out.println("REMOVED TRANSACTION"+s.toString());
-		transactionScope.appendRemovedStatement(Set.of(s));
+		transactionScope.appendRemovedStatement(Set.of(new ContainedStatementImpl(s)));
 	}
 
 	
 	public void commitTransaction(String commitMsg) {
 		Commit scope = transactionScope;
 		transactionScope = new StatementCommitImpl("main", commitMsg, "none", 0);
-		targetModel.add(scope.getAddedStatements());
-		targetModel.remove(scope.getRemovedStatements());
+		targetModel.add(scope.getAddedStatements().stream().map(Statement.class::cast).toList());
+		targetModel.remove(scope.getRemovedStatements().stream().map(Statement.class::cast).toList());
 	}
 	
 	public Commit abortTransaction() {

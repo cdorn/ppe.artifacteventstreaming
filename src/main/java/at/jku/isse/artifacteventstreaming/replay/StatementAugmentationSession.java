@@ -1,12 +1,10 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Stream;
 
 import org.apache.jena.ontapi.model.OntClass;
@@ -22,8 +20,6 @@ import org.apache.jena.vocabulary.RDFS;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
-import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
-import at.jku.isse.artifacteventstreaming.api.AES.OPTYPE;
 import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,23 +28,20 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class StatementAugmentationSession {
 		
-	private final List<Statement> addedStatements;
-	private final List<Statement> removedStatements;
+	private final List<ContainedStatement> addedStatements;
+	private final List<ContainedStatement> removedStatements;
 	private final PropertyCardinalityTypes schemaUtils;
-	private final PerResourceHistoryRepository historyRepo;
 	
-	private final Set<ContainedStatement> addedAugmentedStatements = new HashSet<>();
-	private final Set<ContainedStatement> removedAugmentedStatements = new HashSet<>();
-	
-	public void process(String commitId, String branchURI, long timestamp) throws PersistenceException {
+//	private final Set<ContainedStatement> addedAugmentedStatements = new HashSet<>();
+//	private final Set<ContainedStatement> removedAugmentedStatements = new HashSet<>();
+//	
+	public void process() {
 		 Map<RDFNode, List<StatementWrapper>> opsPerInst = collectPerInstance(addedStatements, removedStatements);
 		 opsPerInst.entrySet().stream()
 			.forEach(entry -> processPerInstance(entry.getKey(), entry.getValue()));	
-		 
-		 historyRepo.appendHistory(commitId, branchURI, timestamp, addedAugmentedStatements, removedAugmentedStatements);
 	}
 	
-	private Map<RDFNode, List<StatementWrapper>> collectPerInstance(List<Statement> addedStatements, List<Statement> removedStatements) {
+	private Map<RDFNode, List<StatementWrapper>> collectPerInstance(List<ContainedStatement> addedStatements, List<ContainedStatement> removedStatements) {
 		// we keep the keys (i.e,instances and affected property) in order of their manipulation (.e.g, creating an instance before adding it somewhere else)				
 		Map<RDFNode, List<StatementWrapper>> opsPerInst = new LinkedHashMap<>(); 
 		// we can't map to instances right now, as the subject of a list manipulation is the listresource and not the individual/owner of the list 
@@ -264,25 +257,30 @@ public class StatementAugmentationSession {
 	}
 	
 	protected void wrapInContainmentStatements(List<StatementWrapper> stmts) {
-		stmts.stream().forEach(stmt -> { 
-			if (stmt.op.equals(OPTYPE.ADD)) {
-				addedAugmentedStatements.add(new ContainedStatementImpl(stmt.stmt()));
-			} else {
-				removedAugmentedStatements.add(new ContainedStatementImpl(stmt.stmt()));
-				}
-			});
+		// NoOp as we directly update the statement
+//		stmts.stream().forEach(stmt -> { 
+//			
+//			
+//			if (stmt.op.equals(OPTYPE.ADD)) {
+//				
+//				addedAugmentedStatements.add(new ContainedStatementImpl(stmt.stmt()));
+//			} else {
+//				removedAugmentedStatements.add(new ContainedStatementImpl(stmt.stmt()));
+//				}
+//			});
 	}
 	
 	protected void wrapInContainmentStatements(List<StatementWrapper> stmts, Resource container, Property containmentProperty) {
 		stmts.stream().forEach(stmt -> { 
-			if (stmt.op.equals(OPTYPE.ADD)) {
-				addedAugmentedStatements.add(new ContainedStatementImpl(stmt.stmt(), container, containmentProperty));
-			} else {
-				removedAugmentedStatements.add(new ContainedStatementImpl(stmt.stmt(), container, containmentProperty));
-				}
+			stmt.stmt().augmentWithContainment(container, containmentProperty);
+//			if (stmt.op.equals(OPTYPE.ADD)) {
+//				addedAugmentedStatements.add(new ContainedStatementImpl(stmt.stmt(), container, containmentProperty));
+//			} else {
+//				removedAugmentedStatements.add(new ContainedStatementImpl(stmt.stmt(), container, containmentProperty));
+//				}
 			});
 	}
 
-	public static record StatementWrapper(Statement stmt, AES.OPTYPE op) {}
+	public static record StatementWrapper(ContainedStatement stmt, AES.OPTYPE op) {}
 	
 }

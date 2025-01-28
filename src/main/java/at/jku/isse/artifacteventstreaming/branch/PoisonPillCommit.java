@@ -38,23 +38,33 @@ public class PoisonPillCommit implements Commit {
 	}
 
 	@Override
-	public void appendAddedStatements(Set<Statement> stmts) {
+	public void appendAddedStatements(Set<? extends ContainedStatement> stmts) {
 		//no op
 	}
 
 	@Override
-	public void appendRemovedStatement(Set<Statement> stmts) {
+	public void appendRemovedStatement(Set<? extends ContainedStatement> stmts) {
 		// no op
 	}
 
 	@Override
-	public List<Statement> getAddedStatements() {
+	public List<ContainedStatement> getAddedStatements() {
 		return Collections.emptyList();
 	}
 
 	@Override
-	public List<Statement> getRemovedStatements() {
+	public List<ContainedStatement> getRemovedStatements() {
 		return Collections.emptyList();
+	}
+	
+	@Override
+	public Set<ContainedStatement> getAddedStatementsAsSet() {
+		return Collections.emptySet();
+	}
+
+	@Override
+	public Set<ContainedStatement> getRemovedStatementsAsSet() {
+		return Collections.emptySet();
 	}
 
 	@Override
@@ -81,5 +91,7 @@ public class PoisonPillCommit implements Commit {
 	public long getTimeStamp() {		
 		return -1;
 	}
+
+
 
 }

@@ -14,6 +14,7 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.AES.OPTYPE;
+import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import at.jku.isse.artifacteventstreaming.replay.PerResourceHistoryRepository;
 import at.jku.isse.artifacteventstreaming.replay.StatementAugmentationSession;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
@@ -25,6 +26,13 @@ import at.jku.isse.passiveprocessengine.core.PropertyChange.Update;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * @author Christoph Mayr-Dorn
+ *
+ * This class transforms into highlevel events,
+ * to properly make use of contained statements for history replaying 
+ * it is crucial that each overridden method also calls its super implementation.
+ */
 @Slf4j
 public class TransformationSession extends StatementAugmentationSession {
 		
@@ -32,9 +40,9 @@ public class TransformationSession extends StatementAugmentationSession {
 	final RuleRepositoryInspector inspector;
 	@Getter private final List<Update> updates = new LinkedList<>();
 
-	public TransformationSession(List<Statement> addedStatements, List<Statement> removedStatements,
-			NodeToDomainResolver resolver, PerResourceHistoryRepository historyRepo, RuleSchemaProvider ruleSchema) {
-		super(addedStatements, removedStatements, resolver.getCardinalityUtil(), historyRepo);
+	public TransformationSession(List<ContainedStatement> addedStatements, List<ContainedStatement> removedStatements,
+			NodeToDomainResolver resolver, RuleSchemaProvider ruleSchema) {
+		super(addedStatements, removedStatements, resolver.getCardinalityUtil());
 		this.resolver = resolver;
 		this.inspector = new RuleRepositoryInspector(ruleSchema);
 	}
@@ -119,7 +127,7 @@ public class TransformationSession extends StatementAugmentationSession {
 		}
 	}
 	
-	private Optional<Statement> findFirstStatementAboutProperty(List<StatementWrapper> stmts, Property prop) {
+	private Optional<ContainedStatement> findFirstStatementAboutProperty(List<StatementWrapper> stmts, Property prop) {
 		return stmts.stream().map(StatementWrapper::stmt)
 			.filter(stmt -> stmt.getPredicate().equals(prop))
 			.findAny();

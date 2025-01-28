@@ -7,6 +7,7 @@ import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.Test;
@@ -76,8 +77,8 @@ class ModelStreamingTest {
 		art1.removeAll(successorProp);
 		var scope = streamer.abortTransaction();
 		// here we do a manual undo of changes by applying inverse statements
-		sourceModel.remove(scope.getAddedStatements());
-		sourceModel.add(scope.getRemovedStatements());
+		sourceModel.remove(scope.getAddedStatements().stream().map(Statement.class::cast).toList());
+		sourceModel.add(scope.getRemovedStatements().stream().map(Statement.class::cast).toList());
 		
 		art1.addProperty(successorProp, art3);
 		streamer.commitTransaction("adding some more properties");

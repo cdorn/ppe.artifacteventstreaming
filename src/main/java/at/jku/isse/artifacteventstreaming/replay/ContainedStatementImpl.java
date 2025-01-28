@@ -13,25 +13,32 @@ import org.apache.jena.rdf.model.Seq;
 import org.apache.jena.rdf.model.Statement;
 
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
+import lombok.NonNull;
 
 public class ContainedStatementImpl implements ContainedStatement {
 
 	private final Statement delegate;
-	private final Resource container;
-	private final Property containmentProperty;
+	private Resource container;
+	private Property containmentProperty;
 	
-	public ContainedStatementImpl(Statement delegate, Resource container, Property containmentProperty) {
+	public ContainedStatementImpl(@NonNull Statement delegate, Resource container, Property containmentProperty) {
 		super();
 		this.delegate = delegate;
 		this.container = container;
 		this.containmentProperty = containmentProperty;
 	}	
 	
-	public ContainedStatementImpl(Statement delegate) {
+	public ContainedStatementImpl(@NonNull Statement delegate) {
 		super();
 		this.delegate = delegate;
 		this.container = null;
 		this.containmentProperty = null;
+	}
+	
+	@Override
+	public void augmentWithContainment(Resource container, Property containingProperty) {
+		this.container = container;
+		this.containmentProperty = containingProperty;
 	}
 
 	@Override
@@ -201,5 +208,7 @@ public class ContainedStatementImpl implements ContainedStatement {
 	public Model getModel() {
 		return delegate.getModel();
 	}
+
+
 	
 }

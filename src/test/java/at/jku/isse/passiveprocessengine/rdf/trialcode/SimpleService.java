@@ -43,7 +43,7 @@ public class SimpleService extends CommitLoggingService {
 		// here we just look at additions
 		log.debug(serviceName + ": called with offset "+indexOfNewAddition);
 		
-		List<Statement> additions = commit.getAddedStatements();
+		List<Statement> additions = commit.getAddedStatements().stream().map(Statement.class::cast).toList();
 		if (indexOfNewAddition >= additions.size()) {
 			log.debug("no added statements");
 			return;

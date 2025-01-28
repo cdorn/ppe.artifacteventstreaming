@@ -36,7 +36,7 @@ public class AllUndoService implements IncrementalCommitHandler {
 		// here we just look at additions
 		log.debug(String.format("%s : called with add offset %s and remove offset %s ", serviceName, indexOfNewAddition, indexOfNewRemoval));
 		
-		List<Statement> removals = commit.getRemovedStatements();
+		List<Statement> removals = commit.getRemovedStatements().stream().map(Statement.class::cast).toList();
 		if (indexOfNewRemoval >= removals.size()) {
 			log.debug("no removed statements");
 
@@ -48,7 +48,7 @@ public class AllUndoService implements IncrementalCommitHandler {
 				indexOfNewRemoval++;
 			} while (indexOfNewRemoval < removals.size());
 		}
-		List<Statement> additions = commit.getAddedStatements();
+		List<Statement> additions = commit.getAddedStatements().stream().map(Statement.class::cast).toList();
 		if (indexOfNewAddition >= additions.size()) {
 			log.debug("no added statements");
 
