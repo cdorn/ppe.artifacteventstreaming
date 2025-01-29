@@ -24,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.CommitToHistoryHandler;
@@ -47,7 +48,7 @@ class TestContainmentReplay {
 	@Mock Branch mockBranch;
 	
 	@BeforeEach
-	void setupListener() throws ResourceMismatchException {
+	void setupListener() throws Exception {
 				
 		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_RDFS_INF );
 		schemaUtil = new PropertyCardinalityTypes(m);
@@ -98,6 +99,8 @@ class TestContainmentReplay {
 		augmenter.handleCommit(commit3);
 		commit2history.handleCommit(commit3);
 	}
+	
+	
 
 	@Test
 	void testEmptyRevert() {

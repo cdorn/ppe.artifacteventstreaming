@@ -31,6 +31,7 @@ import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonDeserializer;
 import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonSerializer;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +41,7 @@ public class EventStoreFactory {
 
 	 private final EventStoreDBClient client;
 	 private final EventStoreDBProjectionManagementClient projectionClient;
+	 @Getter
 	 private final JsonMapper jsonMapper = new JsonMapper();
 	 private static final SimpleModule commitModule = new SimpleModule().addAbstractTypeMapping(Commit.class, StatementCommitImpl.class);
 	 
@@ -111,6 +113,9 @@ public class EventStoreFactory {
 				if (innerException instanceof StreamNotFoundException) {
 					return Collections.emptyList(); //done
 				}
+				String msg = String.format("Error loading commits for branch %s with error %s", branchURI, e.getMessage());
+				log.warn(msg);
+				throw new PersistenceException(msg);
 			}
 			
 			try {

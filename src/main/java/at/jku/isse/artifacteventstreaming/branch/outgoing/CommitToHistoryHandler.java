@@ -8,6 +8,7 @@ import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
+import at.jku.isse.artifacteventstreaming.replay.InMemoryHistoryRepository;
 import at.jku.isse.artifacteventstreaming.replay.PerResourceHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,10 +20,10 @@ public class CommitToHistoryHandler extends AbstractHandlerBase {
 	public static final String CACHE_ENTRY_PREFIX = "LAST_COMMIT_TRANSFORMED_TO_HISTORY";
 	
 	private final Branch sourceBranch;
-	private final PerResourceHistoryRepository historyRepo;
+	private final InMemoryHistoryRepository historyRepo;
 	private final BranchStateCache cache;	
 	
-	public CommitToHistoryHandler(Branch sourceBranch, PerResourceHistoryRepository historyRepo,
+	public CommitToHistoryHandler(Branch sourceBranch, InMemoryHistoryRepository historyRepo,
 			 BranchStateCache cache) {
 		super(CommitToHistoryHandler.class.getSimpleName()+sourceBranch.getBranchName(), sourceBranch.getBranchResource().getModel());
 		this.sourceBranch = sourceBranch;
@@ -77,7 +78,7 @@ public class CommitToHistoryHandler extends AbstractHandlerBase {
 		return CACHE_ENTRY_PREFIX+SERVICE_TYPE_URI+sourceBranch.getBranchId();
 	}
 	
-	public static ServiceFactory getServiceFactory(BranchStateCache cache, PerResourceHistoryRepository historyRepo) {
+	public static ServiceFactory getServiceFactory(BranchStateCache cache, InMemoryHistoryRepository historyRepo) {
 		if (factory == null) {
 			factory = new DefaultServiceFactory(cache, historyRepo);
 		}
@@ -90,7 +91,7 @@ public class CommitToHistoryHandler extends AbstractHandlerBase {
 	public static class DefaultServiceFactory implements ServiceFactory {
 
 		private final BranchStateCache cache;
-		private final PerResourceHistoryRepository historyRepo;
+		private final InMemoryHistoryRepository historyRepo;
 		
 		@Override
 		public CommitHandler getCommitHandlerInstanceFor(Branch sourceBranch
