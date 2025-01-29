@@ -1,6 +1,5 @@
 package at.jku.isse.artifacteventstreaming.jena;
 
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.stream.Stream;
@@ -19,19 +18,16 @@ import org.apache.jena.rdf.model.Bag;
 import org.apache.jena.rdf.model.InfModel;
 import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.rdf.model.Seq;
 import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.reasoner.Reasoner;
 import org.apache.jena.reasoner.ReasonerRegistry;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
-import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
-import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.ChangeListener;

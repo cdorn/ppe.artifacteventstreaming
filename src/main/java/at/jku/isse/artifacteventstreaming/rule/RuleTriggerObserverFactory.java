@@ -6,7 +6,6 @@ import org.apache.jena.ontapi.model.OntModel;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor

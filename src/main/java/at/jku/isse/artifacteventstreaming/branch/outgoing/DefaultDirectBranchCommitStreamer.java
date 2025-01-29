@@ -3,10 +3,7 @@ package at.jku.isse.artifacteventstreaming.branch.outgoing;
 import java.net.URI;
 import java.util.List;
 
-import javax.swing.text.ChangedCharSetException;
-
 import org.apache.jena.ontapi.model.OntIndividual;
-import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.rdf.model.Resource;
 
 import at.jku.isse.artifacteventstreaming.api.AES;

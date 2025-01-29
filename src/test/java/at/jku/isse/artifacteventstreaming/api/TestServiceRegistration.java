@@ -1,6 +1,7 @@
 package at.jku.isse.artifacteventstreaming.api;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.net.URI;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;

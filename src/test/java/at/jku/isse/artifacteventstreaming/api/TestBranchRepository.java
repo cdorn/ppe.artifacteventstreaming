@@ -17,9 +17,9 @@ import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import at.jku.isse.artifacteventstreaming.api.exceptions.NotFoundException;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;

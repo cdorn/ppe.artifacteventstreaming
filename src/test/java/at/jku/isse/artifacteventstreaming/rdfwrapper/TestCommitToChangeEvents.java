@@ -21,14 +21,11 @@ import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.google.errorprone.annotations.Var;
-
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
-import at.jku.isse.artifacteventstreaming.replay.InMemoryHistoryRepository;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
@@ -40,9 +37,6 @@ import at.jku.isse.passiveprocessengine.core.ProcessInstanceChangeListener;
 import at.jku.isse.passiveprocessengine.core.PropertyChange.Update;
 import at.jku.isse.passiveprocessengine.rdfwrapper.CommitChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.MapWrapper;
-import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
-import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
-import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RuleEnabledResolver;
 import lombok.Getter;
 

@@ -5,19 +5,16 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.net.URI;
+
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.branch.persistence.FilebasedDatasetLoader;
-import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
-import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 
 public class TestRDFMapWrapperOntologyPersistence  {
 

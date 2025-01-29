@@ -1,22 +1,12 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.jena.graph.Graph;
-import org.apache.jena.ontapi.UnionGraph;
-import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.rdf.model.ModelChangedListener;
-import org.apache.jena.rdf.model.impl.ModelCom;
-import org.apache.jena.reasoner.InfGraph;
-import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFDataMgr;
-import org.apache.jena.vocabulary.RDF;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
-import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 
 class TestRuleRepair extends TestRuleEvaluation {
 	

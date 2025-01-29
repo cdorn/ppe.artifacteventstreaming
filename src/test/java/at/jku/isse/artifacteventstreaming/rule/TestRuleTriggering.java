@@ -1,13 +1,10 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.jena.graph.Graph;
-import org.apache.jena.ontapi.UnionGraph;
-import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.rdf.model.ModelChangedListener;
-import org.apache.jena.rdf.model.impl.ModelCom;
-import org.apache.jena.reasoner.InfGraph;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.vocabulary.RDF;

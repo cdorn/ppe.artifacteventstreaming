@@ -8,20 +8,15 @@ import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
-import org.rocksdb.RocksDBException;
 
 import com.eventstore.dbclient.DeleteStreamOptions;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
-import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.FilebasedDatasetLoader;
-import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
-import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryEventStore;
 import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
-import at.jku.isse.artifacteventstreaming.replay.InMemoryHistoryRepository;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;

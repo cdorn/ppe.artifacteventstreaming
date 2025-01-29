@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.URI;
 import java.util.LinkedList;
-import java.util.List;
 
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
@@ -16,12 +15,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import com.eventstore.dbclient.CreateProjectionOptions;
 import com.eventstore.dbclient.DeleteStreamOptions;
 import com.eventstore.dbclient.EventStoreDBProjectionManagementClient;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;

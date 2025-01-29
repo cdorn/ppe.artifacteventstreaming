@@ -2,9 +2,6 @@ package at.jku.isse.artifacteventstreaming.branch.serialization;
 
 import java.io.IOException;
 
-import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.rdf.model.Statement;
-
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;

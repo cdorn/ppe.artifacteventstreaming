@@ -4,6 +4,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
@@ -11,11 +12,10 @@ import org.apache.jena.ontapi.model.OntProperty;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.rdf.model.Statement;
+
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.AES.OPTYPE;
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
-import at.jku.isse.artifacteventstreaming.replay.PerResourceHistoryRepository;
 import at.jku.isse.artifacteventstreaming.replay.StatementAugmentationSession;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;

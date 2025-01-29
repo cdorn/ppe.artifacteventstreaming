@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.stream.Stream;
 
 import com.eventstore.dbclient.AppendToStreamOptions;
 import com.eventstore.dbclient.EventData;

@@ -1,14 +1,12 @@
 package at.jku.isse.artifacteventstreaming.branch.outgoing;
 
-import java.util.stream.Collectors;
-
 import org.apache.jena.ontapi.model.OntIndividual;
+
 import at.jku.isse.artifacteventstreaming.api.AbstractHandlerBase;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
-import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
 import at.jku.isse.artifacteventstreaming.replay.PerResourceHistoryRepository;
 import lombok.RequiredArgsConstructor;

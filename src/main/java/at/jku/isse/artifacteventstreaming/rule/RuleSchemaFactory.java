@@ -1,7 +1,6 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
@@ -10,14 +9,12 @@ import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.rdf.model.Model;
 import org.apache.jena.tdb2.TDB2Factory;
 import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
 
 import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
-import at.jku.isse.artifacteventstreaming.schemasupport.SchemaFactory;
 import lombok.Getter;
 
 public class RuleSchemaFactory {

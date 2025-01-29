@@ -3,9 +3,7 @@ package at.jku.isse.artifacteventstreaming.rule;
 import java.util.UUID;
 
 import org.apache.jena.ontapi.model.OntClass;
-import org.apache.jena.ontapi.model.OntModel;
 
-import at.jku.isse.designspace.rule.arl.evaluator.ModelAccess;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 

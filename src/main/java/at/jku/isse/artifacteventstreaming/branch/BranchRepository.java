@@ -10,7 +10,6 @@ import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
-import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Statement;
 
 import at.jku.isse.artifacteventstreaming.api.AES;

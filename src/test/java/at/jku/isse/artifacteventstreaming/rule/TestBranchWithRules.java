@@ -1,6 +1,6 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.net.URI;
 import java.util.List;

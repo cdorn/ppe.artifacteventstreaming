@@ -13,9 +13,7 @@ import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
-import at.jku.isse.artifacteventstreaming.api.AES.OPTYPE;
 import at.jku.isse.artifacteventstreaming.api.Commit;
-import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 
 public class ReplayEntryCollectorFromCommits implements ReplayEntryCollector {
 

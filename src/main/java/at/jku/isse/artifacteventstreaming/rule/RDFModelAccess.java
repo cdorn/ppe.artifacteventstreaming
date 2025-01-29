@@ -1,7 +1,6 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
 import java.util.AbstractMap;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -14,6 +13,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.jena.ontapi.model.OntClass;
+import org.apache.jena.ontapi.model.OntClass.CardinalityRestriction;
+import org.apache.jena.ontapi.model.OntClass.ValueRestriction;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObject;
@@ -25,8 +26,6 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Seq;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.XSD;
-import org.apache.jena.ontapi.model.OntClass.CardinalityRestriction;
-import org.apache.jena.ontapi.model.OntClass.ValueRestriction;
 
 import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;

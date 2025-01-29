@@ -10,7 +10,6 @@ import java.util.ListIterator;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty.Named;
 import org.apache.jena.rdf.model.NodeIterator;

@@ -3,7 +3,6 @@ package at.jku.isse.artifacteventstreaming.replay;
 import java.util.Comparator;
 
 import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.Statement;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;

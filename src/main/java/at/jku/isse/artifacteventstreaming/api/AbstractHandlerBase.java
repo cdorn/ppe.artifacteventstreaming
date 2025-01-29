@@ -3,7 +3,6 @@ package at.jku.isse.artifacteventstreaming.api;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.vocabulary.RDFS;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

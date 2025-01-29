@@ -2,8 +2,8 @@ package at.jku.isse.artifacteventstreaming.rule;
 
 import java.util.AbstractMap;
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 
 import org.apache.jena.ontapi.model.OntClass;

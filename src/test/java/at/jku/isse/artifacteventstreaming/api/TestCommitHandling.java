@@ -30,7 +30,6 @@ import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.AllUndoService;
-import at.jku.isse.passiveprocessengine.rdf.trialcode.LongRunningNoOpLocalService;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.MockLazyLoadingService;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SimpleService;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;

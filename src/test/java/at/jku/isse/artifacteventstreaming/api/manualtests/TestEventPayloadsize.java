@@ -1,7 +1,6 @@
 package at.jku.isse.artifacteventstreaming.api.manualtests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.util.LinkedList;
@@ -12,30 +11,15 @@ import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
-import org.apache.jena.query.DatasetFactory;
-import org.apache.jena.query.ReadWrite;
-import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.vocabulary.RDFS;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import com.eventstore.dbclient.DeleteStreamOptions;
 
-import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
-import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.Commit;
-import at.jku.isse.artifacteventstreaming.api.PerBranchEventStore;
-import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
-import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
-import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 
 class TestEventPayloadsize {

@@ -3,8 +3,6 @@ package at.jku.isse.artifacteventstreaming.api;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.jena.rdf.model.Statement;
-
 public interface Commit {
 
 	String getCommitMessage();

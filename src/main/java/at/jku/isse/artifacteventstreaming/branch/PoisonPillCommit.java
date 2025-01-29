@@ -4,8 +4,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.jena.rdf.model.Statement;
-
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 

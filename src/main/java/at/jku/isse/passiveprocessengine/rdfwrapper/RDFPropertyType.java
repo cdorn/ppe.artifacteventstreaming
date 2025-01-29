@@ -7,8 +7,6 @@ import java.util.Set;
 
 import org.apache.jena.datatypes.RDFDatatype;
 import org.apache.jena.ontapi.model.OntClass;
-import org.apache.jena.ontapi.model.OntClass.CardinalityRestriction;
-import org.apache.jena.rdf.model.Model;
 import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntDataRange;
 import org.apache.jena.ontapi.model.OntIndividual;

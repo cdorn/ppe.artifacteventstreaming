@@ -1,16 +1,27 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
-import org.apache.jena.ontapi.OntModelFactory;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.elementHasRuleScopeURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.havingScopeURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.ruleContextElementURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.ruleContextTypeURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.ruleEvaluationErrorURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.ruleEvaluationResultBaseTypeURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.ruleEvaluationResultURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.ruleExpressionErrorURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.ruleHasConsistentResultURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.ruleIsEnabledURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.ruleScopePartURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.uri;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.usedInRuleURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.usingElementURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.usingPropertyURI;
+
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
-import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFDataMgr;
 
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 import lombok.Getter;
-import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.*;
 
 public class RuleSchemaProvider {
 

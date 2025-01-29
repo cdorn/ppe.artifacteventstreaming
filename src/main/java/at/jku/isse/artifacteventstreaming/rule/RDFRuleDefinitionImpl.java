@@ -1,11 +1,9 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
 import org.apache.jena.ontapi.model.OntClass;
-import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.vocabulary.RDFS;
 
-import at.jku.isse.designspace.rule.arl.evaluator.ModelAccess;
 import at.jku.isse.designspace.rule.arl.exception.ParsingException;
 import at.jku.isse.designspace.rule.arl.expressions.Expression;
 import at.jku.isse.designspace.rule.arl.expressions.RootExpression;

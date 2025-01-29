@@ -3,22 +3,14 @@ package at.jku.isse.artifacteventstreaming.schemasupport;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.jena.datatypes.xsd.XSDDatatype;
-import org.apache.jena.ontapi.impl.OntGraphModelImpl;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntDataRange;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
-import org.apache.jena.ontapi.model.OntProperty;
-import org.apache.jena.rdf.model.AnonId;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
-import org.apache.jena.vocabulary.OWL2;
-import org.apache.jena.vocabulary.RDF;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.replay.StatementAugmentationSession.StatementWrapper;
