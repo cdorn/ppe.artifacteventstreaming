@@ -12,7 +12,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
 import at.jku.isse.artifacteventstreaming.api.Commit;
+import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,7 +29,10 @@ public class CommitSplitter {
 	private final JsonMapper jsonMapper;
 	
 	public static final int MAX_PAYLOAD_SIZE = 1000000; 
-	public static final int STATEMENT_BATCH_SIZE = 4000;
+	public static final int STATEMENT_BATCH_SIZE = 8000;
+	
+	@Getter
+	private int resplitCounter = 0;
 	
 	/**
 	 * @param commit is spit into multi part events containing first all added statements in batches, then all removed statements in batches
@@ -36,7 +41,8 @@ public class CommitSplitter {
 	 *  @return stream of byte arrays that can be writing into an event envelope
 	 */
 	public Stream<byte[]> split(Commit commit) {
-		if (commit.getAdditionCount()+commit.getRemovalCount() > STATEMENT_BATCH_SIZE) {
+		resplitCounter = 0; // reset
+		if ((commit.getAdditionCount()+commit.getRemovalCount()) > STATEMENT_BATCH_SIZE) {
 			return divideIntoBatches(commit);			
 		} else {
 			return transformToSingleEvent(commit);
@@ -45,7 +51,7 @@ public class CommitSplitter {
 
 	private Stream<byte[]> divideIntoBatches(Commit commit) {
 		//https://stackoverflow.com/questions/5824825/efficient-way-to-divide-a-list-into-lists-of-n-size		
-		List<List<Statement>> addedBatches = splitList(commit.getAddedStatements()); 
+		List<List<ContainedStatement>> addedBatches = splitList(commit.getAddedStatements()); 
 		Stream<byte[]> addedPayload = addedBatches.stream()
 				.map(batch -> new StatementCommitImpl(commit.getOriginatingBranchId()
 				, commit.getCommitId()
@@ -56,7 +62,7 @@ public class CommitSplitter {
 				, Collections.emptySet()))
 				.flatMap(this::transformToSingleEvent);		
 		
-		List<List<Statement>> removedBatches = splitList(commit.getRemovedStatements());
+		List<List<ContainedStatement>> removedBatches = splitList(commit.getRemovedStatements());
 		Stream<byte[]> removedPayload = removedBatches.stream()
 				.map(batch -> new StatementCommitImpl(commit.getOriginatingBranchId()
 				, commit.getCommitId()
@@ -71,7 +77,7 @@ public class CommitSplitter {
 		return Stream.concat(addedPayload, removedPayload);
 	}
 	
-	private List<List<Statement>> splitList(List<Statement> list) {
+	private List<List<ContainedStatement>> splitList(List<ContainedStatement> list) {
 		return Stream.iterate(0, i -> i <= list.size(), i -> i + STATEMENT_BATCH_SIZE)
         .map(i -> list.subList(i, Math.min(i + STATEMENT_BATCH_SIZE, list.size())) )
         .filter(Predicate.not(List::isEmpty))
@@ -82,6 +88,7 @@ public class CommitSplitter {
 		try {
 		byte[] eventByte = jsonMapper.writeValueAsBytes(commit);
 		if (eventByte.length > MAX_PAYLOAD_SIZE) {
+			resplitCounter++;
 			return splitBatch(commit);
 		} else {
 			return Stream.of(eventByte);
@@ -142,7 +149,7 @@ public class CommitSplitter {
 		}
 	}
 	
-	private List<List<Statement>> splitInHalf(List<Statement> stmts) {
+	private List<List<ContainedStatement>> splitInHalf(List<ContainedStatement> stmts) {
 		if (stmts.isEmpty()) return Collections.emptyList();
 		if (stmts.size() == 1) { 
 			// when a single statement exceeds the event payload, then either the URIs are way way too large, or the value/object is way too large, 

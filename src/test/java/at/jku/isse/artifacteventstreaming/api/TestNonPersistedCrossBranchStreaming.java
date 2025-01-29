@@ -1,6 +1,7 @@
 package at.jku.isse.artifacteventstreaming.api;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.util.concurrent.CountDownLatch;
@@ -60,20 +61,22 @@ class TestNonPersistedCrossBranchStreaming {
 		branch3.appendIncomingCommitMerger(new CompleteCommitMerger(branch3));
 
 
-		branch.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(branch, branch2, new InMemoryBranchStateCache()));
-		branch.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(branch, branch3, new InMemoryBranchStateCache()));
+		var streamer12 = new DefaultDirectBranchCommitStreamer(branch, branch2, new InMemoryBranchStateCache());
+		var streamer13 = new DefaultDirectBranchCommitStreamer(branch, branch3, new InMemoryBranchStateCache());		
+		branch.appendOutgoingCommitDistributer(streamer12);
+		branch.appendOutgoingCommitDistributer(streamer13);
 		branch.startCommitHandlers(null);
 		branch2.startCommitHandlers(null);
 		branch3.startCommitHandlers(null);
 		
-		
+		Commit lastCommit = null;
 		for (int j = 0; j < commitRounds; j++) {
 			branch.getDataset().begin();
 			Resource testResource = model.createResource(repoURI1+"#art"+j);
 			for (int i = 0; i<changeCount ; i++) {
 				model.add(testResource, RDFS.label, model.createTypedLiteral(i));	
 			}				
-			Commit commit = branch.commitChanges("TestCommit"+j);			
+			lastCommit = branch.commitChanges("TestCommit"+j);			
 		}
 				
 		boolean success = latch.await(2, TimeUnit.SECONDS);
@@ -83,10 +86,9 @@ class TestNonPersistedCrossBranchStreaming {
 		branch.getDataset().begin();
 		OntModel model2 = branch2.getModel();
 		branch2.getDataset().end();
-		//branch2.getDataset().begin();
 		OntModel model3 = branch3.getModel();
 		branch3.getDataset().end();
-		//branch3.getDataset().begin();
+
 		//why are models 2 and 3 sizes not updated, some content, while logging says statements have been added
 		//hmm, apparently we need to have dataset.end()
 		System.out.println("Model 1 size: "+model.size());
@@ -112,9 +114,13 @@ class TestNonPersistedCrossBranchStreaming {
 				
 		Resource testResource = model.createResource(repoURI1+"#artFinaly");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(-1));
-		Commit commit = branch.commitChanges("FinalTestCommit");
+		Commit ultimateCommit = branch.commitChanges("FinalTestCommit");
 		success = latch.await(2, TimeUnit.SECONDS);
-		assert(branch2.getInQueue().size() == 1);
+		assertTrue(success);
+		//branches drop commits if no commit handler available
+		assertEquals(ultimateCommit.getCommitId(), streamer13.getLastForwardedCommitId());
+		assertEquals(lastCommit.getCommitId(), streamer12.getLastForwardedCommitId());
+
 	}
 	
 	

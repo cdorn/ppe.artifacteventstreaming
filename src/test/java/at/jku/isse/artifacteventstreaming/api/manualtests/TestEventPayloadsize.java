@@ -55,7 +55,7 @@ class TestEventPayloadsize {
 	
 	
 	@Test // @Disabled
-	void test10KStmtCommitSplitting() throws Exception {	
+	void test190KStmtCommitSplitting() throws Exception {	
 		
 		OntModel m = OntModelFactory.createModel(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF);
 		var listener = new StatementAggregator();
@@ -74,12 +74,16 @@ class TestEventPayloadsize {
 			}			
 		}
 		var commit = new StatementCommitImpl(NS.toString(), "TestCommit", null, 0, listener.retrieveAddedStatements(), listener.retrieveRemovedStatements());
+		System.out.println("Added Statements: "+commit.getAdditionCount());
 		EventStoreFactory factory = new EventStoreFactory();
 		var store = factory.getEventStore(NS.toString());
 		store.appendCommit(commit);
 		
 		List<Commit> allCommits = store.loadAllCommits();
 		assertEquals(1, allCommits.size());
+		var fetchedCommit = allCommits.get(0);
+		System.out.println("Retrieved Statements: "+fetchedCommit.getAdditionCount());
+		assertEquals(commit.getAdditionCount(), fetchedCommit.getAdditionCount());
 	}
 	
 	

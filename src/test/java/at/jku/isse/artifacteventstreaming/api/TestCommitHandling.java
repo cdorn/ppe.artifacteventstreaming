@@ -139,13 +139,15 @@ class TestCommitHandling {
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		assertEquals(1, model.size());
 		assertEquals(1, commit.getAddedStatements().size());
-	//	assertEquals(0, commit.getRemovedStatements().size());
+		//FIXME: JENA notification does not work correctly as events are provided for non-effective changes, e.g., removing something that is not in the model should not pop up
+		assertEquals(0, commit.getRemovedStatements().size());
 		
 		branch.getDataset().begin();
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1)); // this should not result in an event, as there is no change to the model
 		Commit commit2 = branch.commitChanges("TestCommit2");
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		assertEquals(1, model.size());
+		//FIXME: JENA notification does not work correctly as events are provided for non-effective changes
 		assertEquals(0, commit2.getAddedStatements().size());
 		assertEquals(0, commit2.getRemovedStatements().size());
 	}

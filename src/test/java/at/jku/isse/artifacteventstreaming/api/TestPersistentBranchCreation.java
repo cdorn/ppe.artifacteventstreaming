@@ -5,11 +5,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.tdb2.TDB2Factory;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -20,8 +24,31 @@ class TestPersistentBranchCreation {
 	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testbranch");
 	
 	@BeforeAll
-	static void clearPersistenceDirectory() {
-		
+	static void prepareDirectory() throws Exception {
+		removeDataset(repoURI);
+		String directory = "repos/"+repoURI.getPath() ;
+		Dataset repoDataset = TDB2Factory.connectDataset(directory) ;		
+		Branch branch = new BranchBuilder(repoURI, repoDataset)				
+				.build();
+		repoDataset.begin();
+		assertEquals(branch.getBranchName(), "main");
+		repoDataset.end();
+	}
+	
+	@AfterAll
+	static void cleanUp() {
+		removeDataset(repoURI);
+	}
+	
+	public static boolean removeDataset(URI uri) {
+		String directory = "repos/"+uri.getPath() ;
+		File file = new File(directory);
+		try {
+			FileUtils.deleteDirectory(file);
+			return true;
+		} catch (IOException e) {			
+			return false;
+		}
 	}
 	
 	@Test
@@ -47,24 +74,14 @@ class TestPersistentBranchCreation {
 		String name = BranchBuilder.getBranchNameFromURI(repoURI);
 		assertNull(name);
 		
-		name = BranchBuilder.getBranchNameFromURI(URI.create(repoURI.toString()+"#"));
-		assertNull(name);
+		name = BranchBuilder.getBranchNameFromURI(URI.create(repoURI.toString()+"::"));
+		assertEquals(null, name);
 		
-		name = BranchBuilder.getBranchNameFromURI(URI.create(repoURI.toString()+"#test"));
+		name = BranchBuilder.getBranchNameFromURI(URI.create(repoURI.toString()+"::test"));
 		assertEquals("test", name);
 	}
 	
-	@Test
-	void testCreateBranch() throws Exception {
-		String directory = "repos/"+repoURI.getPath() ;
-		Dataset repoDataset = TDB2Factory.connectDataset(directory) ;		
-		Branch branch = new BranchBuilder(repoURI, repoDataset)				
-				.build();
-		repoDataset.begin();
-		assertEquals(branch.getBranchName(), "main");
-		repoDataset.end();
-	}
-	
+
 	@Test
 	void testLoadExistingBranch() {				
 		String directory = "repos/"+repoURI.getPath() ;

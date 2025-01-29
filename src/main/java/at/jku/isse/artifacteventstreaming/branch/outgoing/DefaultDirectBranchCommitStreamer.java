@@ -3,6 +3,8 @@ package at.jku.isse.artifacteventstreaming.branch.outgoing;
 import java.net.URI;
 import java.util.List;
 
+import javax.swing.text.ChangedCharSetException;
+
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.rdf.model.Resource;
@@ -15,6 +17,7 @@ import at.jku.isse.artifacteventstreaming.api.BranchStateKeeper;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.BranchRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -68,11 +71,19 @@ public class DefaultDirectBranchCommitStreamer extends AbstractHandlerBase {
 			destinationBranch.enqueueIncomingCommit(commit);
 			cache.put(getCacheKey(), commit.getCommitId());
 		} catch (Exception e) {
-			log.warn(String.format("Error during enqueuing commit %s  from branch %s to branch %s", commit.getCommitId(), sourceBranch.getBranchId(), destinationBranch.getBranchId()));
+			log.warn(String.format("Error during enqueuing commit %s  from branch %s to branch %s: %s", commit.getCommitId(), sourceBranch.getBranchId(), destinationBranch.getBranchId(), e.getMessage()));
 			//TODO: retry later necessary
 		}
 	}
 
+	public String getLastForwardedCommitId() {
+		try {
+			return cache.get(getCacheKey());
+		} catch (PersistenceException e) {
+			return null;
+		}
+	}
+	
 	@Override
 	public OntIndividual getConfigResource() {
 		if (config == null) {

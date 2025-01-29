@@ -1,6 +1,7 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -17,7 +18,11 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.CommitToHistoryHandler;
@@ -26,6 +31,7 @@ import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
 import at.jku.isse.passiveprocessengine.rdfwrapper.ResourceMismatchException;
 
+@ExtendWith(MockitoExtension.class) 
 class TestContainmentReplay {
 
 	public static URI baseURI = URI.create("http://at.jku.isse.artifacteventstreaming/test/replay#");
@@ -37,8 +43,11 @@ class TestContainmentReplay {
 	ReplayEntryCollectorFromHistory collector;
 	PropertyCardinalityTypes schemaUtil;
 	
+	@Mock Branch mockBranch;
+	
 	@BeforeEach
 	void setupListener() throws ResourceMismatchException {
+				
 		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_RDFS_INF );
 		schemaUtil = new PropertyCardinalityTypes(m);
 		schema = new MockSchema(m, schemaUtil);
@@ -47,8 +56,11 @@ class TestContainmentReplay {
 		
 		InMemoryHistoryRepository historyRepo = new InMemoryHistoryRepository();
 		collector = new ReplayEntryCollectorFromHistory(historyRepo, branchURI );
-		//TODO: mock branch
-		var commit2history = new CommitToHistoryHandler(null, historyRepo, null);
+		
+		
+		when(mockBranch.getBranchName()).thenReturn("testBranch");
+		when(mockBranch.getBranchResource()).thenReturn(m.createIndividual(baseURI+"mock"));
+		var commit2history = new CommitToHistoryHandler(mockBranch, historyRepo, null);
 		CommitContainmentAugmenter augmenter = new CommitContainmentAugmenter(branchURI, m, schemaUtil);
 
 		issue1 = schema.createIssue("Issue1");

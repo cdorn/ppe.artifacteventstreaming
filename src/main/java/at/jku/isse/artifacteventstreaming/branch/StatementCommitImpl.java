@@ -16,7 +16,7 @@ import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import lombok.Getter;
 
-@JsonIgnoreProperties(value = { "additionCount", "removalCount", "empty" })
+@JsonIgnoreProperties(value = { "additionCount", "removalCount", "empty", "addedStatementsAsSet", "removedStatementsAsSet" })
 public class StatementCommitImpl implements Commit {
 
 	private final Set<ContainedStatement> addedStatements = new LinkedHashSet<>();

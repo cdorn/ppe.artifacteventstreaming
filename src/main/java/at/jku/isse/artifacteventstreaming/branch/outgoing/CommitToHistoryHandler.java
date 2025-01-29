@@ -29,8 +29,7 @@ public class CommitToHistoryHandler extends AbstractHandlerBase {
 		super(CommitToHistoryHandler.class.getSimpleName()+sourceBranch.getBranchName(), sourceBranch.getBranchResource().getModel());
 		this.sourceBranch = sourceBranch;
 		this.historyRepo = historyRepo;
-		this.cache = cache;
-		config = getConfigResource();
+		this.cache = cache;		
 	}
 	
 	public void init() throws Exception {

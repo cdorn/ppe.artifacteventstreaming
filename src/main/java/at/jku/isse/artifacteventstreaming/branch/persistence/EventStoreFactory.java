@@ -202,7 +202,10 @@ public class EventStoreFactory {
 				if (payloads.isEmpty()) { 
 					log.warn("Empty commit "+commit.getCommitId()+", not persisting any events");
 					return;				
-				}
+				} 
+				if (payloads.size() > 1) {
+					log.info(String.format("Splitting commit %s into %s events, having to replit events %s times", commit.getCommitId(), payloads.size(), splitter.getResplitCounter()));
+				}								
 				for (int i = 0; i < payloads.size(); i++) {
 					EventMetaData metadata = new EventMetaData(commit.getCommitId(), i+1, payloads.size());
 					byte[] metaByte = jsonMapper.writeValueAsBytes(metadata);

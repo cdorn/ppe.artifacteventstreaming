@@ -38,9 +38,9 @@ public abstract class TypedCollectionResource {
 			if (!node.asResource().canAs(OntIndividual.class)) {// not a typed resource
 				return false;
 			}
-			//var ontInd = node.asResource().as(OntIndividual.class);
-			//return isInstanceOfClassHierachy(ontInd, objectType); / this is way too slow, needs some caching mechanism.
-			return true;
+			var ontInd = node.asResource().as(OntIndividual.class);
+			return isInstanceOfClassHierachy(ontInd, objectType); // this is way too slow, needs some caching mechanism.
+			//return true;
 		}
 		return true;
 	}

@@ -13,6 +13,7 @@ import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import com.eventstore.dbclient.CreateProjectionOptions;
@@ -87,7 +88,7 @@ class TestEventStoreProjections {
 		//assertEquals(1, allCommits.size());
 	}
 	
-	@Test
+	@Test @Disabled
 	void createTestEvents() throws Exception {
 		createTestStreamContent("1", 0);
 		createTestStreamContent("2", 0);
@@ -130,7 +131,7 @@ class TestEventStoreProjections {
 			+ "    })\r\n"
 			+ ".outputState();";
 	
-	@Test
+	@Test @Disabled
 	void testCreateProjection() throws Exception {
 		//String projectionContent = String.format(projectionTemplate, NS.toString());
 		projectionClient.create(testProjectionName, projectionTemplate).get();
@@ -142,7 +143,7 @@ class TestEventStoreProjections {
 		assertEquals(1, commitIds.getCommitIds().length);
 	}
 
-	@Data
+	@Data 
 	public static class CommitIdCollection{ 
 		final int count;
 		final String[] commitIds;

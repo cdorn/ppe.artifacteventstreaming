@@ -12,30 +12,42 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
+import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 
-public class StatementJsonSerializer extends StdSerializer<Statement> {
+public class StatementJsonSerializer extends StdSerializer<ContainedStatement> {
 
 	public static final String OBJECT = "object";
 	public static final String DATATYPE = "datatype";
 	public static final String PREDICATE = "predicate";
 	public static final String SUBJECT = "subject";
+	public static final String CONTAINING_SUBJECT = "containingsubject";
+	public static final String CONTAINMENT_PREDICATE = "containmentpredicate";
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
 
-	protected StatementJsonSerializer(Class<Statement> t) {
+	protected StatementJsonSerializer(Class<ContainedStatement> t) {
 		super(t);
 		
 	}
 
 	@Override
-	public void serialize(Statement value, JsonGenerator gen, SerializerProvider provider) throws IOException {
+	public void serialize(ContainedStatement value, JsonGenerator gen, SerializerProvider provider) throws IOException {
 		
-		String id = AES.resourceToId(value.getSubject());
+		var containmentId = AES.resourceToId(value.getContainerOrSubject());
+		var containingProp = value.getContainmentPropertyOrPredicate().getURI();
+		var id = AES.resourceToId(value.getSubject());
+		var prop = value.getPredicate().getURI();
 		gen.writeStartObject();
-        gen.writeStringField(SUBJECT, id);		
-        gen.writeStringField(PREDICATE, value.getPredicate().getURI());
+		if (!id.equals(containmentId)) {			
+			gen.writeStringField(CONTAINING_SUBJECT, containmentId);
+		}
+		gen.writeStringField(SUBJECT, id);		              
+		if (!prop.equals(containingProp)) {
+			gen.writeStringField(CONTAINMENT_PREDICATE, containingProp);
+		}
+        gen.writeStringField(PREDICATE, prop);
         if (value.getObject().isLiteral()) {
         	String datatypeURI = value.getObject().asLiteral().getDatatype().getURI();
         	 gen.writeStringField(DATATYPE, datatypeURI);
@@ -48,7 +60,7 @@ public class StatementJsonSerializer extends StdSerializer<Statement> {
 
 	public static void registerSerializationModule(ObjectMapper mapper) {
 		SimpleModule module = new SimpleModule();
-		module.addSerializer(Statement.class, new StatementJsonSerializer(Statement.class));
+		module.addSerializer(ContainedStatement.class, new StatementJsonSerializer(ContainedStatement.class));
 		mapper.registerModule(module);
 	}
 	

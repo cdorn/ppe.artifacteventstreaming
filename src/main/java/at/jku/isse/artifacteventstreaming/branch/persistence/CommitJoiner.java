@@ -7,6 +7,7 @@ import java.util.List;
 import org.apache.jena.rdf.model.Statement;
 
 import at.jku.isse.artifacteventstreaming.api.Commit;
+import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 
 public class CommitJoiner {
@@ -26,8 +27,8 @@ public class CommitJoiner {
 		} if (commitsToJoin.size() == 1) {
 			return commitsToJoin.get(0);
 		} else {			
-			List<Statement> addedStmts = new LinkedList<>();			
-			List<Statement> removedStmts = new LinkedList<>();
+			List<ContainedStatement> addedStmts = new LinkedList<>();			
+			List<ContainedStatement> removedStmts = new LinkedList<>();
 			commitsToJoin.forEach(commit -> {
 				addedStmts.addAll(commit.getAddedStatements());
 				removedStmts.addAll(commit.getRemovedStatements());
