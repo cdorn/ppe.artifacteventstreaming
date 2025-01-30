@@ -32,7 +32,7 @@ import at.jku.isse.passiveprocessengine.core.SchemaRegistry;
 import lombok.Getter;
 
 @Getter
-public class RDFWrapperSetup implements DesignspaceTestSetup {
+public class RDFWrapperTestSetup implements DesignspaceTestSetup {
 
 	public static final URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/rdfwrapper");
 	public static final URI branchURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/rdfwrapper/testbranch");

@@ -31,11 +31,12 @@ import at.jku.isse.passiveprocessengine.core.PPEInstance;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
 import at.jku.isse.passiveprocessengine.core.RuleDefinition;
 import at.jku.isse.passiveprocessengine.core.RuleEvaluationService;
+import lombok.Getter;
 
 public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEvaluationService {
 
 	final RepairService repairService;
-	final RuleSchemaProvider ruleSchema;
+	@Getter final RuleSchemaProvider ruleSchema;
 	final RuleRepository repo;
 	final RuleRepositoryInspector inspector;
 	
