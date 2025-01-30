@@ -18,9 +18,9 @@ import com.eventstore.dbclient.ResolvedEvent;
 import com.eventstore.dbclient.StreamNotFoundException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
+import at.jku.isse.artifacteventstreaming.api.AES.OPTYPE;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
-import at.jku.isse.artifacteventstreaming.api.AES.OPTYPE;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import lombok.extern.slf4j.Slf4j;

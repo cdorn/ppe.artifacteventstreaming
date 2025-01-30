@@ -1,15 +1,11 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
-import static org.mockito.Mockito.when;
-
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 
 import com.eventstore.dbclient.DeleteStreamOptions;
 
-import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;

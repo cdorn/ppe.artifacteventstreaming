@@ -9,7 +9,6 @@ import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
 import at.jku.isse.artifacteventstreaming.replay.InMemoryHistoryRepository;
-import at.jku.isse.artifacteventstreaming.replay.PerResourceHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
