@@ -8,11 +8,12 @@ import lombok.Getter;
 public class RDFPPERuleDefinitionWrapper extends RDFInstanceType implements RuleDefinition {
 
 	@Getter
-	private final RDFRuleDefinition ruleDef;
+	private final RDFRuleDefinition ruleDef;	
 	
-	public RDFPPERuleDefinitionWrapper(RDFRuleDefinition element, NodeToDomainResolver resolver) {
+	public RDFPPERuleDefinitionWrapper(RDFRuleDefinition element, RuleEnabledResolver resolver) {
 		super(element.getRuleDefinition(), resolver);
 		this.ruleDef = element;
+		super.cacheSuperProperties();
 	}
 
 	@Override
@@ -35,6 +36,10 @@ public class RDFPPERuleDefinitionWrapper extends RDFInstanceType implements Rule
 		return resolver.resolveToType(ruleDef.getRDFContextType());
 	}
 
-	
+	@Override
+	public void markAsDeleted() {
+		var ruleResolver = (RuleEnabledResolver)resolver;
+		ruleResolver.removeRuleDefinition(this);
+	}
 	
 }

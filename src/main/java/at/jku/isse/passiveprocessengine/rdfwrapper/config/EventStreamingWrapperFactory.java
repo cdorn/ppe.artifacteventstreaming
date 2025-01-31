@@ -55,8 +55,10 @@ public class EventStreamingWrapperFactory {
 	@Getter(value = AccessLevel.NONE) private final BranchStateUpdater stateKeeper;
 	
 	public void signalExternalSetupComplete() throws PersistenceException, BranchConfigurationException {
+		branch.getDataset().commit();
+		branch.getDataset().end();
 		var unfinishedCommit = stateKeeper.loadState();
-		 branch.startCommitHandlers(unfinishedCommit); // first complete other stuff on top
+		branch.startCommitHandlers(unfinishedCommit); 		 
 	}
 	
 	
@@ -106,9 +108,9 @@ public class EventStreamingWrapperFactory {
 				// add logic here, when history access is needed
 				
 				// setting up branch
+				if (repoURI == null) repoURI = new URI(defaultRepoURI);
 				var branchURI = BranchBuilder.generateBranchURI(new URI(defaultBranchBaseURI), branchLocalName);
-				var stateKeeper = new StateKeeperImpl(branchURI, cacheFactory.getCache(), eventstoreFactory.getEventStore(branchURI.toString()));
-										
+				var stateKeeper = new StateKeeperImpl(branchURI, cacheFactory.getCache(), eventstoreFactory.getEventStore(branchURI.toString()));				
 				var branch = new BranchBuilder(repoURI, repoDataset, repoModel)
 						.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF)		
 						.setDataset(modelDataset.get())

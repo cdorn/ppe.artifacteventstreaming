@@ -33,7 +33,7 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 		super(element, resolver);
 		this.type = element;
 		// cache super properties, we assume no super properties are added/removed after a subclass has been defined.
-		cacheSuperProperties();
+		// cacheSuperProperties(); we cant call this here, as when resolving properties, we wont find them yet, node2domain resolver needs to call this
 		element.superClasses()
 			.filter(superClass -> !(superClass instanceof CardinalityRestriction))
 			.filter(superClass -> !(superClass instanceof ValueRestriction))
@@ -168,6 +168,7 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	@Override
 	public PPEPropertyType createSinglePropertyType(String arg0, PPEInstanceType arg1) {
 		var propUri = makePropertyURI(arg0);
+		if (propWrappers.containsKey(propUri)) return propWrappers.get(propUri);
 		var prop = BuildInType.isAtomicType(arg1) ? 
 				resolver.getCardinalityUtil().createSingleDataPropertyType(propUri, this.type, resolver.resolveAtomicInstanceType(arg1))
 				: 

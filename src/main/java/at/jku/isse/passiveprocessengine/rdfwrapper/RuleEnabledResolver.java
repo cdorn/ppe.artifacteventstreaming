@@ -62,14 +62,27 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 			.filter(ontClass -> !ontClass.getNameSpace().equals(OWL2.NS))	
 			.filter(ontClass -> !ruleDefinitions.contains(ontClass.getURI())) // we dont want to cache rule definitons as instance types but rule definitions via rule repo			
 			.forEach(ontClass -> { 
-			var type = typeIndex.put(ontClass, new RDFInstanceType(ontClass, this));
+			var type = new RDFInstanceType(ontClass, this);
+			typeIndex.put(ontClass, type);
+			type.cacheSuperProperties();
 			ontClass.individuals(true).forEach(indiv -> instanceIndex.put(indiv.getURI(), new RDFInstance(indiv, type, this)));
 		} );
+		
+		repo.getRuleDefinitions().forEach(ruleDef -> {
+			var wrapper = new RDFPPERuleDefinitionWrapper(ruleDef, this);			
+			typeIndex.put(ruleDef.getRuleDefinition(), wrapper);	
+		});
 		
 //		var ruleEvalWrappers = ruleSchema.getResultBaseType().individuals().collect(Collectors.toSet()); // we dont want to cache the result resources
 //		model.individuals()
 //			.filter(indiv -> !ruleEvalWrappers.contains(indiv))
 //			.forEach(indiv -> instanceIndex.put(indiv, new RDFInstance(indiv, this)));
+	}
+	
+	protected void removeRuleDefinition(RDFPPERuleDefinitionWrapper ruleDef) {
+		// remove from type index, then remove from repo below
+		typeIndex.remove(ruleDef.getType());
+		repo.removeRuleDefinition(ruleDef.getId());
 	}
 	
 	@Override
@@ -82,7 +95,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 				.withRuleExpression(ruleExpression)
 				.withRuleTitle(ruleName)
 				.build();
-			var wrapper = new RDFPPERuleDefinitionWrapper(ruleDef, this);
+			var wrapper = new RDFPPERuleDefinitionWrapper(ruleDef, this);			
 			typeIndex.put(ruleDef.getRuleDefinition(), wrapper);
 			return wrapper;
 		} catch (RuleException e) {

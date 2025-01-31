@@ -6,6 +6,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 
+import org.apache.jena.atlas.logging.Log;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.rdf.model.Property;
@@ -17,7 +18,9 @@ import at.jku.isse.designspace.rule.arl.exception.EvaluationException;
 import at.jku.isse.designspace.rule.arl.repair.RepairNode;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperResource {
 
 	@Getter
@@ -114,13 +117,17 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 				var indiv = res.as(OntIndividual.class);
 				var element = indiv.getPropertyResourceValue(factory.getUsingElementProperty().asProperty());
 				if (element == null || !element.canAs(OntIndividual.class)) {				
-					throw new EvaluationException(String.format("Cannot create ruleevaluation wrapper for entity %s as the referenced context instace rule scope element doesn't point to an OntIndividual via %s ", ruleEvalObj, factory.getUsingElementProperty().getURI()));		
+					var msg = String.format("Cannot create ruleevaluation wrapper for entity %s as the referenced context instace rule scope element doesn't point to an OntIndividual via %s ", ruleEvalObj, factory.getUsingElementProperty().getURI());
+					log.warn(msg);
+					throw new EvaluationException(msg);		
 				} else {
 					return element.as(OntIndividual.class);
 				}
 				
 		} else {
-			throw new EvaluationException(String.format("Cannot create ruleevaluation wrapper for entity %s as its referenced context instance rule scope %s is not an ontindividual", ruleEvalObj.getId(), res));
+			var msg = String.format("Cannot create ruleevaluation wrapper for entity %s as its referenced context instance rule scope %s is not an ontindividual", ruleEvalObj.getId(), res);
+			log.warn(msg);
+			throw new EvaluationException(msg);
 		}					
 	}
 	

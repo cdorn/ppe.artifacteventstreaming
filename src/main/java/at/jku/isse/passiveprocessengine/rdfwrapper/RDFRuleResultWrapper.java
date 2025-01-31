@@ -58,10 +58,10 @@ public class RDFRuleResultWrapper extends RDFInstance implements RuleResult {
 			if (el != null) {
 				return (RDFInstance) resolver.resolveToRDFElement(el);
 			} else {
-				log.warn("Encountered rule scope without element reference "+element.getId());
+				log.warn("Encountered rule scope without element reference "+element.getURI());
 			}
 		} else {
-			log.warn("Encountered rule result without context scope in "+element.getId());
+			log.warn("Encountered rule result without context scope in "+element.getURI());
 		}
 		return null;
 		//return super.getTypedProperty("ruleContextElement", RDFInstance.class);

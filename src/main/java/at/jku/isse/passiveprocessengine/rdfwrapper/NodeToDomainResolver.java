@@ -75,7 +75,9 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		.filter(ontClass -> !ontClass.getNameSpace().equals(RDFS.uri))
 		.filter(ontClass -> !ontClass.getNameSpace().equals(OWL2.NS))
 		.forEach(ontClass -> { 
-			var type = typeIndex.put(ontClass, new RDFInstanceType(ontClass, this));
+			var type = new RDFInstanceType(ontClass, this);
+			typeIndex.put(ontClass, type);
+			type.cacheSuperProperties();
 			ontClass.individuals(true).forEach(indiv -> instanceIndex.put(indiv.getURI(), new RDFInstance(indiv, type, this)));
 		} );		
 	}
@@ -214,6 +216,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 				}
 			}
 			var type = new RDFInstanceType(ontClass, this);
+			type.cacheSuperProperties();
 			typeIndex.put(ontClass, type);
 			return type;
 		}
@@ -238,7 +241,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		} else {
 			var ruleDef = ruleRepo.findRuleDefinitionForResource(ontClass);
 			if (ruleDef == null) return Optional.empty();
-			var defWrapper = typeIndex.computeIfAbsent(ruleDef.getRuleDefinition(), k-> new RDFPPERuleDefinitionWrapper(ruleDef, this));
+			var defWrapper = typeIndex.computeIfAbsent(ruleDef.getRuleDefinition(), k-> new RDFPPERuleDefinitionWrapper(ruleDef, (RuleEnabledResolver) this));
 			return Optional.ofNullable(defWrapper);
 		}
 	}
@@ -256,7 +259,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	public void removeTypeCascading(RDFInstanceType type) {				
 		// first we need to remove instances of these types
 		type.getType().individuals().forEach(indiv -> { 
-			instanceIndex.remove(indiv);
+			instanceIndex.remove(indiv.getURI());
 			indiv.removeProperties(); 
 		});		
 		type.getType().subClasses().forEach(typeIndex::remove); // we just update the index, properties are deleted by the RDFInstanceType objects
@@ -271,7 +274,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		}	
 		var def = ruleRepo.findRuleDefinitionForURI(arg0);
 		if (def != null) {
-			return (RuleDefinition) typeIndex.computeIfAbsent(def.getRuleDefinition(), k-> new RDFPPERuleDefinitionWrapper(def, this));
+			return (RuleDefinition) typeIndex.computeIfAbsent(def.getRuleDefinition(), k-> new RDFPPERuleDefinitionWrapper(def, (RuleEnabledResolver) this));
 		} else {
 			return null;
 		}
@@ -401,7 +404,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		} else if (e.equals(BuildInType.RULE)) { 
 			 return model.getOntClass(RuleSchemaFactory.ruleDefinitionURI);
 		} else if (e.equals(BuildInType.METATYPE)) {
-			 return model.getOntClass(OWL2.Class.getURI());
+			 return metaClass; //model.getOntClass(OWL2.Class.getURI());
 		}else { // a literal
 			return getModel().createTypedLiteral(e);
 		}

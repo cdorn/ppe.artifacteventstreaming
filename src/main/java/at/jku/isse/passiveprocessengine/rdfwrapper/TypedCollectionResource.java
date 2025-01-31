@@ -38,6 +38,10 @@ public abstract class TypedCollectionResource {
 			if (!node.asResource().canAs(OntIndividual.class)) {// not a typed resource
 				return false;
 			}
+			if (objectType.equals(resolver.metaClass)) {
+				// we accept any ont classes here incl metaclass itself
+				return node.canAs(OntClass.class);
+			} 			
 			var ontInd = node.asResource().as(OntIndividual.class);
 			return isInstanceOfClassHierachy(ontInd, objectType); // this is way too slow, needs some caching mechanism.
 			//return true;

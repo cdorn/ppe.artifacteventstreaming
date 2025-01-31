@@ -1,6 +1,7 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
 import java.util.AbstractMap;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -57,6 +58,10 @@ public class RuleRepository {
 			})
 			.filter(Objects::nonNull)
 			.forEach(evalWrapper -> evaluations.put(evalWrapper.getRuleEvalObj().getURI(), evalWrapper));
+	}
+	
+	public Collection<RDFRuleDefinition> getRuleDefinitions() {
+		return definitions.values();
 	}
 	
 	public RuleDefinitionRegistrar getRuleBuilder() {
@@ -206,13 +211,18 @@ public class RuleRepository {
 			var scope = stmt.getResource().as(OntIndividual.class);
 			var iterRule = scope.listProperties(factory.getUsedInRuleProperty().asProperty());
 			while(iterRule.hasNext()) {
-				var ruleRes = iterRule.next().getResource().as(OntIndividual.class);
+				var res = iterRule.next().getResource();
+				var ruleRes = res.as(OntIndividual.class);
 				if (evaluations.containsKey(ruleRes.getURI())) {
 					evals.add(evaluations.get(ruleRes.getURI()));
 				} else {
-					var evalObj = RuleEvaluationWrapperResourceImpl.loadFromModel(ruleRes, factory, this);
-					evaluations.put(evalObj.getRuleEvalObj().getURI(), evalObj);
-					evals.add(evalObj);
+					try { 
+						var evalObj = RuleEvaluationWrapperResourceImpl.loadFromModel(ruleRes, factory, this);
+						evaluations.put(evalObj.getRuleEvalObj().getURI(), evalObj);
+						evals.add(evalObj);
+					} catch (EvaluationException e) {
+						// ignored, check via logs how to improve scope handling issues
+					}					
 				}
 			}
 		}				
@@ -247,10 +257,14 @@ public class RuleRepository {
 					var ruleRes = iterRule.next().getResource().as(OntIndividual.class);
 					if (evaluations.containsKey(ruleRes.getURI())) {
 						evals.add(evaluations.get(ruleRes.getURI()));
-					} else {
-						var evalObj = RuleEvaluationWrapperResourceImpl.loadFromModel(ruleRes, factory, this);
-						evaluations.put(evalObj.getRuleEvalObj().getURI(), evalObj);
-						evals.add(evalObj);
+					} else {						
+						try { 
+							var evalObj = RuleEvaluationWrapperResourceImpl.loadFromModel(ruleRes, factory, this);
+							evaluations.put(evalObj.getRuleEvalObj().getURI(), evalObj);
+							evals.add(evalObj);
+						} catch (EvaluationException e) {
+							// ignored, check via logs how to improve scope handling issues
+						}	
 					}
 				}
 			}
@@ -361,9 +375,13 @@ public class RuleRepository {
 				while (iter2.hasNext()) {
 					var evalObj = iter2.next().getResource().as(OntIndividual.class);
 					var evalObjWrapper = evaluations.remove(evalObj.getURI());
-					if (evalObjWrapper == null) {
-						evalObjWrapper = RuleEvaluationWrapperResourceImpl.loadFromModel(evalObj, factory, this);
-						// not we dont add to index here, as we remove these anyway before returning
+					if (evalObjWrapper == null) {						
+						try { 
+							evalObjWrapper = RuleEvaluationWrapperResourceImpl.loadFromModel(evalObj, factory, this);
+							// now we dont add to index here, as we remove these anyway before returning
+						} catch (EvaluationException e) {
+							// ignored, check via logs how to improve scope handling issues
+						}													
 					} 					
 					evals.add(evalObjWrapper); //we delete evals further down 
 				}				
@@ -372,7 +390,8 @@ public class RuleRepository {
 		// clean up scopes //TODO check if some empty pointers with eval Wrappers remain!
 		scopes.forEach(Resource::removeProperties);
 		// delete eval wrapper
-		evals.forEach(eval -> eval.delete());				
+		evals.stream().filter(Objects::nonNull)
+			.forEach(eval -> eval.delete());				
 		return evals;
 	}
 
