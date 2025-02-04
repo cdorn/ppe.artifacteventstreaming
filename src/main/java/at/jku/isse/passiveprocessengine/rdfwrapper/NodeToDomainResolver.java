@@ -378,7 +378,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 			if (ruleRepo != null) { // mode with rule repo
 				var evalWrapper = ruleRepo.getEvaluations().get(node.getURI());
 				if (evalWrapper != null)
-					return new RDFRuleResultWrapper(evalWrapper.getRuleEvalObj(), this, ruleRepo); //FIXME: we are created new wrappers every time, but if we cache, we wont know when they need to be deleted					
+					return new RDFRuleResultWrapper(evalWrapper, this, ruleRepo); //FIXME: we are created new wrappers every time, but if we cache, we wont know when they need to be deleted					
 			} 
 			return null;
 		}

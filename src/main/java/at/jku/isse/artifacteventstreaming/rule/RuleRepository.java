@@ -211,18 +211,26 @@ public class RuleRepository {
 			var scope = stmt.getResource().as(OntIndividual.class);
 			var iterRule = scope.listProperties(factory.getUsedInRuleProperty().asProperty());
 			while(iterRule.hasNext()) {
-				var res = iterRule.next().getResource();
-				var ruleRes = res.as(OntIndividual.class);
-				if (evaluations.containsKey(ruleRes.getURI())) {
-					evals.add(evaluations.get(ruleRes.getURI()));
+				var res = iterRule.next().getResource();				
+				if (evaluations.containsKey(res.getURI())) {
+					evals.add(evaluations.get(res.getURI()));
 				} else {
-					try { 
+					if (!res.canAs(OntIndividual.class)) {
+						log.warn("Found dangling reference to evaluation resource with URI: "+res.getURI());
+					} else {
+					try {
+						//TODO: there seem to be some leftover evaluation references that no longer can be identified as an evaluation object and hence fail to be used as OntIndividual
+						
+						var ruleRes = res.as(OntIndividual.class);
+						
 						var evalObj = RuleEvaluationWrapperResourceImpl.loadFromModel(ruleRes, factory, this);
 						evaluations.put(evalObj.getRuleEvalObj().getURI(), evalObj);
 						evals.add(evalObj);
 					} catch (EvaluationException e) {
+						log.info("Error wrapping evaluation resource: "+e.getMessage());
 						// ignored, check via logs how to improve scope handling issues
-					}					
+					}			
+					}
 				}
 			}
 		}				

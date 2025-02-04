@@ -3,6 +3,8 @@ package at.jku.isse.passiveprocessengine.rdfwrapper;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.vocabulary.OWL2;
 
+import at.jku.isse.artifacteventstreaming.rule.RuleEvaluationWrapperResource;
+import at.jku.isse.artifacteventstreaming.rule.RuleEvaluationWrapperResourceImpl;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.passiveprocessengine.core.PPEInstance;
@@ -15,9 +17,11 @@ import lombok.extern.slf4j.Slf4j;
 public class RDFRuleResultWrapper extends RDFInstance implements RuleResult {
 
 	private final RuleRepository ruleRepo;
+	private final RuleEvaluationWrapperResource evalWrapper;
 	
-	public RDFRuleResultWrapper(OntIndividual element, NodeToDomainResolver resolver, RuleRepository ruleRepo) {
-		super(element, null, resolver);
+	public RDFRuleResultWrapper(RuleEvaluationWrapperResourceImpl evalWrapper, NodeToDomainResolver resolver, RuleRepository ruleRepo) {
+		super(evalWrapper.getRuleEvalObj() , null, resolver);
+		this.evalWrapper = evalWrapper;
 		this.ruleRepo = ruleRepo;
 	}
 	
@@ -65,6 +69,11 @@ public class RDFRuleResultWrapper extends RDFInstance implements RuleResult {
 		}
 		return null;
 		//return super.getTypedProperty("ruleContextElement", RDFInstance.class);
+	}
+	
+	@Override
+	public void markAsDeleted() {		
+		evalWrapper.delete();
 	}
 
 }
