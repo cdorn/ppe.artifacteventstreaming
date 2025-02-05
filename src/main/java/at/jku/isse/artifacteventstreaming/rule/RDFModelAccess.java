@@ -30,7 +30,7 @@ import org.apache.jena.vocabulary.XSD;
 import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 import at.jku.isse.designspace.rule.arl.evaluator.ModelAccess;
 import at.jku.isse.designspace.rule.arl.exception.EvaluationException;
@@ -46,7 +46,7 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
 	private MapResourceType mapFactory;
 	private SingleResourceType singleFactory;
 	
-    public RDFModelAccess(OntModel model, PropertyCardinalityTypes propertyCardinalities) {
+    public RDFModelAccess(OntModel model, MetaModelSchemaTypes propertyCardinalities) {
     	this.model = model;
     	listFactory = propertyCardinalities.getListType();
     	mapFactory = propertyCardinalities.getMapType();

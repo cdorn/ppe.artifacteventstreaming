@@ -33,9 +33,7 @@ public class MapResourceType  {
 	public static final String OBJECT_VALUE_PROPERTY_URI = MAP_NS+OBJECT_VALUE;
 	public static final String CONTAINER_PROPERTY_URI = MAP_NS+"containerRef";
 	public static final String MAP_REFERENCE_SUPERPROPERTY_URI = MAP_NS+"mapRef";
-	
-	private static MapSchemaFactory factory = new MapSchemaFactory();
-	
+		
 	@Getter
 	private final OntDataProperty keyProperty;
 	@Getter
@@ -53,7 +51,6 @@ public class MapResourceType  {
 	private SingleResourceType singleType;
 	
 	public MapResourceType(OntModel model, SingleResourceType singleType) {		
-		factory.addSchemaToModel(model);
 		this.singleType = singleType;
 		mapEntryClass = model.getOntClass(ENTRY_TYPE_URI);
 		keyProperty = model.getDataProperty(KEY_PROPERTY_URI);
@@ -141,15 +138,15 @@ public class MapResourceType  {
 		return props;
 	}
 	
-	private static class MapSchemaFactory extends SchemaFactory {
+	protected static class MapSchemaFactory {
 		
-		public static final String MAPONTOLOGY = "mapontology";
+		
 		private final OntModel model;
 		
-		public MapSchemaFactory() {
-			this.model = loadOntologyFromFilesystem(MAPONTOLOGY);			
+		public MapSchemaFactory(OntModel metaOntology) {
+			this.model = metaOntology;		
 			initTypes();			
-			super.writeOntologyToFilesystem(model, MAPONTOLOGY);
+
 		}				
 		
 		private void initTypes() {
@@ -189,9 +186,5 @@ public class MapResourceType  {
 				mapReferenceSuperProperty.addRange(mapEntryClass);
 			}
 		}
-
-		public void addSchemaToModel(Model modelToAddOntologyTo) {
-			modelToAddOntologyTo.add(model);		
-		} 
 	}
 }

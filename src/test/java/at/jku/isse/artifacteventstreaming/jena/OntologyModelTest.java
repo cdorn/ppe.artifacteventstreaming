@@ -27,9 +27,12 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.Test;
 
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.ChangeListener;
 
 class OntologyModelTest {
@@ -43,7 +46,10 @@ class OntologyModelTest {
 		Reasoner reasoner = ReasonerRegistry.getOWLReasoner();
 		reasoner.bindSchema(m);
 		InfModel infmodel = ModelFactory.createInfModel(reasoner, m);
-		SingleResourceType singleType = new SingleResourceType(m);
+		
+		var metaModel = MetaModelOntology.buildInMemoryOntology(); 			
+		var metaUtil = new MetaModelSchemaTypes(m, metaModel);		
+		SingleResourceType singleType = metaUtil.getSingleType();
 		MapResourceType mapType = new MapResourceType(m, singleType);
 		
 		OntClass artifactType = m.createOntClass(NS+"artifact");		
@@ -144,8 +150,10 @@ class OntologyModelTest {
 	void testSeq() {
 		OntModel m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM );
 		m.register(new ChangeListener());
-		var singleType = new SingleResourceType(m);
-		var listFactory = new ListResourceType(m, singleType);
+		 var metaModel = MetaModelOntology.buildInMemoryOntology(); 			
+		var metaUtil = new MetaModelSchemaTypes(m, metaModel);		
+		SingleResourceType singleType = metaUtil.getSingleType();
+		var listFactory = metaUtil.getListType();
 		
 		OntClass artifactType = m.createOntClass(NS+"artifact");
 		OntIndividual art1 = artifactType.createIndividual(NS+"art1");
@@ -165,8 +173,10 @@ class OntologyModelTest {
 	void testPropertyName() {
 		OntModel m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM );
 		OntClass artifactType = m.createOntClass(NS+"artifact");		
-		var singleType = new SingleResourceType(m);
-		var listFactory = new ListResourceType(m, singleType);
+		var metaModel = MetaModelOntology.buildInMemoryOntology(); 			
+		var metaUtil = new MetaModelSchemaTypes(m, metaModel);		
+		SingleResourceType singleType = metaUtil.getSingleType();
+		var listFactory = metaUtil.getListType();
 		var successorProp = listFactory.addObjectListProperty(artifactType, NS+"hasSuccessor", artifactType);
 		
 		artifactType.declaredProperties().forEach(prop -> System.out.println(prop.getLocalName()));

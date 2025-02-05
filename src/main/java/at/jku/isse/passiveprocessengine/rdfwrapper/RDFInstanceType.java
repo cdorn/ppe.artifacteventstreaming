@@ -260,7 +260,10 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	}
 
 
-
+	@Override
+	public String toString() {
+		return "RDFInstanceType [" + getId() + "]";
+	}
 	
 	
 

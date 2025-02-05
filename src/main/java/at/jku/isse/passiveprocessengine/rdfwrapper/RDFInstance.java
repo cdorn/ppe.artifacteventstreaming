@@ -60,4 +60,8 @@ public class RDFInstance extends RDFElement implements PPEInstance {
 		return type.getType().equals(named) || type.getAllSuperClasses().contains(named);		
 	}
 
+	@Override
+	public String toString() {
+		return "RDFInstance [" + getId() + "]";
+	}
 }

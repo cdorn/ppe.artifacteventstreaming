@@ -35,8 +35,7 @@ public class ListResourceType {
 	private static final String CONTAINER_PROPERTY_URI = LIST_NS+"containerOwnerRef";
 	private static final String LIST_REFERENCE_SUPERPROPERTY_URI = LIST_NS+"hasList";
 	public static final Resource LI = ResourceFactory.createResource(RDF.uri+"li");
-			
-	private static final ListSchemaFactory factory = new ListSchemaFactory();
+	
 
 	@Getter // pointing back to container owner
 	private final OntObjectProperty containerProperty;
@@ -49,7 +48,6 @@ public class ListResourceType {
 	
 	public ListResourceType(OntModel model, SingleResourceType singleType) {			
 		this.singleType = singleType;
-		factory.addSchemaToModel(model);
 		listClass = model.getOntClass(RDF.Seq);	
 		containerProperty = model.getObjectProperty(CONTAINER_PROPERTY_URI);	
 		listReferenceSuperProperty = model.getObjectProperty(LIST_REFERENCE_SUPERPROPERTY_URI);		
@@ -172,15 +170,14 @@ public class ListResourceType {
 	}
 
 	
-	private static class ListSchemaFactory extends SchemaFactory {
-
-		public static final String LISTONTOLOGY = "listontology";
+	protected static class ListSchemaFactory {
+		
 		private final OntModel model;
 
-		public ListSchemaFactory() {
-			this.model = loadOntologyFromFilesystem(LISTONTOLOGY);			
+		public ListSchemaFactory(OntModel metaOntology) {
+			this.model = metaOntology;	
 			initTypes();			
-			super.writeOntologyToFilesystem(model, LISTONTOLOGY);
+
 		}				
 
 		private void initTypes() {
@@ -202,8 +199,5 @@ public class ListResourceType {
 			}
 		}
 		
-		public void addSchemaToModel(Model modelToAddOntologyTo) {
-			modelToAddOntologyTo.add(model);		
-		} 
 	}
 }

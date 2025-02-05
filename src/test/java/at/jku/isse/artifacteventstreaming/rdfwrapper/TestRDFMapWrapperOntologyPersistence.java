@@ -14,7 +14,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.branch.persistence.FilebasedDatasetLoader;
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 
 public class TestRDFMapWrapperOntologyPersistence  {
 
@@ -34,7 +36,9 @@ public class TestRDFMapWrapperOntologyPersistence  {
 		modelDataset.begin(ReadWrite.WRITE);
 		var m = OntModelFactory.createModel(modelDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		assertEquals(0, m.size());
-		var cardType = new PropertyCardinalityTypes(m);
+		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
+		var cardType = new MetaModelSchemaTypes(m, metaModel);
 		cardType.createSingleDataPropertyType(branchURI+"testProp", cardType.getListType().getListClass(), m.getDatatype(XSD.xint));
 		assertTrue(m.size() > 0);
 		m.statements().forEach(stmt -> System.out.println(stmt));
@@ -48,7 +52,9 @@ public class TestRDFMapWrapperOntologyPersistence  {
 		m = OntModelFactory.createModel(modelDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		long oldSize = m.size();
 		assertNotEquals(0, m.size());
-		cardType = new PropertyCardinalityTypes(m);
+		metaModel = MetaModelOntology.buildInMemoryOntology(); 
+		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
+		cardType = new MetaModelSchemaTypes(m, metaModel);
 		cardType.createSingleDataPropertyType(branchURI+"testProp", cardType.getListType().getListClass(), m.getDatatype(XSD.xint));
 		long newSize = m.size();
 		m.statements().forEach(stmt -> System.out.println(stmt));

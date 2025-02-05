@@ -14,7 +14,8 @@ import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
 
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 import lombok.Getter;
 
 public class RuleSchemaFactory {
@@ -60,24 +61,17 @@ public class RuleSchemaFactory {
 
 	private final OntModel model;
 	private final Dataset ontology;
-	@Getter private final PropertyCardinalityTypes propertyCardinalityTypes;
+	private final SingleResourceType singleType;	
 
-	public RuleSchemaFactory(PropertyCardinalityTypes schemaUtil) {
-		this.propertyCardinalityTypes = schemaUtil;
-		this.ontology = loadOntologyFromFilesystem();
+	public RuleSchemaFactory(MetaModelSchemaTypes.MetaModelOntology metamodel) {
+		this.ontology = metamodel.getMetaontology();
 		ontology.begin(ReadWrite.WRITE);
-		this.model = OntModelFactory.createModel(ontology.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		this.model = metamodel.getMetamodel();
+		this.singleType = new SingleResourceType(model); // we use this type provider only on the meta model, no actual runtime model uses this instance
 		initTypes();
 		model.setNsPrefix("rules", uri);
 		ontology.commit();
 		ontology.close();
-	}
-
-	private Dataset loadOntologyFromFilesystem() {
-		String directory = "ontologies/"+RULEONTOLOGY ;
-		Dataset dataset = TDB2Factory.connectDataset(directory) ;
-		if (dataset == null) throw new RuntimeException("Cannot load rule ontology dataset");
-		return dataset;
 	}
 
 	private void initTypes() {		
@@ -109,17 +103,17 @@ public class RuleSchemaFactory {
 
 		var expressionProperty = model.getDataProperty(ruleExpressionURI);
 		if (expressionProperty == null) {
-			propertyCardinalityTypes.createSingleDataPropertyType(ruleExpressionURI, definitionType, model.getDatatype(XSD.xstring)); 
+			singleType.createSingleDataPropertyType(ruleExpressionURI, definitionType, model.getDatatype(XSD.xstring)); 
 		}
 
 		var expressionErrorProperty = model.getDataProperty(ruleExpressionErrorURI);
 		if (expressionErrorProperty == null) {
-			propertyCardinalityTypes.createSingleDataPropertyType(ruleExpressionErrorURI, definitionType, model.getDatatype(XSD.xstring));
+			singleType.createSingleDataPropertyType(ruleExpressionErrorURI, definitionType, model.getDatatype(XSD.xstring));
 		}
 
 		var contextTypeProperty = model.getObjectProperty(ruleContextTypeURI);
 		if (contextTypeProperty == null) {	
-			propertyCardinalityTypes.createSingleObjectPropertyType(ruleContextTypeURI, definitionType, model.createOntClass(OWL2.Class.getURI())); // the concept of 'class' in OWL2, not the java .class 			
+			singleType.createSingleObjectPropertyType(ruleContextTypeURI, definitionType, model.createOntClass(OWL2.Class.getURI())); // the concept of 'class' in OWL2, not the java .class 			
 		}
 	}
 
@@ -134,44 +128,44 @@ public class RuleSchemaFactory {
 
 		var evaluationHasConsistentResultProperty = model.getDataProperty(ruleHasConsistentResultURI);
 		if (evaluationHasConsistentResultProperty == null) {
-			propertyCardinalityTypes.createSingleDataPropertyType(ruleHasConsistentResultURI, resultBaseType, model.getDatatype(XSD.xboolean));
+			singleType.createSingleDataPropertyType(ruleHasConsistentResultURI, resultBaseType, model.getDatatype(XSD.xboolean));
 		}
 
 		var evaluationErrorProperty = model.getDataProperty(ruleEvaluationErrorURI);
 		if (evaluationErrorProperty == null) {
-			propertyCardinalityTypes.createSingleDataPropertyType(ruleEvaluationErrorURI, resultBaseType, model.getDatatype(XSD.xstring));
+			singleType.createSingleDataPropertyType(ruleEvaluationErrorURI, resultBaseType, model.getDatatype(XSD.xstring));
 		}
 
 		var contextElementScopeProperty = model.getObjectProperty(ruleContextElementURI);
 		if (contextElementScopeProperty == null) {
-			propertyCardinalityTypes.createSingleObjectPropertyType(ruleContextElementURI, resultBaseType, ruleScopeCollection);  			
+			singleType.createSingleObjectPropertyType(ruleContextElementURI, resultBaseType, ruleScopeCollection);  			
 		}
 
 		havingScopePartProperty = model.getObjectProperty(havingScopeURI);
 		if (havingScopePartProperty == null) {
-			havingScopePartProperty = propertyCardinalityTypes.createSingleObjectPropertyType(havingScopeURI, resultBaseType, ruleScopeCollection);
+			havingScopePartProperty = singleType.createSingleObjectPropertyType(havingScopeURI, resultBaseType, ruleScopeCollection);
 		}
 
 		var isEnabledProperty = model.getDataProperty(ruleIsEnabledURI);	
 		if (isEnabledProperty == null) {
-			propertyCardinalityTypes.createSingleDataPropertyType(ruleIsEnabledURI, List.of(definitionType, resultBaseType), model.getDatatype(XSD.xboolean));																	
+			singleType.createSingleDataPropertyType(ruleIsEnabledURI, List.of(definitionType, resultBaseType), model.getDatatype(XSD.xboolean));																	
 		}
 	}
 
 	private void initScopePartTypeProperties() {						
 		var usingPredicateProperty = model.getObjectProperty(usingPropertyURI);
 		if (usingPredicateProperty == null) {
-			propertyCardinalityTypes.createSingleObjectPropertyType(usingPropertyURI, ruleScopeCollection, model.createOntClass(RDF.Property.getURI()));
+			singleType.createSingleObjectPropertyType(usingPropertyURI, ruleScopeCollection, model.createOntClass(RDF.Property.getURI()));
 		}
 
 		var usingElementProperty = model.getObjectProperty(usingElementURI);
 		if (usingElementProperty == null) {
-			propertyCardinalityTypes.createSingleObjectPropertyType(usingElementURI, ruleScopeCollection, model.createOntClass(OWL2.NamedIndividual.getURI()));
+			singleType.createSingleObjectPropertyType(usingElementURI, ruleScopeCollection, model.createOntClass(OWL2.NamedIndividual.getURI()));
 		}
 
 		OntObjectProperty usedInRuleProperty = model.getObjectProperty(usedInRuleURI);
 		if (usedInRuleProperty == null) {
-			usedInRuleProperty = propertyCardinalityTypes.createBaseObjectPropertyType(usedInRuleURI, ruleScopeCollection, resultBaseType);		
+			usedInRuleProperty = singleType.createBaseObjectPropertyType(usedInRuleURI, ruleScopeCollection, resultBaseType);		
 			usedInRuleProperty.addInverseProperty(havingScopePartProperty);
 		}
 	}
@@ -188,16 +182,4 @@ public class RuleSchemaFactory {
 		// usingElementProperty.addInverseProperty(hasRuleScope); //we dont want this as inverse, as if we remove instance, then this backlink would be gone as well.
 	}
 
-
-	public void addRuleSchemaToModel(OntModel modelToAddOntologyTo) {
-		//modelToAddOntologyTo.add(model); this will add new anonymous nodes (which we dont want to duplicate, hence
-		// we only add the model when the main class is not present.
-		if (modelToAddOntologyTo.getOntClass(ruleDefinitionURI) == null) {
-			ontology.begin(ReadWrite.READ);
-			modelToAddOntologyTo.add(model);
-			ontology.end();
-		}
-		//FixedBy DB usage: there is still the problem that two models that get augmented here, at different times (e.g., upon a restart) will have different anonymous ids
-		// as the ids are not persisted in the ttl file. --> TDB2 does maintain anonIds and we create replicatable unique anon ids
-	}
 }

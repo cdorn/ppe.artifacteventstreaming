@@ -76,4 +76,8 @@ public class RDFRuleResultWrapper extends RDFInstance implements RuleResult {
 		evalWrapper.delete();
 	}
 
+	@Override
+	public String toString() {
+		return "RDFRuleResultWrapper [" + getId() + "]";
+	}
 }

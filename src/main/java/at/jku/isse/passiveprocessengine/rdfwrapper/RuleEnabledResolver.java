@@ -18,7 +18,7 @@ import at.jku.isse.artifacteventstreaming.rule.RuleException;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.designspace.rule.arl.evaluator.EvaluationNode;
 import at.jku.isse.designspace.rule.arl.evaluator.RuleDefinitionImpl;
 import at.jku.isse.designspace.rule.arl.evaluator.RuleEvaluation;
@@ -40,7 +40,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 	final RuleRepository repo;
 	final RuleRepositoryInspector inspector;
 	
-	public RuleEnabledResolver(Branch branch, RepairService repairService, RuleSchemaProvider ruleSchema, RuleRepository repo, PropertyCardinalityTypes cardinalityTypes) {
+	public RuleEnabledResolver(Branch branch, RepairService repairService, RuleSchemaProvider ruleSchema, RuleRepository repo, MetaModelSchemaTypes cardinalityTypes) {
 		super(branch, repo, cardinalityTypes);
 		this.repairService = repairService;
 		this.ruleSchema = ruleSchema;
@@ -55,17 +55,18 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 	}
 	
 	protected void initOverride() {
-		var ruleDefinitions = ruleSchema.getDefinitionType().individuals().map(indiv -> indiv.getURI()).collect(Collectors.toSet());
+		var ruleDefinitions = repo.getRuleDefinitions().stream().map(indiv -> indiv.getRuleDefinition().getURI()).collect(Collectors.toSet());
 		model.classes()
-			.filter(ontClass -> !ontClass.getNameSpace().equals(RDF.uri))
-			.filter(ontClass -> !ontClass.getNameSpace().equals(RDFS.uri))
-			.filter(ontClass -> !ontClass.getNameSpace().equals(OWL2.NS))	
-			.filter(ontClass -> !ruleDefinitions.contains(ontClass.getURI())) // we dont want to cache rule definitons as instance types but rule definitions via rule repo			
+			.filter(ontClass -> !isBlacklistedNamespace(ontClass.getNameSpace()))									
+			.filter(ontClass -> !ruleDefinitions.contains(ontClass.getURI())) // we dont want to cache rule evaluations here but via rule repo			
 			.forEach(ontClass -> { 
 			var type = new RDFInstanceType(ontClass, this);
 			typeIndex.put(ontClass, type);
 			type.cacheSuperProperties();
-			ontClass.individuals(true).forEach(indiv -> instanceIndex.put(indiv.getURI(), new RDFInstance(indiv, type, this)));
+			if (!ontClass.equals(metaClass)) {
+				var individuals = ontClass.individuals(true).toList();
+				individuals.forEach(indiv -> instanceIndex.putIfAbsent(indiv.getURI(), new RDFInstance(indiv, type, this)));
+			}
 		} );
 		
 		repo.getRuleDefinitions().forEach(ruleDef -> {
@@ -116,7 +117,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 	@Override
 	public RuleDefinition findByInternalId(String id) {
 		var indiv = model.getOntClass(id);
-		if (indiv != null) {
+		if (indiv != null) {			
 			var ruleDef = super.typeIndex.get(indiv);
 			if (ruleDef instanceof RDFPPERuleDefinitionWrapper wrapper) {
 				return wrapper;

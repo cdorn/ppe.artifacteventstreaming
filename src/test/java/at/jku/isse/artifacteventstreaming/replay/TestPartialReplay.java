@@ -22,7 +22,9 @@ import org.junit.jupiter.api.Test;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.rule.MockSchema;
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 
 class TestPartialReplay {
 
@@ -36,7 +38,9 @@ class TestPartialReplay {
 	@BeforeEach
 	void setupListener() {
 		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_RDFS_INF );
-		var cardUtils = new PropertyCardinalityTypes(m);
+		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
+		var cardUtils = new MetaModelSchemaTypes(m, metaModel);
 		schema = new MockSchema(m, cardUtils);
 		aggr = new StatementAggregator();
 		aggr.registerWithModel(m);

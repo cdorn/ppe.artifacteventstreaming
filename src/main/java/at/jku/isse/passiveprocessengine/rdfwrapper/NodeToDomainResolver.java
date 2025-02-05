@@ -27,9 +27,14 @@ import org.apache.jena.vocabulary.XSD;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
+import at.jku.isse.artifacteventstreaming.rule.RDFRuleDefinition;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
+import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.InstanceRepository;
 import at.jku.isse.passiveprocessengine.core.PPEInstance;
@@ -55,34 +60,44 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	protected final OntClass metaClass;
 	protected long commitSessionCounter = 1;
 	
-	@Getter private PropertyCardinalityTypes cardinalityUtil;
+	@Getter private MetaModelSchemaTypes cardinalityUtil;
 	protected Lock writeLock;
 	
-	public NodeToDomainResolver(Branch branch, RuleRepository ruleRepo, PropertyCardinalityTypes cardinalityUtil) {
+	public NodeToDomainResolver(Branch branch, RuleRepository ruleRepo, MetaModelSchemaTypes cardinalityUtil) {
 		super();
 		this.ruleRepo = ruleRepo;
 		this.branch = branch;
 		this.model = branch.getModel();
 		this.dataset = branch.getDataset();	
 		this.cardinalityUtil = cardinalityUtil; 
-		metaClass = createMetaClass(model);	
+		metaClass = createMetaClass();	
 		init();		
 	}
 	
 	protected void init() {
 		model.classes()
-		.filter(ontClass -> !ontClass.getNameSpace().equals(RDF.uri))
-		.filter(ontClass -> !ontClass.getNameSpace().equals(RDFS.uri))
-		.filter(ontClass -> !ontClass.getNameSpace().equals(OWL2.NS))
+		.filter(ontClass -> !isBlacklistedNamespace(ontClass.getNameSpace()))		
 		.forEach(ontClass -> { 
 			var type = new RDFInstanceType(ontClass, this);
 			typeIndex.put(ontClass, type);
 			type.cacheSuperProperties();
-			ontClass.individuals(true).forEach(indiv -> instanceIndex.put(indiv.getURI(), new RDFInstance(indiv, type, this)));
+			if (!ontClass.equals(metaClass)) {
+				ontClass.individuals(true).forEach(indiv -> instanceIndex.putIfAbsent(indiv.getURI(), new RDFInstance(indiv, type, this)));
+			}
 		} );		
 	}
 	
-	private OntClass createMetaClass(OntModel model2) {
+	protected boolean isBlacklistedNamespace(String namespace) {
+		return namespace.equals(RDF.uri) || 
+				namespace.equals(RDFS.uri) ||	
+				namespace.equals(OWL2.NS) ||
+				namespace.equals(MapResourceType.MAP_NS) ||
+				namespace.equals(SingleResourceType.SINGLE_NS) ||
+				namespace.equals(ListResourceType.LIST_NS) ||
+				namespace.equals(RuleSchemaFactory.uri);
+	}
+	
+	private OntClass createMetaClass() {
 		var meta = model.getOntClass(BASE_NS+"MetaClass");
 		if (meta == null) { 			
 			meta = model.createOntClass(BASE_NS+"MetaClass");

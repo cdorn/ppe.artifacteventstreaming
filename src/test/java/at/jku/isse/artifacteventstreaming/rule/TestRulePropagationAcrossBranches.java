@@ -25,7 +25,8 @@ import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
 
 class TestRulePropagationAcrossBranches {
@@ -61,8 +62,10 @@ class TestRulePropagationAcrossBranches {
 		branchDestination.appendIncomingCommitMerger(merger);
 		//setup rules for destination branch
 		var destModel = branchDestination.getModel();
-		var cardUtil = new PropertyCardinalityTypes(destModel);
-		RuleTriggerObserverFactory observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory(cardUtil));
+		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
+		var cardUtil = new MetaModelSchemaTypes(destModel, metaModel);
+		RuleTriggerObserverFactory observerFactory = new RuleTriggerObserverFactory(cardUtil);
 		
 		observerDest = observerFactory.buildInstance("RuleTriggerObserverDestination", destModel, repoModel);
 		branchDestination.appendBranchInternalCommitService(observerDest);		// register rule service with destination branch

@@ -20,7 +20,7 @@ import org.apache.jena.vocabulary.RDFS;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,7 +30,7 @@ public class StatementAugmentationSession {
 		
 	private final List<ContainedStatement> addedStatements;
 	private final List<ContainedStatement> removedStatements;
-	private final PropertyCardinalityTypes schemaUtils;
+	private final MetaModelSchemaTypes schemaUtils;
 	
 //	private final Set<ContainedStatement> addedAugmentedStatements = new HashSet<>();
 //	private final Set<ContainedStatement> removedAugmentedStatements = new HashSet<>();

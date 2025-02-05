@@ -22,7 +22,8 @@ import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 
 class TestRuleDefinitions {
 	
@@ -47,7 +48,9 @@ class TestRuleDefinitions {
 		//THIS OntSpec is important: as without inference, then subproperties and subclass individuals are not correctly inferred
 		//m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_RDFS_INF ); // builtin is much faster that this spec!!!!
 		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF );
-		PropertyCardinalityTypes schemaUtils = new PropertyCardinalityTypes(m);		 	
+		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
+		MetaModelSchemaTypes schemaUtils = new MetaModelSchemaTypes(m, metaModel);		 	
 		m.setNsPrefix("rules", RuleSchemaFactory.uri);
 		m.setNsPrefix("test", baseURI.toString());
 		artType = m.createOntClass(baseURI+"artType");
@@ -62,11 +65,10 @@ class TestRuleDefinitions {
 		subProp.addDomain(artSubType);
 		
 		labelProp = schemaUtils.createSingleDataPropertyType(baseURI+"label", artType, m.getDatatype(XSD.xstring));
-		priorityProp = schemaUtils.createSingleDataPropertyType(baseURI+"priority", artType, m.getDatatype(XSD.xlong)); 
-		var cardUtil = new PropertyCardinalityTypes(m);
-		RuleSchemaFactory ruleSchemaFactory = new RuleSchemaFactory(cardUtil);		
-		factory = new RuleSchemaProvider(m, ruleSchemaFactory);
-		modelAccess = new RDFModelAccess(m, cardUtil);
+		priorityProp = schemaUtils.createSingleDataPropertyType(baseURI+"priority", artType, m.getDatatype(XSD.xlong)); 		
+				
+		factory = new RuleSchemaProvider(m, schemaUtils);
+		modelAccess = new RDFModelAccess(m, schemaUtils);
 	}
 	
 	@Test

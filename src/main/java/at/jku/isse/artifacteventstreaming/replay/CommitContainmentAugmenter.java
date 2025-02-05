@@ -6,14 +6,14 @@ import at.jku.isse.artifacteventstreaming.api.AbstractHandlerBase;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 
 public class CommitContainmentAugmenter extends AbstractHandlerBase implements IncrementalCommitHandler {
 
-	protected final PropertyCardinalityTypes cardinalityUtils;
+	protected final MetaModelSchemaTypes cardinalityUtils;
 
 	public CommitContainmentAugmenter(String serviceName, OntModel repoModel,
-			PropertyCardinalityTypes cardinalityUtils) {
+			MetaModelSchemaTypes cardinalityUtils) {
 		super(serviceName, repoModel);
 		this.cardinalityUtils = cardinalityUtils;
 	}

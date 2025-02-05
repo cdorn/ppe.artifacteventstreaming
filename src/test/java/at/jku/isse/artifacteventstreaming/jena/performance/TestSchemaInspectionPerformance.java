@@ -14,7 +14,9 @@ import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.Test;
 
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 
 class TestSchemaInspectionPerformance {
 
@@ -25,7 +27,8 @@ class TestSchemaInspectionPerformance {
 		var dataset = DatasetFactory.createTxnMem();
 		OntModel m = OntModelFactory.createModel(dataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF );
 		dataset.begin(ReadWrite.WRITE);
-		var schemaUtils = new PropertyCardinalityTypes(m); 
+		var metaModel = MetaModelOntology.buildInMemoryOntology(); 		
+		var schemaUtils = new MetaModelSchemaTypes(m, metaModel); 
 		var props = new LinkedList<OntRelationalProperty>();
 		var types = new LinkedList<OntClass>();
 		

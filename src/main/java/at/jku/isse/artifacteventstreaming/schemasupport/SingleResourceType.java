@@ -30,8 +30,6 @@ public class SingleResourceType {
 	public static final String SINGLE_OBJECT_URI = SINGLE_NS+"object";
 	public static final String SINGEL_LITERAL_URI = SINGLE_NS+"literal";
 	
-	private static SingleSchemaFactory factory = new SingleSchemaFactory();
-	
 	@Getter
 	private final OntObjectProperty singleObjectProperty;
 	@Getter
@@ -42,8 +40,7 @@ public class SingleResourceType {
 	
 	private final Set<String> propertyCache = new HashSet<>();
 	
-	public SingleResourceType(OntModel model) {
-		factory.addSchemaToModel(model);	
+	public SingleResourceType(OntModel model) {			
 		singleObjectProperty = model.getObjectProperty(SINGLE_OBJECT_URI);
 		singleLiteralProperty = model.getDataProperty(SINGEL_LITERAL_URI);
 		fillCaches(model);		
@@ -101,7 +98,7 @@ public class SingleResourceType {
 		if (prop != null) {
 			var maxOneProp = getMaxOneDataCardinalityRestriction(domain.getModel(), prop, range);
 			domain.addProperty(RDFS.subClassOf, maxOneProp);
-			getSingleLiteralProperty().addSubProperty(prop);
+			singleLiteralProperty.addSubProperty(prop);
 			dataSubpropertyCache.add(prop);
 		}
 		return prop;
@@ -113,7 +110,7 @@ public class SingleResourceType {
 		if (prop != null) {
 			var maxOneProp = getMaxOneDataCardinalityRestriction(localModel, prop, range);
 			domains.forEach(domain -> domain.addProperty(RDFS.subClassOf, maxOneProp));			//domain.addSuperClass(maxOneProp)
-			getSingleLiteralProperty().addSubProperty(prop);
+			singleLiteralProperty.addSubProperty(prop);
 			dataSubpropertyCache.add(prop);
 		}
 		return prop;
@@ -125,7 +122,7 @@ public class SingleResourceType {
 			var maxOneProp = getMaxOneObjectCardinalityRestriction(domain.getModel(), prop, range);
 			//domain.addSuperClass(maxOneProp);
 			domain.addProperty(RDFS.subClassOf, maxOneProp);			
-			getSingleObjectProperty().addSubProperty(prop);
+			singleObjectProperty.addSubProperty(prop);
 			objectSubpropertyCache.add(prop);
 		}
 		return prop;
@@ -157,15 +154,15 @@ public class SingleResourceType {
 		return restrRes;
 	}
 	
-	private static class SingleSchemaFactory extends SchemaFactory {
+	
+	
+	protected static class SingleSchemaFactory {
 		
-		public static final String SINGLEONTOLOGY = "singlevalueontology";
 		private final OntModel model;
 		
-		public SingleSchemaFactory() {
-			this.model = loadOntologyFromFilesystem(SINGLEONTOLOGY);			
-			initTypes();			
-			super.writeOntologyToFilesystem(model, SINGLEONTOLOGY);
+		public SingleSchemaFactory(OntModel metaOntology) {
+			this.model = metaOntology;			
+			initTypes();						
 		}				
 		
 		private void initTypes() {
@@ -179,8 +176,5 @@ public class SingleResourceType {
 			}
 		}
 
-		public void addSchemaToModel(Model modelToAddOntologyTo) {
-			modelToAddOntologyTo.add(model);		
-		} 
 	}
 }

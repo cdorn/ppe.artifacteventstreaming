@@ -19,7 +19,8 @@ import org.junit.jupiter.api.Test;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
 
 class TestBranchWithRules {
@@ -48,8 +49,10 @@ class TestBranchWithRules {
 				.addOutgoingCommitDistributer(serviceOut)
 				.build();		
 		model = branch.getModel();
-		var cardUtil = new PropertyCardinalityTypes(model);
-		RuleTriggerObserverFactory observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory(cardUtil));
+		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
+		var cardUtil = new MetaModelSchemaTypes(model, metaModel);
+		RuleTriggerObserverFactory observerFactory = new RuleTriggerObserverFactory(cardUtil);
 		schema = new MockSchema(model, cardUtil); // create types for testing
 								
 		// setup rule service				

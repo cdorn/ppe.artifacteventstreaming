@@ -31,7 +31,8 @@ import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserver;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.PPEPropertyType;
 import at.jku.isse.passiveprocessengine.core.ProcessInstanceChangeListener;
@@ -70,8 +71,10 @@ class TestCommitToRuleChangeEvents {
 				.setModelReasoner(OntSpecification.OWL2_DL_MEM_RDFS_INF)
 				.build();		
 		m = branch.getModel();		
-		var cardUtil = new PropertyCardinalityTypes(m);
-		var observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory(cardUtil));
+		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
+		var cardUtil = new MetaModelSchemaTypes(m, metaModel);
+		var observerFactory = new RuleTriggerObserverFactory(cardUtil);
 		observer = observerFactory.buildInstance("RuleTriggeringObserver", m, repoModel);
 		observer.registerListener(new TestRuleEvaluationListener());
 		var repairService = new RepairService(m, observer.getRepo());

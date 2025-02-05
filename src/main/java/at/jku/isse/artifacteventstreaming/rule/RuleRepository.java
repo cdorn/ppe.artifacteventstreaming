@@ -244,7 +244,7 @@ public class RuleRepository {
 	public Set<RuleEvaluationWrapperResource> getRulesAffectedByChange(OntIndividual changedSubject, Property predicate) {
 		// if this is a mapentry change -> do not need to support that, as rules dont support maps
 		// if this is a list entry change --> find owner of list, and property between owner and this entry
-		if (factory.getSchemaFactory().getPropertyCardinalityTypes().getListType().isListCollection(changedSubject)) {
+		if (factory.getSchemaFactory().getListType().isListCollection(changedSubject)) {
 			var entry = findListOwner(changedSubject);
 			if (entry != null) {
 				changedSubject = entry.getKey();
@@ -283,13 +283,13 @@ public class RuleRepository {
 	private Entry<OntIndividual, Property> findListOwner(OntIndividual list) {
 		var id = list.isAnon() ? list.getId() : list.getURI();
 		// first obtain the owner of the list
-		var optOwner = factory.getSchemaFactory().getPropertyCardinalityTypes().getCurrentListOwner(list);
+		var optOwner = factory.getSchemaFactory().getCurrentListOwner(list);
 		// should only exist one such resource as we dont share lists across individuals
 		if (optOwner.isEmpty()) {			
 			return null;
 		}
 		var owner = optOwner.get();
-		var commonProps = factory.getSchemaFactory().getPropertyCardinalityTypes().getListType().findListReferencePropertiesBetween(owner, list); // list is never removed, just stays empty
+		var commonProps = factory.getSchemaFactory().getListType().findListReferencePropertiesBetween(owner, list); // list is never removed, just stays empty
 		if (commonProps.size() != 1) {
 			return null;
 		}

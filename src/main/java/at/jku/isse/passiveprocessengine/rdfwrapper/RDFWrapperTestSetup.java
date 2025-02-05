@@ -21,7 +21,8 @@ import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.designspace.artifactconnector.core.repository.CoreTypeFactory;
 import at.jku.isse.passiveprocessengine.core.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.core.DesignspaceTestSetup;
@@ -59,8 +60,10 @@ public class RDFWrapperTestSetup implements DesignspaceTestSetup {
 					.setBranchLocalName("main")
 					.build();		
 			var model1 = branch.getModel();
-			var cardUtil = new PropertyCardinalityTypes(model1);
-			observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory(cardUtil));
+			var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+			new RuleSchemaFactory(metaModel); // add rule schema to meta model
+			var cardUtil = new MetaModelSchemaTypes(model1, metaModel);				
+			var observerFactory = new RuleTriggerObserverFactory(cardUtil);
 			var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);
 			var repairService = new RepairService(model1, observer.getRepo());
 			RuleEnabledResolver resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
@@ -116,9 +119,10 @@ public class RDFWrapperTestSetup implements DesignspaceTestSetup {
 			var model1 = branch.getModel();	
 			loadedModel.add(model1);
 			System.out.println("loaded model of size: "+model1.size());
-			var cardUtil = new PropertyCardinalityTypes(model1);
-			System.out.println("Size after carditnality types build: "+model1.size());
-			observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory(cardUtil));
+			var metaModel = MetaModelOntology.buildDBbackedOntology(); 
+			new RuleSchemaFactory(metaModel); // add rule schema to meta model
+			var cardUtil = new MetaModelSchemaTypes(model1, metaModel);				
+			var observerFactory = new RuleTriggerObserverFactory(cardUtil);												
 			System.out.println("Size after observer factory build: "+model1.size());
 			var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);
 			System.out.println("Size after observer build: "+model1.size());

@@ -28,8 +28,10 @@ import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.CommitToHistoryHandler;
 import at.jku.isse.artifacteventstreaming.rule.MockSchema;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.passiveprocessengine.rdfwrapper.ResourceMismatchException;
 
 @ExtendWith(MockitoExtension.class) 
@@ -42,7 +44,7 @@ class TestContainmentReplay {
 	MockSchema schema;
 	OntObject issue1;
 	ReplayEntryCollectorFromHistory collector;
-	PropertyCardinalityTypes schemaUtil;
+	MetaModelSchemaTypes schemaUtil;
 	
 	@Mock Branch mockBranch;
 	
@@ -50,7 +52,9 @@ class TestContainmentReplay {
 	void setupListener() throws Exception {
 				
 		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_RDFS_INF );
-		schemaUtil = new PropertyCardinalityTypes(m);
+		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
+		schemaUtil = new MetaModelSchemaTypes(m, metaModel);
 		schema = new MockSchema(m, schemaUtil);
 		aggr = new StatementAggregator();
 		aggr.registerWithModel(m);

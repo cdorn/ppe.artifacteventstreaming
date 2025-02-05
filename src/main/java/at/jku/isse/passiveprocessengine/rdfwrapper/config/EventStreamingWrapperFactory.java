@@ -23,7 +23,8 @@ import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.designspace.artifactconnector.core.repository.CoreTypeFactory;
 import at.jku.isse.passiveprocessengine.core.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.core.InstanceRepository;
@@ -120,8 +121,10 @@ public class EventStreamingWrapperFactory {
 				var model1 = branch.getModel();	
 				
 				// setting up branch commit handlers
-				var cardUtil = new PropertyCardinalityTypes(model1);				
-				var observerFactory = new RuleTriggerObserverFactory(new RuleSchemaFactory(cardUtil));
+				var metaModel = MetaModelOntology.buildDBbackedOntology(); 
+				new RuleSchemaFactory(metaModel); // add rule schema to meta model
+				var cardUtil = new MetaModelSchemaTypes(model1, metaModel);				
+				var observerFactory = new RuleTriggerObserverFactory(cardUtil);
 				var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);				
 				var repairService = new RepairService(model1, observer.getRepo());
 				RuleEnabledResolver resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);

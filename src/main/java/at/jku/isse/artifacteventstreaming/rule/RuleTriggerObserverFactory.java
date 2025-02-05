@@ -6,12 +6,13 @@ import org.apache.jena.ontapi.model.OntModel;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class RuleTriggerObserverFactory implements ServiceFactory {
 
-	private final RuleSchemaFactory ruleSchemaFactory;
+	private final MetaModelSchemaTypes schemaFactory;
 	
 	@Override
 	public CommitHandler getCommitHandlerInstanceFor(Branch branch, OntIndividual serviceConfigEntryPoint)
@@ -24,7 +25,7 @@ public class RuleTriggerObserverFactory implements ServiceFactory {
 	}
 	
 	public RuleTriggerObserver buildInstance(String serviceName, OntModel branchModel, OntModel repoModel) {		
-		var factoryDest = new RuleSchemaProvider(branchModel, ruleSchemaFactory);
+		var factoryDest = new RuleSchemaProvider(branchModel, schemaFactory);
 		var ruleRepoDest = new RuleRepository(factoryDest);
 		return new RuleTriggerObserver(serviceName, repoModel, factoryDest, ruleRepoDest);
 	}

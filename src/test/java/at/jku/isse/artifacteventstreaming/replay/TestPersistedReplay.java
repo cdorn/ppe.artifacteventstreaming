@@ -10,8 +10,10 @@ import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
 import at.jku.isse.artifacteventstreaming.rule.MockSchema;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
-import at.jku.isse.artifacteventstreaming.schemasupport.PropertyCardinalityTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 
 public class TestPersistedReplay extends TestContainmentReplay{
 		
@@ -22,7 +24,9 @@ public class TestPersistedReplay extends TestContainmentReplay{
 	void setupListener() throws Exception {
 		removeStream(branchURI);		
 		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_RDFS_INF );
-		schemaUtil = new PropertyCardinalityTypes(m);
+		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
+		schemaUtil = new MetaModelSchemaTypes(m, metaModel);
 		schema = new MockSchema(m, schemaUtil);
 		aggr = new StatementAggregator();
 		aggr.registerWithModel(m);

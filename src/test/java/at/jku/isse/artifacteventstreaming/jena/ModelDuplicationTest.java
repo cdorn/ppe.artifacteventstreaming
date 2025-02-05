@@ -23,7 +23,9 @@ import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.passiveprocessengine.rdfwrapper.ResourceMismatchException;
 
 class ModelDuplicationTest {
@@ -36,9 +38,10 @@ class ModelDuplicationTest {
 		OntModel m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM );
 		m.setNsPrefix("isse", NS);
 		m.setNsPrefix("map", MAP_NS);
-		SingleResourceType singleType = new SingleResourceType(m);
-		
-		MapResourceType mapTypeDef = new MapResourceType(m, singleType);
+		var metaModel = MetaModelOntology.buildInMemoryOntology(); 			
+		var metaUtil = new MetaModelSchemaTypes(m, metaModel);		
+		SingleResourceType singleType = metaUtil.getSingleType();		
+		MapResourceType mapTypeDef = metaUtil.getMapType();
 		OntClass artifactType = m.createOntClass(NS+"artifactType");		
 		OntClass mapType = mapTypeDef.getMapEntryClass();
 		
