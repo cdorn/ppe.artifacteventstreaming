@@ -36,15 +36,13 @@ import lombok.Getter;
 public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEvaluationService {
 
 	final RepairService repairService;
-	@Getter final RuleSchemaProvider ruleSchema;
-	final RuleRepository repo;
+	@Getter final RuleSchemaProvider ruleSchema;	
 	final RuleRepositoryInspector inspector;
 	
 	public RuleEnabledResolver(Branch branch, RepairService repairService, RuleSchemaProvider ruleSchema, RuleRepository repo, MetaModelSchemaTypes cardinalityTypes) {
 		super(branch, repo, cardinalityTypes);
 		this.repairService = repairService;
-		this.ruleSchema = ruleSchema;
-		this.repo = repo;
+		this.ruleSchema = ruleSchema;		
 		this.inspector = new RuleRepositoryInspector(ruleSchema);
 		initOverride();
 	}
@@ -55,7 +53,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 	}
 	
 	protected void initOverride() {
-		var ruleDefinitions = repo.getRuleDefinitions().stream().map(indiv -> indiv.getRuleDefinition().getURI()).collect(Collectors.toSet());
+		var ruleDefinitions = ruleRepo.getRuleDefinitions().stream().map(indiv -> indiv.getRuleDefinition().getURI()).collect(Collectors.toSet());
 		model.classes()
 			.filter(ontClass -> !isBlacklistedNamespace(ontClass.getNameSpace()))									
 			.filter(ontClass -> !ruleDefinitions.contains(ontClass.getURI())) // we dont want to cache rule evaluations here but via rule repo			
@@ -69,7 +67,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 			}
 		} );
 		
-		repo.getRuleDefinitions().forEach(ruleDef -> {
+		ruleRepo.getRuleDefinitions().forEach(ruleDef -> {
 			var wrapper = new RDFPPERuleDefinitionWrapper(ruleDef, this);			
 			typeIndex.put(ruleDef.getRuleDefinition(), wrapper);	
 		});
@@ -83,14 +81,14 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 	protected void removeRuleDefinition(RDFPPERuleDefinitionWrapper ruleDef) {
 		// remove from type index, then remove from repo below
 		typeIndex.remove(ruleDef.getType());
-		repo.removeRuleDefinition(ruleDef.getId());
+		ruleRepo.removeRuleDefinition(ruleDef.getId());
 	}
 	
 	@Override
 	public RuleDefinition createInstance(PPEInstanceType type, String ruleName, String ruleExpression) {
 		OntClass ctxType = (OntClass) resolveTypeToClassOrDatarange(type);
 		try {
-			var ruleDef = repo.getRuleBuilder()
+			var ruleDef = ruleRepo.getRuleBuilder()
 				.withRuleURI(NodeToDomainResolver.BASE_NS+ruleName)
 				.withContextType(ctxType)
 				.withRuleExpression(ruleExpression)
@@ -173,7 +171,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 	public Set<ResultEntry> getEvaluationResults(RuleDefinition rule) throws Exception {
 		if (rule instanceof RDFPPERuleDefinitionWrapper wrapper) {
 			var def = wrapper.getRuleDef().getRuleDefinition();
-			var evals =  repo.getEvaluations();
+			var evals =  ruleRepo.getEvaluations();
 			return def.individuals()
 				.map(eval -> evals.get(eval.getURI()))
 				.filter(Objects::nonNull)
@@ -197,7 +195,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 		if (instance instanceof RDFInstance rdfEl) {
 			Map<RuleDefinition, Set<ResultEntry>> resultMap = new HashMap<>();
 			var indiv = rdfEl.getInstance();
-			var evals =  repo.getEvaluations();
+			var evals =  ruleRepo.getEvaluations();
 			inspector.getEvalWrappersFromScopes(indiv).stream()
 				.map(evalObj -> evals.get(evalObj.getURI()))
 				.forEach(evalWrapper -> {

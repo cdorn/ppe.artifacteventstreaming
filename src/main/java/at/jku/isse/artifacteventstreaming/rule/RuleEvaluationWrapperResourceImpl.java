@@ -25,7 +25,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 
 	@Getter
 	private final OntIndividual ruleEvalObj;
-	private final RuleSchemaProvider factory;
+	private final RuleSchemaProvider schemaProvider;
 	private final OntIndividual contextInstance;
 	@Getter
 	private final RuleEvaluation delegate;
@@ -145,7 +145,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 		super();
 		this.ruleEvalObj = ruleEvalObj;
 		this.contextInstance = contextInstance;
-		this.factory = factory;
+		this.schemaProvider = factory;
 		this.definition = def;
 		this.delegate = new RuleEvaluationImpl(def, contextInstance);
 		setEnabledIfNotStatusAvailable();		
@@ -153,7 +153,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	}
 	
 	private void setEnabledIfNotStatusAvailable() {
-		var stmt = ruleEvalObj.getProperty(factory.getIsEnabledProperty());
+		var stmt = ruleEvalObj.getProperty(schemaProvider.getIsEnabledProperty());
 		if (stmt == null) // not set, thus enable
 			setEnabledStatus(true);
 	}		
@@ -172,15 +172,15 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 		result = delegate.evaluate();
 		var error = delegate.getError();
 		if (error != null) {			
-			ruleEvalObj.removeAll(factory.getEvaluationErrorProperty())
-			.addLiteral(factory.getEvaluationErrorProperty(), error);
-			ruleEvalObj.removeAll(factory.getEvaluationHasConsistentResultProperty())
-			.addLiteral(factory.getEvaluationHasConsistentResultProperty(), Boolean.FALSE);			
+			ruleEvalObj.removeAll(schemaProvider.getEvaluationErrorProperty())
+			.addLiteral(schemaProvider.getEvaluationErrorProperty(), error);
+			ruleEvalObj.removeAll(schemaProvider.getEvaluationHasConsistentResultProperty())
+			.addLiteral(schemaProvider.getEvaluationHasConsistentResultProperty(), Boolean.FALSE);			
 		} else {
-			ruleEvalObj.removeAll(factory.getEvaluationErrorProperty());
-			ruleEvalObj.removeAll(factory.getEvaluationHasConsistentResultProperty());
+			ruleEvalObj.removeAll(schemaProvider.getEvaluationErrorProperty());
+			ruleEvalObj.removeAll(schemaProvider.getEvaluationHasConsistentResultProperty());
 			if (result instanceof Boolean boolResult) {
-				ruleEvalObj.addLiteral(factory.getEvaluationHasConsistentResultProperty(), boolResult); 	
+				ruleEvalObj.addLiteral(schemaProvider.getEvaluationHasConsistentResultProperty(), boolResult); 	
 			}
 			updateRuleScope();
 		}				
@@ -202,15 +202,16 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 		OntIndividual scope = findScope(subject,  property);						
 		if (scope == null) {
 			// ensure individual has scopeCollection			
-			scope = createScopeSkeleton(subject, factory);
-			scope.addProperty(factory.getUsingPredicateProperty().asNamed(), property);
-			scope.addProperty(factory.getUsedInRuleProperty().asNamed(), ruleEval);
-			// now link up eval to scope part			
-			ruleEval.addProperty(factory.getHavingScopePartProperty().asNamed(), scope); 
-			//TODO: currently this doesn work yet via inverseProperty definition of usedInRuleProperty, hence manually
-		} else { //scope exists already for this property and instance, just set the rule usage 
-			scope.addProperty(factory.getUsedInRuleProperty().asNamed(), ruleEval);
+			scope = createScopeSkeleton(subject, schemaProvider);
+			scope.addProperty(schemaProvider.getUsingPredicateProperty().asNamed(), property);
+			scope.addProperty(schemaProvider.getUsedInRuleProperty().asNamed(), ruleEval);
+		} else {	
+			 //scope exists already for this property and instance, just set the rule usage
 		}
+		// now link up eval to scope part			
+		ruleEval.addProperty(schemaProvider.getHavingScopePartProperty().asNamed(), scope); 
+		//currently this doesn work yet via inverseProperty definition of usedInRuleProperty, hence manually 
+		scope.addProperty(schemaProvider.getUsedInRuleProperty().asNamed(), ruleEval);		
 	}		
 	
 	private void removePropertyFromScope(Object entry, OntIndividual ruleEval) {
@@ -222,18 +223,18 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 		if (scope == null) {
 			//there was no scope recorded before, nothing to do,			
 		} else { //scope exists already for this property and instance, just remove the rule usage 		
-			scope.remove(factory.getUsedInRuleProperty().asProperty(), ruleEval);
-			//TODO: currently we need to remove this from the rule as well as inverse-of property does not work yet		
-			ruleEval.remove(factory.getHavingScopePartProperty().asProperty(), scope);
+			scope.remove(schemaProvider.getUsedInRuleProperty().asProperty(), ruleEval);
+			//currently we need to remove this from the rule as well as inverse-of property does not work yet		
+			ruleEval.remove(schemaProvider.getHavingScopePartProperty().asProperty(), scope);
 		}
 	}
 	
 	private OntIndividual findScope(Resource subject, Property property) {
 		OntIndividual scope = null;
-		var iter = subject.listProperties(factory.getHasRuleScope().asProperty());
+		var iter = subject.listProperties(schemaProvider.getHasRuleScope().asProperty());
 		while(iter.hasNext()) {
 			var stmt = iter.next();
-			var propStmt = stmt.getResource().getProperty(factory.getUsingPredicateProperty().asProperty());
+			var propStmt = stmt.getResource().getProperty(schemaProvider.getUsingPredicateProperty().asProperty());
 			if (propStmt != null && propStmt.getResource().getURI().equals(property.getURI())) {
 				//is this the scope collection for this particular property
 				scope = stmt.getResource().as(OntIndividual.class);
@@ -250,13 +251,13 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	
 	@Override
 	public boolean isConsistent() {
-		var stmt = ruleEvalObj.getProperty(factory.getEvaluationHasConsistentResultProperty());
+		var stmt = ruleEvalObj.getProperty(schemaProvider.getEvaluationHasConsistentResultProperty());
 		return stmt != null ? stmt.getBoolean() : Boolean.TRUE; // if never has been set or if not a boolean result but no error, then True
 	}		
 
 	@Override
 	public String getEvaluationError() {
-		var stmt = ruleEvalObj.getProperty(factory.getEvaluationErrorProperty());
+		var stmt = ruleEvalObj.getProperty(schemaProvider.getEvaluationErrorProperty());
 		return stmt != null ? stmt.getString() : "";
 	}
 
@@ -276,13 +277,13 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	@Override
 	public boolean isEnabled() {
 		if (ruleEvalObj == null) return false;
-		var stmt = ruleEvalObj.getProperty(factory.getIsEnabledProperty());
+		var stmt = ruleEvalObj.getProperty(schemaProvider.getIsEnabledProperty());
 		return stmt != null ? stmt.getBoolean() : Boolean.FALSE; //if not set, then assumed false, because when we delete, we wont have any statements, hence need to assume disabled
 	}
 	
 	private void setEnabledStatus(boolean status) {
-		ruleEvalObj.removeAll(factory.getIsEnabledProperty())
-		.addLiteral(factory.getIsEnabledProperty(), status);	
+		ruleEvalObj.removeAll(schemaProvider.getIsEnabledProperty())
+		.addLiteral(schemaProvider.getIsEnabledProperty(), status);	
 	}
 	
 
@@ -303,20 +304,20 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	
 	@Override
 	public void delete() {
-		// remove from scope information of involved elements
-		var iter = ruleEvalObj.listProperties(factory.getHavingScopePartProperty().asProperty());
 		Set<OntIndividual> scopesToRemoveRuleFrom = new HashSet<>();
+		// remove from scope information of involved elements				
+		var iter = ruleEvalObj.listProperties(schemaProvider.getHavingScopePartProperty().asProperty());		
 		while(iter.hasNext()) {
 			var scope = iter.next().getResource().as(OntIndividual.class);
 			scopesToRemoveRuleFrom.add(scope);			
 		}
 		// remove context instance scope
-		iter = ruleEvalObj.listProperties(factory.getContextElementScopeProperty().asProperty());
+		iter = ruleEvalObj.listProperties(schemaProvider.getContextElementScopeProperty().asProperty());
 		while(iter.hasNext()) { // should only be one, but to be on the save side
 			var scope = iter.next().getResource().as(OntIndividual.class);
 			scopesToRemoveRuleFrom.add(scope);
 		}
-		scopesToRemoveRuleFrom.forEach(scope -> scope.remove(factory.getUsedInRuleProperty().asProperty(), ruleEvalObj));
+		scopesToRemoveRuleFrom.forEach(scope -> scope.remove(schemaProvider.getUsedInRuleProperty().asProperty(), ruleEvalObj));
 		
 		//then remove self
 		this.ruleEvalObj.removeProperties();

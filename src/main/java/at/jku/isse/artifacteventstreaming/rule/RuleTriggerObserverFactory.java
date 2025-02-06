@@ -12,7 +12,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class RuleTriggerObserverFactory implements ServiceFactory {
 
-	private final MetaModelSchemaTypes schemaFactory;
+	private final MetaModelSchemaTypes schemaProvider;
 	
 	@Override
 	public CommitHandler getCommitHandlerInstanceFor(Branch branch, OntIndividual serviceConfigEntryPoint)
@@ -25,9 +25,9 @@ public class RuleTriggerObserverFactory implements ServiceFactory {
 	}
 	
 	public RuleTriggerObserver buildInstance(String serviceName, OntModel branchModel, OntModel repoModel) {		
-		var factoryDest = new RuleSchemaProvider(branchModel, schemaFactory);
-		var ruleRepoDest = new RuleRepository(factoryDest);
-		return new RuleTriggerObserver(serviceName, repoModel, factoryDest, ruleRepoDest);
+		var factory = new RuleSchemaProvider(branchModel, schemaProvider);
+		var ruleRepo = new RuleRepository(factory);
+		return new RuleTriggerObserver(serviceName, repoModel, factory, ruleRepo);
 	}
 
 }

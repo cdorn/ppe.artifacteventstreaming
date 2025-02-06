@@ -280,8 +280,7 @@ public class RuleRepository {
 		return evals;
 	}
 	
-	private Entry<OntIndividual, Property> findListOwner(OntIndividual list) {
-		var id = list.isAnon() ? list.getId() : list.getURI();
+	private Entry<OntIndividual, Property> findListOwner(OntIndividual list) {		
 		// first obtain the owner of the list
 		var optOwner = factory.getSchemaFactory().getCurrentListOwner(list);
 		// should only exist one such resource as we dont share lists across individuals

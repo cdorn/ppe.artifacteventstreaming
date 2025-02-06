@@ -53,7 +53,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	
 	protected final OntModel model;
 	protected final Dataset dataset;
-	protected final RuleRepository ruleRepo;		
+	@Getter protected final RuleRepository ruleRepo;		
 	protected final Map<OntClass, RDFInstanceType> typeIndex = new HashMap<>();	
 	protected final Map<String, RDFInstance> instanceIndex = new HashMap<>();	
 	protected final Branch branch;
