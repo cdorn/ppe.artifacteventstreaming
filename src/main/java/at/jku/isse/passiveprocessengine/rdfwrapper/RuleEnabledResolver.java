@@ -111,6 +111,18 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 			throw new RuntimeException("Expected RDFInstanceType but received "+type.getClass());
 		}
 	}
+	
+	@Override
+	public boolean isPropertyRepairable(PPEInstanceType type, String property) {
+		if (type instanceof RDFInstanceType rdfType) {
+			var optProp = rdfType.resolveToPropertyType(property);
+			if (optProp.isPresent()) {			
+				return repairService.isPropertyRepairable(rdfType.getType(), optProp.get().getProperty().asProperty());
+			} else return false;
+		} else {
+			throw new RuntimeException("Expected RDFInstanceType but received "+type.getClass());
+		}
+	}
 
 	@Override
 	public RuleDefinition findByInternalId(String id) {
@@ -215,6 +227,8 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 			throw new RuntimeException("Expected RDFElement but received "+instance.getClass());
 		}
 	}
+
+
 
 	
 	
