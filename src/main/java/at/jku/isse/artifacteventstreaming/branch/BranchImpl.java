@@ -289,8 +289,10 @@ public class BranchImpl  implements Branch, Runnable {
 		if (!stmtAggregator.hasAdditions() && !stmtAggregator.hasRemovals()) {
 			log.debug("Commit not created as no changes occurred since last commit: "+getLastCommitId());
 			// we still are expected to be in a transaction, hence close the transaction here
-			dataset.abort();
-			dataset.end();
+			if (dataset.isInTransaction()) {
+				dataset.abort();
+				dataset.end();
+			}
 			return null;
 		} else {
 			var commit = new StatementCommitImpl( branchResource.getURI() , commitMsg, getLastCommitId(), timeStampProvider.getCurrentTimeStamp(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());

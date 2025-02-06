@@ -90,6 +90,7 @@ class TestCommitHandling {
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		branch.undoNoncommitedChanges();
 		System.out.println("undo now:");
+		branch.getDataset().begin();
 		int lastLabel = testResource.getProperty(RDFS.label).getInt();
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		assertEquals(21, lastLabel);

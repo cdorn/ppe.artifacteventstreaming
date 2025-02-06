@@ -78,7 +78,8 @@ class TestRulePropagationAcrossBranches {
 		model1 = branchSource.getModel();
 		schema = new MockSchema(model1, cardUtil); // create types for testing
 		// setup rule service for source branch
-		observerSource = observerFactory.buildInstance("RuleTriggerObserverSource", model1, repoModel);
+		RuleTriggerObserverFactory observerFactorySource = new RuleTriggerObserverFactory(new MetaModelSchemaTypes(model1, metaModel));
+		observerSource = observerFactorySource.buildInstance("RuleTriggerObserverSource", model1, repoModel);
 		branchSource.appendBranchInternalCommitService(observerSource); // register rule service with branch
 		// connect branches
 		branchSource.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(branchSource, branchDestination, new InMemoryBranchStateCache()));
