@@ -92,9 +92,10 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	public void markAsDeleted() {
 		//first we remove the hierarchy below, then itself (instances need to be removed via resolver, not our concern here)
 		resolver.removeTypeCascading(this);
-		for (var subClass : type.subClasses().toList()) { 
+		for (var subClass : type.subClasses().toList()) { 			
 			subClass.removeProperties(); 
 		}
+		//TODO: remove property definitions as well, not just properties of this ontclass
 		super.markAsDeleted();
 		
 	}

@@ -139,7 +139,7 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 			removedResourceURIs.add(subject);			
 		} else { //we assume just any other resource			
 			// to distinguish between complete removal and only retying, see if we can get an Ont individual from the uri
-			if (subject.getURI() != null) {// not an anonymous resource such as an ruleeval
+			if (subject.getURI() != null && typeUri != null) {// not an anonymous resource such as an ruleeval, neither a restriction as resource
 				var indiv = factory.getDefinitionType().getModel().getIndividual(subject.getURI());
 				if (indiv == null || isDefactoEmptyIndividual(indiv)) {// completely removed or not an ontindividual
 					repo.getRemovedRulesAffectedByInstanceRemoval(stmt.getSubject());

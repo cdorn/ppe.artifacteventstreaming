@@ -328,12 +328,17 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 
 	@Override
 	public PPEInstance createInstance(@NonNull String id, @NonNull PPEInstanceType arg1) {
+		boolean wasValidId = true;
+		String uri;
 		if (!isValidURL(id)) {
-			id = BASE_NS+id;
-		}		
+			uri = BASE_NS+id;
+			wasValidId = false;
+		} else {
+			uri = id;
+		}
 		if (arg1 instanceof RDFInstanceType type) {
-			var individual = model.createIndividual(id, type.getType());
-			individual.addLabel(individual.getLocalName());
+			var individual = model.createIndividual(uri, type.getType());
+			individual.addLabel(wasValidId ? individual.getLocalName() : id);
 			return instanceIndex.computeIfAbsent(individual.getURI(), k -> new RDFInstance(individual, type, this));
 		}
 		else 
@@ -359,7 +364,8 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	@Override
 	public Set<PPEInstance> getAllInstancesOfTypeOrSubtype(@NonNull PPEInstanceType arg0) {
 		if (arg0 instanceof RDFInstanceType type) {
-			return type.getType().individuals()
+			var indivs = type.getType().individuals().toList(); 
+			return indivs.stream()
 			.map(el -> instanceIndex.computeIfAbsent(el.getURI(), k->new RDFInstance(el, type, this)))
 			.collect(Collectors.toSet());
 		}
