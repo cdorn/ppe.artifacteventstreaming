@@ -137,7 +137,7 @@ public class RuleRepository {
 	}
 	
 	/**
-	 * @param removeRuleDefinition TODO
+	 * @param removeRuleDefinition whether to remove the rule definition or just the evaluations thereof
 	 * @param def the RuleDefinition to remove including all evaluation instances thereof 
 	 * @return all evaluation instances of that definition that now become stale and wont ever be reactivated because we remove their statements
 	 */
@@ -162,6 +162,17 @@ public class RuleRepository {
 			return Collections.emptySet();
 		}				
 	}
+	
+	
+	/**
+	 * @param subject the predicate that was removed, hence any rules (and their evaluations) that use this property are to be removed
+	 */
+	public void removeRuleDefinitionsAffectedByPredicateRemoval(Resource subject) {
+		// TODO we need to establish which rules make use of a property, this is not tracked at the moment
+		
+		
+	}
+	
 	
 	/**
 	 * used upon deletion when definition type is already gone/no longer accessible
@@ -452,6 +463,8 @@ public class RuleRepository {
 			return ctxId+def.getRuleDefinition().getURI();
 		}
 	}
+
+
 
 
 }

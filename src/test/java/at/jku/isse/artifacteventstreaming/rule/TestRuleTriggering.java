@@ -1,6 +1,7 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -190,5 +191,25 @@ class TestRuleTriggering extends TestRuleEvaluation {
 				
 		assertNotEquals(affected, affected2); // not the same eval objects		
 		
+	}
+	
+	@Test
+	void testRuleUsedPropertyRemoval() throws RuleException {
+		var def = getBasicArtTypeWithPriorityRule(1);		
+		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		observer.handleCommit(commit);
+		
+		var affected = repo.getRulesAffectedByChange(inst2, priorityProp.asProperty());
+		assertEquals(1, affected.size());
+		var ruleEval = affected.iterator().next();
+		assertEquals(Boolean.FALSE, ruleEval.getEvaluationResult());
+		aggr.retrieveAddedStatements(); // to clear changes
+		aggr.retrieveRemovedStatements();
+		
+		schemaUtils.getSingleType().removeSingleProperty(artType, priorityProp);
+		commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "SchemaChangeCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		observer.handleCommit(commit);				
+		
+		assertFalse(ruleEval.isEnabled());
 	}
 }

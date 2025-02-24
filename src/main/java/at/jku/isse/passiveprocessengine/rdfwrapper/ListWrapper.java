@@ -118,6 +118,11 @@ public class ListWrapper extends TypedCollectionResource implements List<Object>
 	}
 	
 	@Override
+	public void delete() {
+		listContent.removeProperties();
+	}
+	
+	@Override
 	public Object get(int index) {
 		var content = listContent.getObject(index+1); //RDF lists are 1-based
 		return resolver.convertFromRDF(content);
@@ -209,5 +214,7 @@ public class ListWrapper extends TypedCollectionResource implements List<Object>
 		}
 
 	}
+
+
 	
 }

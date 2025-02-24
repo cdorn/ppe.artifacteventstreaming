@@ -45,6 +45,11 @@ public class SetWrapper extends TypedCollectionResource implements Set<Object> {
 	}
 	
 	@Override
+	public void delete() {
+		this.clear();
+	}
+	
+	@Override
 	public void forEach(Consumer<? super Object> action) {
 		throw new RuntimeException("Not supported");
 	}

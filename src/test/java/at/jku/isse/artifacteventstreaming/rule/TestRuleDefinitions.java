@@ -42,6 +42,7 @@ class TestRuleDefinitions {
 	OntDataProperty priorityProp;
 	OntDataProperty labelProp;
 	RDFModelAccess modelAccess;
+	MetaModelSchemaTypes schemaUtils;
 	
 	@BeforeEach
 	void setup() {
@@ -50,7 +51,7 @@ class TestRuleDefinitions {
 		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF );
 		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
 		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
-		MetaModelSchemaTypes schemaUtils = new MetaModelSchemaTypes(m, metaModel);		 	
+		schemaUtils = new MetaModelSchemaTypes(m, metaModel);		 	
 		m.setNsPrefix("rules", RuleSchemaFactory.uri);
 		m.setNsPrefix("test", baseURI.toString());
 		artType = m.createOntClass(baseURI+"artType");
@@ -64,8 +65,8 @@ class TestRuleDefinitions {
 		subProp.addRange(artSubType);
 		subProp.addDomain(artSubType);
 		
-		labelProp = schemaUtils.createSingleDataPropertyType(baseURI+"label", artType, m.getDatatype(XSD.xstring));
-		priorityProp = schemaUtils.createSingleDataPropertyType(baseURI+"priority", artType, m.getDatatype(XSD.xlong)); 		
+		labelProp = schemaUtils.getSingleType().createSingleDataPropertyType(baseURI+"label", artType, m.getDatatype(XSD.xstring));
+		priorityProp = schemaUtils.getSingleType().createSingleDataPropertyType(baseURI+"priority", artType, m.getDatatype(XSD.xlong)); 		
 				
 		factory = new RuleSchemaProvider(m, schemaUtils);
 		modelAccess = new RDFModelAccess(m, schemaUtils);

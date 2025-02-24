@@ -267,7 +267,7 @@ class TestCommitToRuleChangeEvents {
 		
 		public void printCurrentUpdates() {
 			System.out.println("START:");
-			latestUpdates.stream().forEach(event -> System.out.println(event));
+			latestUpdates.stream().forEach(System.out::println);
 			System.out.println("END:");			
 		}
 		

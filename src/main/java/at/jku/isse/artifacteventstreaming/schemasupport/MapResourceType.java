@@ -12,11 +12,13 @@ import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
+import org.apache.jena.ontapi.model.OntProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.RDFS;
 import org.apache.jena.vocabulary.XSD;
 
 import lombok.Getter;
@@ -31,7 +33,7 @@ public class MapResourceType  {
 	public static final String KEY_PROPERTY_URI = MAP_NS+"key";
 	public static final String LITERAL_VALUE_PROPERTY_URI = MAP_NS+LITERAL_VALUE;
 	public static final String OBJECT_VALUE_PROPERTY_URI = MAP_NS+OBJECT_VALUE;
-	public static final String CONTAINER_PROPERTY_URI = MAP_NS+"containerRef";
+	public static final String CONTAINEROWNER_PROPERTY_URI = MAP_NS+"containerOwnerRef";
 	public static final String MAP_REFERENCE_SUPERPROPERTY_URI = MAP_NS+"mapRef";
 		
 	@Getter
@@ -56,7 +58,7 @@ public class MapResourceType  {
 		keyProperty = model.getDataProperty(KEY_PROPERTY_URI);
 		literalValueProperty = model.getDataProperty(LITERAL_VALUE_PROPERTY_URI);
 		objectValueProperty = model.getObjectProperty(OBJECT_VALUE_PROPERTY_URI);
-		containerProperty = model.getObjectProperty(CONTAINER_PROPERTY_URI);
+		containerProperty = model.getObjectProperty(CONTAINEROWNER_PROPERTY_URI);
 		mapReferenceSuperProperty = model.getObjectProperty(MAP_REFERENCE_SUPERPROPERTY_URI);			
 		initHierarchyCache();
 	}		
@@ -65,7 +67,7 @@ public class MapResourceType  {
 		mapEntryClass.subClasses().forEach(subclassesCache::add);
 	}
 	
-	public static boolean isEntryProperty(OntRelationalProperty property) {
+	public static boolean isEntryProperty(OntProperty property) {
 		// better done via super/subproperty check
 		return property.getLocalName().endsWith(MapResourceType.LITERAL_VALUE) || property.getLocalName().endsWith(MapResourceType.OBJECT_VALUE);
 	}
@@ -75,12 +77,16 @@ public class MapResourceType  {
 				|| rangeClass.hasSuperClass(mapEntryClass, true));
 	}
 	
+	public boolean isMapContainerReferenceProperty(OntProperty prop) {
+		return mapReferenceSuperProperty.subProperties(true).anyMatch(subProp -> subProp.equals(prop));
+	}
+	
 	public OntObjectProperty addLiteralMapProperty(OntClass resource, String propertyURI, OntDataRange valueType) {
 		OntModel model = resource.getModel();
 		if (singleType.existsPrimaryProperty(propertyURI)) {
 			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty		
 		}
-		OntClass mapType = model.createOntClass(propertyURI+ENTRY_TYPE);
+		OntClass mapType = model.createOntClass(generateMapEntryTypeURI(propertyURI));
 		mapType.addSuperClass(mapEntryClass);
 		subclassesCache.add(mapType);
 
@@ -101,7 +107,7 @@ public class MapResourceType  {
 		if (singleType.existsPrimaryProperty(propertyURI)) {
 			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty		
 		}
-		OntClass mapType = model.createOntClass(propertyURI+ENTRY_TYPE);
+		OntClass mapType = model.createOntClass(generateMapEntryTypeURI(propertyURI));
 		mapType.addSuperClass(mapEntryClass);
 		subclassesCache.add(mapType);
 
@@ -115,6 +121,31 @@ public class MapResourceType  {
 		hasMap.addRange(mapType);
 		mapReferenceSuperProperty.addSubProperty(hasMap);	
 		return hasMap;
+	}
+
+	private String generateMapEntryTypeURI(String propertyURI) {
+		return propertyURI+ENTRY_TYPE;
+	}
+	
+
+	/**
+	 * @param ontClass from which to remove the property
+	 * @param prop OntProperty to remove from its owning class including the specific map entry type and its value predicate
+	 */
+	public void removeMapContainerReferenceProperty(OntClass owner, OntProperty mapReferenceProperty) {
+		var model = mapReferenceProperty.getModel();
+		// remove listType:
+		var mapType = model.createOntClass(generateMapEntryTypeURI(mapReferenceProperty.getURI()));
+		// remove from cache
+		subclassesCache.remove(mapType);
+		// remove any predicates from any properties that happen to be defined
+		MetaModelSchemaTypes.getExplicitlyDeclaredProperties(mapType).forEach(prop -> { 
+			prop.removeProperties();
+		});
+		// remove predicates association from mapType itself 
+		mapType.removeProperties();
+		// remove map reference property
+		singleType.removeBaseProperty(mapReferenceProperty);
 	}
 	
 	public boolean isMapEntry(OntIndividual ontInd) {
@@ -157,7 +188,6 @@ public class MapResourceType  {
 			
 			var keyProp = model.getDataProperty(KEY_PROPERTY_URI);
 			if (keyProp == null) {
-				
 				keyProp = model.createDataProperty(KEY_PROPERTY_URI);
 				keyProp.addDomain(mapEntryClass);
 				keyProp.addRange(model.getDatatype(XSD.xstring));
@@ -175,9 +205,10 @@ public class MapResourceType  {
 				objectValueProp.addDomain(mapEntryClass);
 			}
 			
-			var containerProperty = model.getObjectProperty(CONTAINER_PROPERTY_URI);
+			var containerProperty = model.getObjectProperty(CONTAINEROWNER_PROPERTY_URI);
 			if (containerProperty == null) {
-				containerProperty = model.createObjectProperty(CONTAINER_PROPERTY_URI);
+				containerProperty = model.createObjectProperty(CONTAINEROWNER_PROPERTY_URI);
+				objectValueProp.addDomain(mapEntryClass);
 			}
 			
 			var mapReferenceSuperProperty = model.getObjectProperty(MAP_REFERENCE_SUPERPROPERTY_URI);

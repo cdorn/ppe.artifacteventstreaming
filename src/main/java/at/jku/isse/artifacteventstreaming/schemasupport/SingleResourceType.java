@@ -3,6 +3,7 @@ package at.jku.isse.artifacteventstreaming.schemasupport;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.ontapi.model.OntClass;
@@ -35,8 +36,8 @@ public class SingleResourceType {
 	@Getter
 	private final OntDataProperty singleLiteralProperty;
 	
-	private final Set<OntRelationalProperty> objectSubpropertyCache = new HashSet<>();
-	private final Set<OntRelationalProperty> dataSubpropertyCache = new HashSet<>();
+	private final Set<OntProperty> objectSubpropertyCache = new HashSet<>();
+	private final Set<OntProperty> dataSubpropertyCache = new HashSet<>();
 	
 	private final Set<String> propertyCache = new HashSet<>();
 	
@@ -55,7 +56,7 @@ public class SingleResourceType {
 		singleLiteralProperty.subProperties().forEach(dataSubpropertyCache::add);
 	}
 	
-	public boolean isSingleProperty(OntRelationalProperty prop) {
+	public boolean isSingleProperty(OntProperty prop) {
 		return dataSubpropertyCache.contains(prop) || objectSubpropertyCache.contains(prop);
 	}
 	
@@ -141,11 +142,12 @@ public class SingleResourceType {
 	
 	private Resource createQualifiedMaxOneRestriction(OntModel model, OntProperty onProperty, OntObject rangeOrClass) {
 		var lit1 = ResourceFactory.createTypedLiteral("1", XSDDatatype.XSDnonNegativeInteger);
-		var anonId = new AnonId("anon::"+onProperty.getURI()+"::maxOneCardinality"); //otherwise uri check will succeed, which we dont want.
+		var anonId = createSingleRestrictionAnonId(onProperty);
 		var restrRes = model.createResource(anonId)
 				.addProperty(RDF.type, OWL2.Restriction) // if we set a uri then Jena cant wrap the node as a datamaxcardinality
 				.addProperty(OWL2.onProperty, onProperty);		
-		var isQualified = rangeOrClass instanceof OntClass;
+		//var isQualified = rangeOrClass instanceof OntClass;
+		var isQualified = isQualified(rangeOrClass);
 		var pred = isQualified ? OWL2.maxQualifiedCardinality : OWL2.maxCardinality;
 		model.add(restrRes, pred, lit1);
 		if (isQualified) {
@@ -153,8 +155,33 @@ public class SingleResourceType {
 		}
 		return restrRes;
 	}
+
+	private AnonId createSingleRestrictionAnonId(OntProperty onProperty) {
+		return new AnonId("anon::"+onProperty.getURI()+"::maxOneCardinality");
+	}
 	
+	private boolean isQualified(OntObject rangeOrClass) {
+		return !(OWL2.Thing.equals(rangeOrClass) || RDFS.Literal.equals(rangeOrClass));
+	}
 	
+	public void removeBaseProperty(@NonNull OntProperty ontProperty) {
+		propertyCache.remove(ontProperty.getURI());
+		ontProperty.removeProperties();
+	}
+	
+	public void removeSingleProperty(@NonNull OntClass owner, @NonNull OntProperty ontProperty) {
+		var model = ontProperty.getModel();
+		// first, remove restriction
+		var anonId = createSingleRestrictionAnonId(ontProperty);
+		var restrRes = model.createResource(anonId); // only way to retrieve anon resource again
+		owner.remove(RDFS.subClassOf, restrRes); // remove the restriction from property owning class
+		restrRes.removeProperties();
+		// remove from cache (we try both)
+		objectSubpropertyCache.remove(ontProperty); 
+		dataSubpropertyCache.remove(ontProperty);
+		// then remove other property predicates
+		removeBaseProperty(ontProperty);
+	}
 	
 	protected static class SingleSchemaFactory {
 		

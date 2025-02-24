@@ -2,6 +2,7 @@ package at.jku.isse.passiveprocessengine.rdfwrapper;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -271,14 +272,22 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		return typeIndex.values().stream().collect(Collectors.toSet());
 	}
 
-	public void removeTypeCascading(RDFInstanceType type) {				
-		// first we need to remove instances of these types
+	public List<OntClass> removeInstancesAndTypeInclSubclassesFromIndex(RDFInstanceType type) {				
+		// first we need to remove instances of this type
 		type.getType().individuals().forEach(indiv -> { 
-			instanceIndex.remove(indiv.getURI());
-			indiv.removeProperties(); 
+			var instance = instanceIndex.get(indiv.getURI());
+			if (instance != null) {
+				instance.markAsDeleted();
+			}
 		});		
-		type.getType().subClasses().forEach(typeIndex::remove); // we just update the index, properties are deleted by the RDFInstanceType objects
+		var subclasses = type.getType().subClasses().toList();
+		subclasses.forEach(typeIndex::remove); // we just update the index, properties are deleted by the RDFInstanceType objects
 		typeIndex.remove(type.getType());				
+		return subclasses;
+	}
+	
+	public void removeInstanceFromIndex(RDFInstance rdfInstance) {
+		instanceIndex.remove(rdfInstance.getInstance().getURI());
 	}
 	
 	@Override
@@ -450,6 +459,5 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 		//FIXME: proper check
 		return url.startsWith("http");
 	}
-
 
 }

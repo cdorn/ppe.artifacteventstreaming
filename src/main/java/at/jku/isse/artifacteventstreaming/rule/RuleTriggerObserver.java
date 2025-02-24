@@ -137,8 +137,10 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 		} else if (isAboutRuleEvaluationType(stmt)) { // 
 			repo.removeRulesAffectedByDeletedRuleEvaluation(subject.getURI()); // this is a side effect of a remote rule evaluation removal or rule type removal
 			removedResourceURIs.add(subject);			
+		} else if (isAboutOWLPropertySchemaChange(stmt)) { // a property has been removed, 
+			repo.removeRuleDefinitionsAffectedByPredicateRemoval(stmt.getSubject());
 		} else { //we assume just any other resource			
-			// to distinguish between complete removal and only retying, see if we can get an Ont individual from the uri
+			// to distinguish between complete removal and only retyping, see if we can get an Ont individual from the uri
 			if (subject.getURI() != null && typeUri != null) {// not an anonymous resource such as an ruleeval, neither a restriction as resource
 				var indiv = factory.getDefinitionType().getModel().getIndividual(subject.getURI());
 				if (indiv == null || isDefactoEmptyIndividual(indiv)) {// completely removed or not an ontindividual
@@ -160,6 +162,13 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 				|| 
 			(typeUri.equals(factory.getResultBaseType().getURI())
 			&& 	stmt.getPredicate().equals(RDFS.subClassOf) ));
+	}
+	
+	private boolean isAboutOWLPropertySchemaChange(Statement stmt) { // when there is a change to properties of a class/type
+		var uri = stmt.getResource().getURI();
+		if (uri == null) return false;
+		return uri.equals(OWL2.DatatypeProperty.getURI()) 
+				|| uri.equals(OWL2.ObjectProperty.getURI());
 	}
 	
 	private boolean isDefactoEmptyIndividual(OntIndividual indiv) {		

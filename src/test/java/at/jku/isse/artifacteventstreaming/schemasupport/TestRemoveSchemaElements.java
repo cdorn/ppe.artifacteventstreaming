@@ -55,8 +55,8 @@ class TestRemoveSchemaElements {
 		
 		dataset.begin(ReadWrite.WRITE);
 		metaModel.getMetaontology().begin(ReadWrite.READ);
-		ontClass.removeProperties();
 		// remove class incl properties
+		metaTypes.removeOntClassInclOwnedProperties(ontClass);
 		// ensure model has same size --> no leftover statements
 		var sizeEnd = model.size();
 		var sizeMetaEnd = metaModel.getMetamodel().size();
@@ -91,9 +91,8 @@ class TestRemoveSchemaElements {
 		
 		dataset.begin(ReadWrite.WRITE);
 		metaModel.getMetaontology().begin(ReadWrite.READ);
-		ontClass.removeProperties();
-		prop.removeProperties();
 		// remove class incl properties
+		metaTypes.removeOntClassInclOwnedProperties(ontClass);
 		// ensure model has same size --> no leftover statements
 		var sizeEnd = model.size();
 		var sizeMetaEnd = metaModel.getMetamodel().size();
@@ -102,7 +101,7 @@ class TestRemoveSchemaElements {
 		metaModel.getMetaontology().end();
 		assertEquals(sizeMetaBegin, sizeMetaEnd);
 		
-		if (sizeEnd > sizeBegin) {
+		if (sizeEnd != sizeBegin) {
 			printDiff(modelBegin, model);
 		}
 		assertEquals(sizeBegin, sizeEnd);
@@ -132,9 +131,8 @@ class TestRemoveSchemaElements {
 		
 		dataset.begin(ReadWrite.WRITE);
 		metaModel.getMetaontology().begin(ReadWrite.READ);
-		ontClass.removeProperties();
-		prop.removeProperties();
 		// remove class incl properties
+		metaTypes.removeOntClassInclOwnedProperties(ontClass);
 		// ensure model has same size --> no leftover statements
 		var sizeEnd = model.size();
 		var sizeMetaEnd = metaModel.getMetamodel().size();
@@ -143,7 +141,7 @@ class TestRemoveSchemaElements {
 		metaModel.getMetaontology().end();
 		assertEquals(sizeMetaBegin, sizeMetaEnd);
 		
-		if (sizeEnd > sizeBegin) {
+		if (sizeEnd != sizeBegin) {
 			printDiff(modelBegin, model);
 		}
 		assertEquals(sizeBegin, sizeEnd);
@@ -163,6 +161,7 @@ class TestRemoveSchemaElements {
 		var ontClass = model.createOntClass(NS+"Demo");
 		var prop = metaTypes.getSingleType().createSingleDataPropertyType(NS+"demoSingle", ontClass, model.getDatatype(XSD.xstring));
 		
+		var subPropsSize = metaTypes.getSingleType().getSingleLiteralProperty().subProperties(true).count();
 		var sizeMiddle = model.size();
 		var sizeMetaMiddle = metaModel.getMetamodel().size();
 		dataset.commit();
@@ -173,21 +172,22 @@ class TestRemoveSchemaElements {
 		
 		dataset.begin(ReadWrite.WRITE);
 		metaModel.getMetaontology().begin(ReadWrite.READ);
-		ontClass.removeProperties();
-		prop.removeProperties();
 		// remove class incl properties
+		metaTypes.removeOntClassInclOwnedProperties(ontClass);
 		// ensure model has same size --> no leftover statements
 		var sizeEnd = model.size();
 		var sizeMetaEnd = metaModel.getMetamodel().size();
+		var subPropsSizeEnd =  metaTypes.getSingleType().getSingleLiteralProperty().subProperties(true).count();
 		dataset.commit();
 		dataset.end();
 		metaModel.getMetaontology().end();
 		assertEquals(sizeMetaBegin, sizeMetaEnd);
 		
-		if (sizeEnd > sizeBegin) {
+		if (sizeEnd != sizeBegin) {
 			printDiff(modelBegin, model);
 		}
 		assertEquals(sizeBegin, sizeEnd);
+		assertEquals(subPropsSize, subPropsSizeEnd+1);
 		
 	}
 	
@@ -214,9 +214,8 @@ class TestRemoveSchemaElements {
 		
 		dataset.begin(ReadWrite.WRITE);
 		metaModel.getMetaontology().begin(ReadWrite.READ);
-		ontClass.removeProperties();
-		prop.removeProperties();
 		// remove class incl properties
+		metaTypes.removeOntClassInclOwnedProperties(ontClass);
 		// ensure model has same size --> no leftover statements
 		var sizeEnd = model.size();
 		var sizeMetaEnd = metaModel.getMetamodel().size();
@@ -225,7 +224,7 @@ class TestRemoveSchemaElements {
 		metaModel.getMetaontology().end();
 		assertEquals(sizeMetaBegin, sizeMetaEnd);
 		
-		if (sizeEnd > sizeBegin) {
+		if (sizeEnd != sizeBegin) {
 			printDiff(modelBegin, model);
 		}
 		assertEquals(sizeBegin, sizeEnd);
@@ -234,7 +233,9 @@ class TestRemoveSchemaElements {
 	
 	private void printDiff(OntModel modelBegin, OntModel model) {
 		dataset.begin(ReadWrite.READ);
-		var modelDiff = model.difference(modelBegin);
+		var modelDiff = model.size() > modelBegin.size() 
+				? model.difference(modelBegin) 
+				: modelBegin.difference(model);
 		RDFDataMgr.write(System.out, modelDiff, Lang.TURTLE) ;
 		dataset.end();
 	}

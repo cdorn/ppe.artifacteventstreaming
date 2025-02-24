@@ -52,4 +52,6 @@ public abstract class TypedCollectionResource {
 	protected boolean isInstanceOfClassHierachy(OntIndividual ontInd, OntClass toMatch) {
 		return ontInd.classes().anyMatch(type -> type.equals(toMatch));
 	}
+	
+	public abstract void delete();
 }

@@ -70,6 +70,11 @@ public class MapWrapper extends TypedCollectionResource implements Map<String, O
 		delegate.clear();
 	}
 
+	@Override
+	public void delete() {
+		delegate.clear(); // removes all entries, hence nothing of the map remains
+	}
+	
 	public Set<String> keySet() {
 		return delegate.keySet();
 	}

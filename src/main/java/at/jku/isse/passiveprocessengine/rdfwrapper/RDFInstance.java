@@ -64,4 +64,10 @@ public class RDFInstance extends RDFElement implements PPEInstance {
 	public String toString() {
 		return "RDFInstance [" + getId() + "]";
 	}
+	
+	@Override
+	public void markAsDeleted() {
+		resolver.removeInstanceFromIndex(this);
+		super.markAsDeleted();
+	}
 }

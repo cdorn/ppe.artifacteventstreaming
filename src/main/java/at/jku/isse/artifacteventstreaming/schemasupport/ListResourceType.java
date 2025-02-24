@@ -13,7 +13,9 @@ import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
+import org.apache.jena.ontapi.model.OntProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
+import org.apache.jena.rdf.model.AnonId;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
@@ -21,10 +23,12 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Seq;
 import org.apache.jena.rdf.model.StmtIterator;
+import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 
 import lombok.Getter;
+import lombok.NonNull;
 
 public class ListResourceType {
 	public static final String LIST_NS = "http://at.jku.isse.list#";
@@ -32,7 +36,7 @@ public class ListResourceType {
 	public static final String OBJECT_LIST_NAME = "#liObject";
 	public static final String LITERAL_LIST_NAME = "#liLiteral";	
 	public static final String LIST_TYPE_NAME = "#list";
-	private static final String CONTAINER_PROPERTY_URI = LIST_NS+"containerOwnerRef";
+	private static final String CONTAINEROWNER_PROPERTY_URI = LIST_NS+"containerOwnerRef";
 	private static final String LIST_REFERENCE_SUPERPROPERTY_URI = LIST_NS+"hasList";
 	public static final Resource LI = ResourceFactory.createResource(RDF.uri+"li");
 	
@@ -46,10 +50,10 @@ public class ListResourceType {
 	private final SingleResourceType singleType;	
 	private final Set<OntClass> subclassesCache = new HashSet<>();
 	
-	public ListResourceType(OntModel model, SingleResourceType singleType) {			
+	public ListResourceType(@NonNull  OntModel model, @NonNull SingleResourceType singleType) {			
 		this.singleType = singleType;
 		listClass = model.getOntClass(RDF.Seq);	
-		containerProperty = model.getObjectProperty(CONTAINER_PROPERTY_URI);	
+		containerProperty = model.getObjectProperty(CONTAINEROWNER_PROPERTY_URI);	
 		listReferenceSuperProperty = model.getObjectProperty(LIST_REFERENCE_SUPERPROPERTY_URI);		
 		initHierarchyCache();
 	}
@@ -58,13 +62,13 @@ public class ListResourceType {
 		listClass.subClasses().forEach(subclassesCache::add);	
 	}
 	
-	public OntObjectProperty addObjectListProperty(OntClass resource, String listPropertyURI, OntClass valueType) {
+	public OntObjectProperty addObjectListProperty(@NonNull OntClass resource, @NonNull String listPropertyURI, @NonNull OntClass valueType) {
 		OntModel model = resource.getModel();
 		if (singleType.existsPrimaryProperty(listPropertyURI)) {
 			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty		
 		}
 		// create the specific class for this list
-		OntClass listType = model.createOntClass(listPropertyURI+LIST_TYPE_NAME);
+		OntClass listType = model.createOntClass(generateListTypeURI(listPropertyURI));
 		listType.addSuperClass(listClass);			
 		// create the property that points to this list type // ensure we only point to one list only
 		var prop = singleType.createBaseObjectPropertyType(listPropertyURI, resource, listType);  
@@ -73,25 +77,29 @@ public class ListResourceType {
 		//NOTE: we cannot use createSingleObject... to avoid putting this property into the single property cache as this is a list property
 		
 		// now also restrict the list content to be of valueType, and property to be a subproperty of 'li'			
-		var liProp = model.createObjectProperty(listPropertyURI+OBJECT_LIST_NAME);
+		var liProp = model.createObjectProperty(generateSpeficifObjectListProperty(listPropertyURI));
 		liProp.addProperty(RDFS.subPropertyOf, LI);
 		liProp.addDomain(listType);
 		liProp.addRange(valueType);
-		ObjectAllValuesFrom restr = model.createObjectAllValuesFrom(liProp, valueType);
+		//ObjectAllValuesFrom restr = model.createObjectAllValuesFrom(liProp, valueType);
+		var restr = createAllValuesFromRestriction(model, liProp, valueType);
 		// add the restriction to the list type
-		listType.addSuperClass(restr);
+		//listType.addSuperClass(restr);
+		listType.addProperty(RDFS.subClassOf, restr);
 		listReferenceSuperProperty.addSubProperty(prop);	
 		subclassesCache.add(listType);
 		return prop;		
 	}
+
+
 	
-	public OntObjectProperty addLiteralListProperty(OntClass resource, String listPropertyURI, OntDataRange valueType) {
+	public OntObjectProperty addLiteralListProperty(@NonNull OntClass resource, @NonNull String listPropertyURI, @NonNull OntDataRange valueType) {
 		OntModel model = resource.getModel();
 		if (singleType.existsPrimaryProperty(listPropertyURI)) {
 			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty		
 		}	
 		// create the specific class for this list
-		OntClass listType = model.createOntClass(listPropertyURI+LIST_TYPE_NAME);
+		OntClass listType = model.createOntClass(generateListTypeURI(listPropertyURI));
 		listType.addSuperClass(listClass);			
 		// create the property that points to this list type // ensure we only point to one list only
 		var prop = singleType.createBaseObjectPropertyType(listPropertyURI, resource, listType);  
@@ -100,16 +108,42 @@ public class ListResourceType {
 		//NOTE: we cannot use createSingleData... to avoid putting this property into the single property cache as this is a list property
 		
 		// now also restrict the list content to be of valueType, and property to be a subproperty of 'li'			
-		var liProp = model.createDataProperty(listPropertyURI+LITERAL_LIST_NAME);
+		var liProp = model.createDataProperty(generateSpecificLiteralListPropertyURI(listPropertyURI));
 		liProp.addProperty(RDFS.subPropertyOf, LI);
 		liProp.addDomain(listType);
 		liProp.addRange(valueType);
-		DataAllValuesFrom restr = model.createDataAllValuesFrom(liProp, valueType);
+		//DataAllValuesFrom restr = model.createDataAllValuesFrom(liProp, valueType); replace with replicable anonid restriction
+		var restr = createAllValuesFromRestriction(model, liProp, valueType);
 		// add the restriction to the list type
-		listType.addSuperClass(restr);
+		//listType.addSuperClass(restr);
+		listType.addProperty(RDFS.subClassOf, restr);
 		listReferenceSuperProperty.addSubProperty(prop);	
 		subclassesCache.add(listType);
 		return prop;
+	}
+	
+	private Resource createAllValuesFromRestriction(OntModel model, OntProperty onProperty,  OntObject rangeOrClass) {
+		var anonId = createValueRestrictionAnonId(onProperty);
+		return model.createResource(anonId)
+				.addProperty(RDF.type, OWL2.Restriction) 
+				.addProperty(OWL2.onProperty, onProperty)
+				.addProperty(OWL2.allValuesFrom, rangeOrClass);		
+	}
+
+	private AnonId createValueRestrictionAnonId(OntProperty onProperty) {
+		return new AnonId("anon::"+onProperty.getURI()+"::valueRestriction");
+	}
+
+	private String generateSpecificLiteralListPropertyURI(String listPropertyURI) {
+		return listPropertyURI+LITERAL_LIST_NAME;
+	}
+	
+	private String generateSpeficifObjectListProperty(String listPropertyURI) {
+		return listPropertyURI+OBJECT_LIST_NAME;
+	}
+
+	private String generateListTypeURI(String listPropertyURI) {
+		return listPropertyURI+LIST_TYPE_NAME;
 	}
 
 	public static boolean isLiProperty(Resource prop) {
@@ -120,6 +154,10 @@ public class ListResourceType {
 			}
 		}
 		return false;
+	}
+	
+	public boolean isListContainerReferenceProperty(@NonNull OntProperty prop) {
+		return listReferenceSuperProperty.subProperties(true).anyMatch(subProp -> subProp.equals(prop));
 	}
 	
 	public boolean isListCollection(OntIndividual ontInd) {
@@ -169,6 +207,32 @@ public class ListResourceType {
 		return props;
 	}
 
+
+	/**
+	 * @param prop OntProperty to remove from its owning class including the sequence li-subproperty
+	 */
+	public void removeListContainerReferenceProperty(@NonNull OntClass owner, @NonNull OntProperty listReferenceProperty) {
+		var model = listReferenceProperty.getModel();
+	// remove listType:
+		var listType = model.createOntClass(generateListTypeURI(listReferenceProperty.getURI()));
+		// remove from cache
+		subclassesCache.remove(listType);
+		// remove liSubproperty predicates and any predicates from other properties that happen to be defined
+		MetaModelSchemaTypes.getExplicitlyDeclaredProperties(listType).forEach(prop -> { 
+			if (isLiProperty(prop)) {
+				// remove restriction
+				var anonId = createValueRestrictionAnonId(prop);
+				var restrRes = model.createResource(anonId); // only way to retrieve anon resource again
+				owner.remove(RDFS.subClassOf, restrRes); // remove the restriction from property owning class
+				restrRes.removeProperties();
+			}
+			prop.removeProperties();
+		});
+		// remove predicates association from listType itself 
+		listType.removeProperties();
+		// remove list reference property
+		singleType.removeSingleProperty(owner,  listReferenceProperty);
+	}
 	
 	protected static class ListSchemaFactory {
 		
@@ -186,9 +250,9 @@ public class ListResourceType {
 				listClass = model.createOntClass(RDF.Seq.getURI());
 			}
 						
-			var containerProperty = model.getObjectProperty(CONTAINER_PROPERTY_URI);
+			var containerProperty = model.getObjectProperty(CONTAINEROWNER_PROPERTY_URI);
 			if (containerProperty == null) {
-				containerProperty = model.createObjectProperty(CONTAINER_PROPERTY_URI);
+				containerProperty = model.createObjectProperty(CONTAINEROWNER_PROPERTY_URI);
 				containerProperty.addDomain(listClass);
 			}
 			

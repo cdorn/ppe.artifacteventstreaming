@@ -280,5 +280,21 @@ class TestRuleEvaluation extends TestRuleDefinitions {
 				.build();
 	}
 	
-
+	protected RDFRuleDefinition getBasicArtTypeWithRefOnPriorityRule(int counter) throws RuleException {
+		return repo.getRuleBuilder()
+				.withContextType(artType)
+				.withDescription("Test3Rule"+counter)
+				.withRuleTitle("Test3RuleTitle"+counter)
+				.withRuleExpression("self.ref->exists(art | art.priority = 1)")
+				.build();
+	}
+	
+	protected RDFRuleDefinition getBasicArtTypeWithPriorityRule(int counter) throws RuleException {
+		return repo.getRuleBuilder()
+				.withContextType(artType)
+				.withDescription("Test3Rule"+counter)
+				.withRuleTitle("Test3RuleTitle"+counter)
+				.withRuleExpression("self.priority = 1")
+				.build();
+	}
 }

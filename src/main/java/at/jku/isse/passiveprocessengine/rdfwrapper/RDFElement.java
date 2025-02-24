@@ -60,8 +60,9 @@ public abstract class RDFElement {
 
 	public void markAsDeleted() {
 		this.isDeleted = true;
+		collectionPropertyCache.values().forEach(coll -> coll.delete()); // ensures that collections are completely removed and dont linger empty without owner in memory
 		element.removeProperties();		
-		//remove from cache needs to be done in childclasses
+		//remove from cache is done in childclasses
 	}
 
 

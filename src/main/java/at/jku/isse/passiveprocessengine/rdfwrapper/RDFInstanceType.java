@@ -91,13 +91,12 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	@Override
 	public void markAsDeleted() {
 		//first we remove the hierarchy below, then itself (instances need to be removed via resolver, not our concern here)
-		resolver.removeTypeCascading(this);
-		for (var subClass : type.subClasses().toList()) { 			
-			subClass.removeProperties(); 
-		}
-		//TODO: remove property definitions as well, not just properties of this ontclass
+		var subclasses = resolver.removeInstancesAndTypeInclSubclassesFromIndex(this); // this removes also instances
+		subclasses.forEach(subClass -> 			
+			resolver.getCardinalityUtil().removeOntClassInclOwnedProperties(subClass)
+		);
+		resolver.getCardinalityUtil().removeOntClassInclOwnedProperties(type);
 		super.markAsDeleted();
-		
 	}
 	
 	@Override
@@ -150,9 +149,9 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 	private OntRelationalProperty createBasePropertyType(String arg0, PPEInstanceType arg1) {
 		var propUri = makePropertyURI(arg0);
 		if (BuildInType.isAtomicType(arg1)) {
-			return resolver.getCardinalityUtil().createBaseDataPropertyType(propUri, this.type, resolver.resolveAtomicInstanceType(arg1));
+			return resolver.getCardinalityUtil().getSingleType().createBaseDataPropertyType(propUri, this.type, resolver.resolveAtomicInstanceType(arg1));
 		} else {
-			return resolver.getCardinalityUtil().createBaseObjectPropertyType(propUri, this.type, (OntClass)resolver.resolveTypeToClassOrDatarange(arg1));
+			return resolver.getCardinalityUtil().getSingleType().createBaseObjectPropertyType(propUri, this.type, (OntClass)resolver.resolveTypeToClassOrDatarange(arg1));
 		}
 	}
 	
@@ -171,9 +170,9 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 		var propUri = makePropertyURI(arg0);
 		if (propWrappers.containsKey(propUri)) return propWrappers.get(propUri);
 		var prop = BuildInType.isAtomicType(arg1) ? 
-				resolver.getCardinalityUtil().createSingleDataPropertyType(propUri, this.type, resolver.resolveAtomicInstanceType(arg1))
+				resolver.getCardinalityUtil().getSingleType().createSingleDataPropertyType(propUri, this.type, resolver.resolveAtomicInstanceType(arg1))
 				: 
-				resolver.getCardinalityUtil().createSingleObjectPropertyType(propUri, this.type, (OntClass)resolver.resolveTypeToClassOrDatarange(arg1));
+				resolver.getCardinalityUtil().getSingleType().createSingleObjectPropertyType(propUri, this.type, (OntClass)resolver.resolveTypeToClassOrDatarange(arg1));
 		if (prop != null)
 			return insertAndReturn(prop);
 		else 

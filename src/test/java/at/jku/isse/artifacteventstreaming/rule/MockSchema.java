@@ -33,16 +33,16 @@ public class MockSchema {
 	public MockSchema(@NonNull OntModel model, @NonNull MetaModelSchemaTypes schemaUtils) {				
 		issueType = model.createOntClass(TEST_SCHEMA_URI+"Issue");
 		
-		keyProperty = schemaUtils.createSingleDataPropertyType(TEST_SCHEMA_URI+"key", issueType, model.getDatatype(XSD.xstring));
-		stateProperty = schemaUtils.createSingleDataPropertyType(TEST_SCHEMA_URI+"state", issueType, model.getDatatype(XSD.xstring));
-		priorityProperty = schemaUtils.createSingleDataPropertyType(TEST_SCHEMA_URI+"priority", issueType, model.getDatatype(XSD.xint));
+		keyProperty = schemaUtils.getSingleType().createSingleDataPropertyType(TEST_SCHEMA_URI+"key", issueType, model.getDatatype(XSD.xstring));
+		stateProperty = schemaUtils.getSingleType().createSingleDataPropertyType(TEST_SCHEMA_URI+"state", issueType, model.getDatatype(XSD.xstring));
+		priorityProperty = schemaUtils.getSingleType().createSingleDataPropertyType(TEST_SCHEMA_URI+"priority", issueType, model.getDatatype(XSD.xint));
 		
-		requirementsProperty = schemaUtils.createBaseObjectPropertyType(TEST_SCHEMA_URI+"requirements", issueType, issueType);  
-		bugsProperty = schemaUtils.createBaseObjectPropertyType(TEST_SCHEMA_URI+"bugs", issueType, issueType);
-		upstreamProperty = schemaUtils.createBaseObjectPropertyType(TEST_SCHEMA_URI+"upstream", issueType, issueType);
-		downstreamProperty = schemaUtils.createBaseObjectPropertyType(TEST_SCHEMA_URI+"downstream", issueType, issueType);
+		requirementsProperty = schemaUtils.getSingleType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"requirements", issueType, issueType);  
+		bugsProperty = schemaUtils.getSingleType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"bugs", issueType, issueType);
+		upstreamProperty = schemaUtils.getSingleType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"upstream", issueType, issueType);
+		downstreamProperty = schemaUtils.getSingleType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"downstream", issueType, issueType);
 		
-		parentProperty = schemaUtils.createSingleObjectPropertyType(TEST_SCHEMA_URI+"downstream", issueType, issueType);
+		parentProperty = schemaUtils.getSingleType().createSingleObjectPropertyType(TEST_SCHEMA_URI+"downstream", issueType, issueType);
 		labelProperty = schemaUtils.getListType().addLiteralListProperty(issueType, TEST_SCHEMA_URI+"label", model.getDatatype(XSD.xstring));
 		keyValueProperty = schemaUtils.getMapType().addLiteralMapProperty(issueType, TEST_SCHEMA_URI+"keyValue", model.getDatatype(XSD.xint));
 	}

@@ -39,7 +39,7 @@ public class TestRDFMapWrapperOntologyPersistence  {
 		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
 		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
 		var cardType = new MetaModelSchemaTypes(m, metaModel);
-		cardType.createSingleDataPropertyType(branchURI+"testProp", cardType.getListType().getListClass(), m.getDatatype(XSD.xint));
+		cardType.getSingleType().createSingleDataPropertyType(branchURI+"testProp", cardType.getListType().getListClass(), m.getDatatype(XSD.xint));
 		assertTrue(m.size() > 0);
 		m.statements().forEach(stmt -> System.out.println(stmt));
 		modelDataset.commit();
@@ -55,7 +55,7 @@ public class TestRDFMapWrapperOntologyPersistence  {
 		metaModel = MetaModelOntology.buildInMemoryOntology(); 
 		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
 		cardType = new MetaModelSchemaTypes(m, metaModel);
-		cardType.createSingleDataPropertyType(branchURI+"testProp", cardType.getListType().getListClass(), m.getDatatype(XSD.xint));
+		cardType.getSingleType().createSingleDataPropertyType(branchURI+"testProp", cardType.getListType().getListClass(), m.getDatatype(XSD.xint));
 		long newSize = m.size();
 		m.statements().forEach(stmt -> System.out.println(stmt));
 		assertEquals(oldSize, newSize);
