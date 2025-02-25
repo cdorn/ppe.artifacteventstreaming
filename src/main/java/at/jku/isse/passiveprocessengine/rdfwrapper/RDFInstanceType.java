@@ -93,9 +93,9 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 		//first we remove the hierarchy below, then itself (instances need to be removed via resolver, not our concern here)
 		var subclasses = resolver.removeInstancesAndTypeInclSubclassesFromIndex(this); // this removes also instances
 		subclasses.forEach(subClass -> 			
-			resolver.getCardinalityUtil().removeOntClassInclOwnedProperties(subClass)
+			resolver.getCardinalityUtil().deleteOntClassInclOwnedProperties(subClass)
 		);
-		resolver.getCardinalityUtil().removeOntClassInclOwnedProperties(type);
+		resolver.getCardinalityUtil().deleteOntClassInclOwnedProperties(type);
 		super.markAsDeleted();
 	}
 	

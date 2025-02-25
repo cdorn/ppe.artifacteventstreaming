@@ -50,7 +50,25 @@ public class MetaModelSchemaTypes {
 		listType = new ListResourceType(model, singleType); 		
 	}
 	
-	public void removeOntClassInclOwnedProperties(OntClass ontClass) {
+	/**
+	 * @param ontClass and any of its subclasses to delete including all properties that were explicitly 
+	 * defined to be in the domain of these classes, 
+	 * do not use if an affected property is in the domain of multiple classes  
+	 */
+	public void deleteOntClassInclSubclasses(OntClass ontClass) {
+		ontClass.subClasses().forEach(subClass -> deleteOntClassInclOwnedProperties(subClass));
+		deleteOntClassInclOwnedProperties(ontClass);
+	}
+	
+	/**
+	 * @param ontClass to delete including all properties that were explicitly 
+	 * defined to be in the domain of that class, 
+	 * super and subclasses and their properties are not removed, 
+	 * removing a class in the middle of a hierarchy will leave its subclasses dangling
+	 * to include deletion of subclasses, use {@link #deleteOntClassInclSubclasses(OntClass) }
+	 * do not use if an affected property is in the domain of multiple classes  
+	 */
+	public void deleteOntClassInclOwnedProperties(OntClass ontClass) {
 		getExplicitlyDeclaredProperties(ontClass).forEach(prop -> {
 			// determine set/map/list/single type
 			// then call matching delete
@@ -70,8 +88,8 @@ public class MetaModelSchemaTypes {
 	}
 	
 	/**
-	 * @param ontClass for which to retrieve only those properties that have in domain exactly this particular class, therefore ignoring class/type hierarchy
-	 * @return
+	 * @param ontClass for which to retrieve only those properties that have in domain this particular class (without using inference), therefore ignoring class/type hierarchy
+	 * @return any property that has the provided ontClass as domain
 	 */
 	public static Stream<OntProperty> getExplicitlyDeclaredProperties(OntClass ontClass) {
 		var model = ontClass.getModel();
