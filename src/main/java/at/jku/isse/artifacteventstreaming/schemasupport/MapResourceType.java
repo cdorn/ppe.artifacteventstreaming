@@ -129,19 +129,16 @@ public class MapResourceType  {
 	
 
 	/**
-	 * @param ontClass from which to remove the property
 	 * @param prop OntProperty to remove from its owning class including the specific map entry type and its value predicate
 	 */
-	public void removeMapContainerReferenceProperty(OntClass owner, OntProperty mapReferenceProperty) {
+	public void removeMapContainerReferenceProperty(OntProperty mapReferenceProperty) {
 		var model = mapReferenceProperty.getModel();
 		// remove listType:
 		var mapType = model.createOntClass(generateMapEntryTypeURI(mapReferenceProperty.getURI()));
 		// remove from cache
 		subclassesCache.remove(mapType);
 		// remove any predicates from any properties that happen to be defined
-		MetaModelSchemaTypes.getExplicitlyDeclaredProperties(mapType).forEach(prop -> { 
-			prop.removeProperties();
-		});
+		MetaModelSchemaTypes.getExplicitlyDeclaredProperties(mapType).forEach(Resource::removeProperties);
 		// remove predicates association from mapType itself 
 		mapType.removeProperties();
 		// remove map reference property
@@ -208,7 +205,7 @@ public class MapResourceType  {
 			var containerProperty = model.getObjectProperty(CONTAINEROWNER_PROPERTY_URI);
 			if (containerProperty == null) {
 				containerProperty = model.createObjectProperty(CONTAINEROWNER_PROPERTY_URI);
-				objectValueProp.addDomain(mapEntryClass);
+				containerProperty.addDomain(mapEntryClass);
 			}
 			
 			var mapReferenceSuperProperty = model.getObjectProperty(MAP_REFERENCE_SUPERPROPERTY_URI);

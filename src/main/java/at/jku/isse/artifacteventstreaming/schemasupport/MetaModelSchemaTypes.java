@@ -56,7 +56,7 @@ public class MetaModelSchemaTypes {
 	 * do not use if an affected property is in the domain of multiple classes  
 	 */
 	public void deleteOntClassInclSubclasses(OntClass ontClass) {
-		ontClass.subClasses().forEach(subClass -> deleteOntClassInclOwnedProperties(subClass));
+		ontClass.subClasses().forEach(this::deleteOntClassInclOwnedProperties);
 		deleteOntClassInclOwnedProperties(ontClass);
 	}
 	
@@ -79,7 +79,7 @@ public class MetaModelSchemaTypes {
 				listType.removeListContainerReferenceProperty(ontClass, prop);
 			} else 
 			if (mapType.isMapContainerReferenceProperty(prop)) {
-				mapType.removeMapContainerReferenceProperty(ontClass, prop);
+				mapType.removeMapContainerReferenceProperty(prop);
 			} else {
 				singleType.removeBaseProperty(prop);
 			}

@@ -195,11 +195,11 @@ public class SingleResourceType {
 		private void initTypes() {
 			var singleObjectProperty = model.getObjectProperty(SINGLE_OBJECT_URI);
 			if (singleObjectProperty == null) {
-				singleObjectProperty = model.createObjectProperty(SINGLE_OBJECT_URI);
+				model.createObjectProperty(SINGLE_OBJECT_URI);
 			}
 			var singleLiteralProperty = model.getDataProperty(SINGEL_LITERAL_URI);
 			if (singleLiteralProperty == null) {
-				singleLiteralProperty = model.createDataProperty(SINGEL_LITERAL_URI);
+				model.createDataProperty(SINGEL_LITERAL_URI);
 			}
 		}
 
