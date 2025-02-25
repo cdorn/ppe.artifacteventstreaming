@@ -85,13 +85,12 @@ public class CrossBranchStreamer implements Runnable {
 	 * @return a commit with the same id, message, preceding commit, and branch, with separate statement lists, but references back to the same statements, i.e., no statement cloning occurs
 	 */
 	private Commit createShallowClone(Commit cloneSource) {
-		StatementCommitImpl clone = new StatementCommitImpl(cloneSource.getOriginatingBranchId()
+		return new StatementCommitImpl(cloneSource.getOriginatingBranchId()
 				, cloneSource.getCommitId()
 				, cloneSource.getCommitMessage()
 				, cloneSource.getPrecedingCommitId()
 				, cloneSource.getTimeStamp()
 				, new LinkedHashSet<>(cloneSource.getAddedStatements())
 				, new LinkedHashSet<>(cloneSource.getRemovedStatements()));
-		return clone;
 	}
 }

@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 
 public class RocksDBFactory {
 
-	private static final String BRANCH_STATE_KEEPER = "branchStateKeeper";
 	public static final String DEFAULT_STORAGEPATH = "./branchStatusCache/";
 	
 	private final Options options;

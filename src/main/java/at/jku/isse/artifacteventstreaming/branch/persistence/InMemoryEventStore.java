@@ -27,15 +27,15 @@ public class InMemoryEventStore implements PerBranchEventStore {
 	public List<Commit> loadAllIncomingCommitsForBranchFromCommitIdOnward(String fromCommitIdOnwards) throws PersistenceException {
 		if (fromCommitIdOnwards == null) {
 			return deliveries.stream().map(event -> event.getCommit())
-					.collect(Collectors.toList());
+					.toList();
 		} else {
 			Boolean found = false;
 			List<Commit> commits = new LinkedList<>();
 			for (CommitDeliveryEvent event : deliveries) {
-				if (!found && event.getCommitId().equals(fromCommitIdOnwards)) {
+				if (Boolean.TRUE.equals(!found) && event.getCommitId().equals(fromCommitIdOnwards)) {
 					found = true;
 				}
-				if (found) {
+				if (Boolean.TRUE.equals(found)) {
 					commits.add(event.getCommit());
 				}
 			}

@@ -258,27 +258,10 @@ public class StatementAugmentationSession {
 	
 	protected void wrapInContainmentStatements(List<StatementWrapper> stmts) {
 		// NoOp as we directly update the statement
-//		stmts.stream().forEach(stmt -> { 
-//			
-//			
-//			if (stmt.op.equals(OPTYPE.ADD)) {
-//				
-//				addedAugmentedStatements.add(new ContainedStatementImpl(stmt.stmt()));
-//			} else {
-//				removedAugmentedStatements.add(new ContainedStatementImpl(stmt.stmt()));
-//				}
-//			});
 	}
 	
 	protected void wrapInContainmentStatements(List<StatementWrapper> stmts, Resource container, Property containmentProperty) {
-		stmts.stream().forEach(stmt -> { 
-			stmt.stmt().augmentWithContainment(container, containmentProperty);
-//			if (stmt.op.equals(OPTYPE.ADD)) {
-//				addedAugmentedStatements.add(new ContainedStatementImpl(stmt.stmt(), container, containmentProperty));
-//			} else {
-//				removedAugmentedStatements.add(new ContainedStatementImpl(stmt.stmt(), container, containmentProperty));
-//				}
-			});
+		stmts.stream().forEach(stmt -> stmt.stmt().augmentWithContainment(container, containmentProperty));
 	}
 
 	public static record StatementWrapper(ContainedStatement stmt, AES.OPTYPE op) {}

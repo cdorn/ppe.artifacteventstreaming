@@ -9,6 +9,7 @@ import java.util.Set;
 import org.apache.jena.atlas.logging.Log;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntIndividual;
+import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 
@@ -80,7 +81,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 		return scope;
 	}
 	
-	// or create from underlying ontclass 
+	// or create from underlying ont object 
 	/**
 	 * @param ruleEvalObj pre-existing, that needs wrapping
 	 * @param factory to access properties 
@@ -141,6 +142,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 	
 
 	
+	@SuppressWarnings("rawtypes")
 	private RuleEvaluationWrapperResourceImpl(RDFRuleDefinition def, OntIndividual ruleEvalObj, OntIndividual contextInstance, RuleSchemaProvider factory ) {
 		super();
 		this.ruleEvalObj = ruleEvalObj;
@@ -187,17 +189,17 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 		return new AbstractMap.SimpleEntry<>(delegate, !Objects.equals(priorConsistency, isConsistent())); // returns if the outcome has changed;
 	}
 
+	@SuppressWarnings("unchecked")
 	private void updateRuleScope() {
 		delegate.getAddedScopeElements().stream()		
-			.forEach(scopeEntry -> addPropertyToScope(scopeEntry, ruleEvalObj));
+			.forEach(scopeEntry -> addPropertyToScope((Entry<Resource, Property>)scopeEntry, ruleEvalObj));
 		delegate.getRemovedScopeElements().stream()		
-		.forEach(scopeEntry -> removePropertyFromScope(scopeEntry, ruleEvalObj));                                       
+		.forEach(scopeEntry -> removePropertyFromScope((Entry<Resource, Property>)scopeEntry, ruleEvalObj));                                       
 	}
 	
-	private void addPropertyToScope(Object entry, OntIndividual ruleEval) {
-		var typed = (Entry) entry;
-		var subject = (Resource) typed.getKey();
-		var property = (Property) typed.getValue();
+	private void addPropertyToScope(Entry<Resource, Property> typed, OntIndividual ruleEval) {
+		var subject = typed.getKey();
+		var property = typed.getValue();
 		
 		OntIndividual scope = findScope(subject,  property);						
 		if (scope == null) {
@@ -214,10 +216,9 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 		scope.addProperty(schemaProvider.getUsedInRuleProperty().asNamed(), ruleEval);		
 	}		
 	
-	private void removePropertyFromScope(Object entry, OntIndividual ruleEval) {
-		var typed = (Entry) entry;
-		var subject = (Resource) typed.getKey();
-		var property = (Property) typed.getValue();
+	private void removePropertyFromScope(Entry<Resource, Property> entry, OntIndividual ruleEval) {
+		var subject = entry.getKey();
+		var property = entry.getValue();
 		
 		OntIndividual scope = findScope(subject,  property);						
 		if (scope == null) {
@@ -263,7 +264,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 
 	@Override
 	public Object getEvaluationResult() {
-		if (result == null && getEvaluationError().length() == 0) { // never evaluated so far
+		if (result == null && getEvaluationError().isEmpty()) { // never evaluated so far
 			 evaluate();
 		} 
 		return result;		

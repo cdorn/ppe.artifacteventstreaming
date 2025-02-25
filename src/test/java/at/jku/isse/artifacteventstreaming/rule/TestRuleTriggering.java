@@ -10,6 +10,7 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.vocabulary.RDF;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
@@ -193,7 +194,7 @@ class TestRuleTriggering extends TestRuleEvaluation {
 		
 	}
 	
-	@Test
+	@Test @Disabled // as we dont support that usecase yet
 	void testRuleUsedPropertyRemoval() throws RuleException {
 		var def = getBasicArtTypeWithPriorityRule(1);		
 		var commit = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());

@@ -20,8 +20,6 @@ import lombok.Getter;
 
 public class RuleSchemaFactory {
 
-	private static final String RULEONTOLOGY = "ruleontology";
-
 	public static final String uri = "http://at.jku.isse.artifacteventstreaming.rules#";
 
 	// definition level

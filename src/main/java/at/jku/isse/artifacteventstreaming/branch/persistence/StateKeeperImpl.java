@@ -57,11 +57,11 @@ public class StateKeeperImpl implements BranchStateUpdater {
 		loadHistory();
 		// make cache entries consistent:
 		// if last open 
-		String lastProducedCommit = cache.get(LAST_PRODUCED_COMMIT+branchURI); 
+		//String lastProducedCommit = cache.get(LAST_PRODUCED_COMMIT+branchURI); 
 		String lastPrelimCommitId = cache.get(LAST_OPEN_PRELEMINARY_COMMIT_ID+branchURI);
 		String lastPrelimCommit = cache.get(LAST_OPEN_PRELEMINARY_COMMIT_CONTENT+branchURI);
 
-		if (lastPrelimCommitId != null && lastPrelimCommitId.length() > 0 && lastPrelimCommit != null) {
+		if (lastPrelimCommitId != null && !lastPrelimCommitId.isEmpty() && lastPrelimCommit != null) {
 			// apparently we crashed while processing a local commit
 			// lets ensure, we might not have just crashed just between finish processing it and caching the result
 			if (lastCommit == null // we have crashed upon first commit, we need to rerun
@@ -158,7 +158,7 @@ public class StateKeeperImpl implements BranchStateUpdater {
 
 	@Override
 	public List<Commit> getHistory() {
-		return producedCommits.values().stream().collect(Collectors.toList());
+		return producedCommits.values().stream().toList();
 	}
 
 	@Override
@@ -183,17 +183,17 @@ public class StateKeeperImpl implements BranchStateUpdater {
 
 	@Override
 	public List<Commit> getNonForwardedCommits() throws PersistenceException {
-		Optional<Commit> lastCommit = getLastCommit();
+		Optional<Commit> lastCommitOpt = getLastCommit();
 		Optional<String> lastForwardedCommitId = getLastForwardedCommitId();
-		if (lastCommit.isPresent()) {
+		if (lastCommitOpt.isPresent()) {
 			List<Commit> commitsToRequeue;
 			if (lastForwardedCommitId.isPresent()) {
-				if (lastForwardedCommitId.get().equals(lastCommit.get().getCommitId())) {
+				if (lastForwardedCommitId.get().equals(lastCommitOpt.get().getCommitId())) {
 					// all up to date, hence noop
 					return Collections.emptyList();
 				} else {
 					commitsToRequeue = getCommitsForwardIncludingFrom(lastForwardedCommitId.get());
-					if (commitsToRequeue.size() > 0) {
+					if (!commitsToRequeue.isEmpty()) {
 						// remove the one already forwarded
 						commitsToRequeue.remove(0);
 					}
@@ -235,9 +235,9 @@ public class StateKeeperImpl implements BranchStateUpdater {
 					return Collections.emptyList();
 				} else {
 					return ids.subList(pos, ids.size()).stream()
-							.map(id -> producedCommits.get(id))
+							.map(producedCommits::get)
 							.filter(Objects::nonNull)
-							.collect(Collectors.toList());
+							.toList();
 				}
 			}
 		}

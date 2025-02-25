@@ -16,7 +16,6 @@ public class InMemoryHistoryRepository implements PerResourceHistoryRepository {
 
 	private final HashMap<String, List<ReplayEntry>> history = new HashMap<>();
 	
-	//@Override
 	public void appendHistory(String commitId, String branchURI, long timeStamp, Set<ContainedStatement> addedStatements,
 			Set<ContainedStatement> removedStatements) {
 		addedStatements.forEach(stmt -> history.computeIfAbsent(AES.resourceToId(stmt.getContainerOrSubject()), 

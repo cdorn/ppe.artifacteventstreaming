@@ -85,12 +85,13 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
 
     public ArlType arlSuperTypeOfType(ArlType type) {
    //not used anywhere but part of interface, hence we keep it here for now
-    	if (type.getNativeType() == null) throw new EvaluationException("supertype needs a native type");
+    	if (type.getNativeType() == null) {
+    		throw new EvaluationException("supertype needs a native type");
+    	}
         var superType = ((OntClass)type.getNativeType()).superClasses()
         		.filter(superClass -> !(superClass instanceof CardinalityRestriction))
 				.filter(superClass -> !(superClass instanceof ValueRestriction))
 				.findFirst();
-
         if (superType.isEmpty())
             return null;
         else {
@@ -135,7 +136,6 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
         	throw new EvaluationException("supertype needs a native type of OntClass");
         }
         return getArlTypeOfProperty((OntClass) type.getNativeType(), property);
-       
     }
     
     @Override
@@ -161,37 +161,45 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
         }
         var first = content.get(0);
         if (first.getObject().isLiteral()) { // must be a set or single
-        	if (foundProp.canAs(OntRelationalProperty.class)) {
-        		var ontProp = foundProp.as(OntRelationalProperty.class);
-        		if (ontProp.hasSuperProperty(singleFactory.getSingleLiteralProperty(), false)) // single element
-        			return ArlType.CollectionKind.SINGLE;
-        		else
-        			return ArlType.CollectionKind.SET;
-        	} else {
-        		return ArlType.CollectionKind.SET;
-        	}        
+        	return obtainCardinalityForLiteral(foundProp);        
         } else { //could be set, single, map, list
         	if (first.getObject().canAs(OntIndividual.class)) {
-        		if (foundProp.canAs(OntRelationalProperty.class)) {
-            		var ontProp = foundProp.as(OntRelationalProperty.class);
-            		if (ontProp.hasSuperProperty(singleFactory.getSingleLiteralProperty(), false)) { // single element
-            			return ArlType.CollectionKind.SINGLE;
-            		} else if (ontProp.hasSuperProperty(mapFactory.getMapReferenceSuperProperty(), false)) { // a map
-            			return ArlType.CollectionKind.MAP;
-            		} else if (ontProp.hasSuperProperty(listFactory.getListReferenceSuperProperty(), false)) { // a list
-            			return ArlType.CollectionKind.LIST;	    			
-            		} else { // a regular set
-            			return ArlType.CollectionKind.SET;
-            		}
-            	} else {
-            		//no type info available, make a set:
-            		return ArlType.CollectionKind.SET;
-            	}            	      		
+        		return obtainCardinalityForObject(foundProp);            	      		
         	} else { //if not backed by an ontology then we cant reason and assume set
         		return ArlType.CollectionKind.SET;
         	}
         }         	
     }
+
+	private ArlType.CollectionKind obtainCardinalityForObject(Property foundProp) {
+		if (foundProp.canAs(OntRelationalProperty.class)) {
+			var ontProp = foundProp.as(OntRelationalProperty.class);
+			if (ontProp.hasSuperProperty(singleFactory.getSingleLiteralProperty(), false)) { // single element
+				return ArlType.CollectionKind.SINGLE;
+			} else if (ontProp.hasSuperProperty(mapFactory.getMapReferenceSuperProperty(), false)) { // a map
+				return ArlType.CollectionKind.MAP;
+			} else if (ontProp.hasSuperProperty(listFactory.getListReferenceSuperProperty(), false)) { // a list
+				return ArlType.CollectionKind.LIST;	    			
+			} else { // a regular set
+				return ArlType.CollectionKind.SET;
+			}
+		} else {
+			//no type info available, make a set:
+			return ArlType.CollectionKind.SET;
+		}
+	}
+
+	private ArlType.CollectionKind obtainCardinalityForLiteral(Property foundProp) {
+		if (foundProp.canAs(OntRelationalProperty.class)) {
+			var ontProp = foundProp.as(OntRelationalProperty.class);
+			if (ontProp.hasSuperProperty(singleFactory.getSingleLiteralProperty(), false)) // single element
+				return ArlType.CollectionKind.SINGLE;
+			else
+				return ArlType.CollectionKind.SET;
+		} else {
+			return ArlType.CollectionKind.SET;
+		}
+	}
 
     public Object propertyValueOfInstance(Resource element, String propertyName) {
         if (element == null) return null;       
@@ -244,28 +252,9 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     		} else if (singleFactory.getSingleLiteralProperty().hasSubProperty(ontProp, false)) { // single element
         			return content.get(0).getObject().asLiteral().getValue();
     		} else if (mapFactory.getMapReferenceSuperProperty().hasSubProperty(ontProp, false)) { // a map
-    			// map is not really supported by the rule engine, lets do this anyway
-    			Map<String, Object> map = new HashMap<>();
-    			MapResource.loadMap(element.listProperties(prop), mapFactory).stream()
-    				.forEach(entry -> {
-    					if(entry.getValue().getObject().isLiteral()) { 
-    						map.put(entry.getKey(), entry.getValue().getObject().asLiteral());
-    					} else {
-    						map.put(entry.getKey(), entry.getValue().getObject().asResource());
-    					}
-    				});
-    			return map;
+    			return convertToMap(element, prop);
     		} else if (listFactory.getListReferenceSuperProperty().hasSubProperty(ontProp, false)) { // a list
-    			var list = content.get(0).getObject().asResource().as(Seq.class);
-    			var iter = list.listProperties();
-    			List<Object> result = new LinkedList<>();
-    			while (iter.hasNext()) {
-    				var stmt = iter.next();
-    				if (stmt.getPredicate().getOrdinal() > 0) {
-    					result.add(statementObjectToResourceOrValue(stmt.getObject()));
-    				}
-    			}
-    			return result;	    			
+    			return convertToList(content);	    			
     		} else { // a regular set
     			return content.stream()
     					.map(Statement::getObject)
@@ -281,6 +270,33 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     	}
     	
     }
+
+	private Object convertToList(List<Statement> content) {
+		var list = content.get(0).getObject().asResource().as(Seq.class);
+		var iter = list.listProperties();
+		List<Object> result = new LinkedList<>();
+		while (iter.hasNext()) {
+			var stmt = iter.next();
+			if (stmt.getPredicate().getOrdinal() > 0) {
+				result.add(statementObjectToResourceOrValue(stmt.getObject()));
+			}
+		}
+		return result;
+	}
+
+	private Object convertToMap(Resource element, Property prop) {
+		// map is not really supported by the rule engine, lets do this anyway
+		Map<String, Object> map = new HashMap<>();
+		MapResource.loadMap(element.listProperties(prop), mapFactory).stream()
+			.forEach(entry -> {
+				if(entry.getValue().getObject().isLiteral()) { 
+					map.put(entry.getKey(), entry.getValue().getObject().asLiteral());
+				} else {
+					map.put(entry.getKey(), entry.getValue().getObject().asResource());
+				}
+			});
+		return map;
+	}
     
     private Object statementObjectToResourceOrValue(RDFNode node) {
     	if (node.isLiteral())
@@ -330,7 +346,7 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
         	return getTypeOfInstance(instance).findAny().map(type -> {
         		var prop = resolveToProperty(type, propertyName);
         		if (prop != null) 
-        			return new AbstractMap.SimpleEntry<Resource, Property>(instance, prop.asProperty());
+        			return new AbstractMap.SimpleEntry<>(instance, prop.asProperty());
         		else 
         			return null;
         	} );

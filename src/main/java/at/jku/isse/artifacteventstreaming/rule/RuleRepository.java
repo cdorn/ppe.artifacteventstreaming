@@ -47,7 +47,7 @@ public class RuleRepository {
 	 * this initialization does not cause rule reevaluation, just prepares all wrapper objects, evaluation is triggered by incoming change events
 	 */
 	private void loadFromModel() {		
-		factory.getDefinitionType().individuals(true).toList().stream().forEach(this::storeRuleDefinition); // TODO: for some reason ruleEvalResources are also included here, need filtering out to avoid log warn messages
+		factory.getDefinitionType().individuals(true).toList().stream().forEach(this::storeRuleDefinition); // FIXME: for some reason ruleEvalResources are also included here, need filtering out to avoid log warn messages
 		factory.getResultBaseType().individuals().toList().stream().map(eval -> { // we need to have a list first as otherwise inference has concurrent modification exception
 				try {
 					return RuleEvaluationWrapperResourceImpl.loadFromModel(eval, factory, this);
@@ -165,9 +165,9 @@ public class RuleRepository {
 	
 	
 	/**
-	 * @param subject the predicate that was removed, hence any rules (and their evaluations) that use this property are to be removed
+	 * @param predicate the property definition that was removed, hence any rules (and their evaluations) that use this property are to be removed
 	 */
-	public void removeRuleDefinitionsAffectedByPredicateRemoval(Resource subject) {
+	public void removeRuleDefinitionsAffectedByPredicateRemoval(Resource predicate) {
 		// TODO we need to establish which rules make use of a property, this is not tracked at the moment
 		
 		
@@ -194,7 +194,7 @@ public class RuleRepository {
 		// check if it has any existing scope, return also those, as a pessimistic caution as we dont know what the type changes imply	
 		var reEval = getAllRuleEvaluationsThatUse(newSubject);			
 		List <RuleEvaluationWrapperResourceImpl> ctxEval = getRuleEvaluationsWhereSubjectIsContext(newSubject).stream()
-				.map(eval -> getOrWrapAndRegister(eval))
+				.map(this::getOrWrapAndRegister)
 				.filter(Objects::nonNull)
 				.toList();
 		
@@ -206,7 +206,6 @@ public class RuleRepository {
 				.map(def -> RuleEvaluationWrapperResourceImpl.create(factory, def, newSubject))	
 				.map(eval -> { evaluations.put(eval.getRuleEvalObj().getURI(), eval); return eval;} )
 				.map(RuleEvaluationWrapperResource.class::cast).toList());			
-		//TODO: check for duplicate eval objects, should not happen under correct event handling, but better be on the safe side
 		return reEval;
 	}
 	
@@ -222,30 +221,33 @@ public class RuleRepository {
 			var scope = stmt.getResource().as(OntIndividual.class);
 			var iterRule = scope.listProperties(factory.getUsedInRuleProperty().asProperty());
 			while(iterRule.hasNext()) {
-				var res = iterRule.next().getResource();				
-				if (evaluations.containsKey(res.getURI())) {
-					evals.add(evaluations.get(res.getURI()));
-				} else {
-					if (!res.canAs(OntIndividual.class)) {
-						log.warn("Found dangling reference to evaluation resource with URI: "+res.getURI());
-					} else {
-					try {
-						//TODO: there seem to be some leftover evaluation references that no longer can be identified as an evaluation object and hence fail to be used as OntIndividual
-						
-						var ruleRes = res.as(OntIndividual.class);
-						
-						var evalObj = RuleEvaluationWrapperResourceImpl.loadFromModel(ruleRes, factory, this);
-						evaluations.put(evalObj.getRuleEvalObj().getURI(), evalObj);
-						evals.add(evalObj);
-					} catch (EvaluationException e) {
-						log.info("Error wrapping evaluation resource: "+e.getMessage());
-						// ignored, check via logs how to improve scope handling issues
-					}			
-					}
-				}
+				var evalResource = iterRule.next().getResource();				
+				collectExistingOrNewEvaluationWrapper(evals, evalResource);
 			}
 		}				
 		return evals;
+	}
+
+	private void collectExistingOrNewEvaluationWrapper(Set<RuleEvaluationWrapperResource> evals, Resource evalResource) {
+		if (evaluations.containsKey(evalResource.getURI())) {
+			evals.add(evaluations.get(evalResource.getURI()));
+		} else {
+			if (!evalResource.canAs(OntIndividual.class)) {
+				log.warn("Found dangling reference to evaluation resource with URI: "+evalResource.getURI());
+				// there seem to be some leftover evaluation references that no longer can be identified as an evaluation object 
+				// and hence fail to be used as OntIndividual
+			} else {
+			try {
+				var ruleRes = evalResource.as(OntIndividual.class);
+				var evalObj = RuleEvaluationWrapperResourceImpl.loadFromModel(ruleRes, factory, this);
+				evaluations.put(evalObj.getRuleEvalObj().getURI(), evalObj);
+				evals.add(evalObj);
+			} catch (EvaluationException e) {
+				log.warn("Error wrapping evaluation resource: "+e.getMessage());
+				// ignored, check via logs how to improve scope handling issues
+			}			
+			}
+		}
 	}
 	
 	private boolean isSubjectContextOfRule(RDFRuleDefinition def, List <RuleEvaluationWrapperResourceImpl> ctxEval) {
@@ -262,7 +264,6 @@ public class RuleRepository {
 				predicate = entry.getValue();
 			}
 		}
-		
 		// check which rules have this subject and predicate in the scope
 		Set<RuleEvaluationWrapperResource> evals = new HashSet<>();
 		var iter = changedSubject.listProperties(factory.getHasRuleScope().asProperty());
@@ -274,17 +275,7 @@ public class RuleRepository {
 				var iterRule = scope.listProperties(factory.getUsedInRuleProperty().asProperty());
 				while(iterRule.hasNext()) {
 					var ruleRes = iterRule.next().getResource().as(OntIndividual.class);
-					if (evaluations.containsKey(ruleRes.getURI())) {
-						evals.add(evaluations.get(ruleRes.getURI()));
-					} else {						
-						try { 
-							var evalObj = RuleEvaluationWrapperResourceImpl.loadFromModel(ruleRes, factory, this);
-							evaluations.put(evalObj.getRuleEvalObj().getURI(), evalObj);
-							evals.add(evalObj);
-						} catch (EvaluationException e) {
-							// ignored, check via logs how to improve scope handling issues
-						}	
-					}
+					collectExistingOrNewEvaluationWrapper(evals, ruleRes);
 				}
 			}
 		}				
@@ -304,7 +295,7 @@ public class RuleRepository {
 			return null;
 		}
 		var listProp = commonProps.get(0);
-		return new AbstractMap.SimpleEntry<OntIndividual, Property>(owner.as(OntIndividual.class), listProp);
+		return new AbstractMap.SimpleEntry<>(owner.as(OntIndividual.class), listProp);
 	}
 
 	public Set<RuleEvaluationWrapperResource> getRulesAffectedByTypeRemoval(@NonNull OntIndividual subject, @NonNull String removedTypeURI) {
@@ -316,12 +307,11 @@ public class RuleRepository {
 		}
 		// else check for retyping of an instance, then we need to remove the evaluation as well
 		// for each use as context, check if the rule context type still matches the remaining type information		
-		var removed = getRuleEvaluationsWhereSubjectIsContext(subject).stream()
-			.map(eval -> getOrWrapAndRegister(eval))
+		getRuleEvaluationsWhereSubjectIsContext(subject).stream()
+			.map(this::getOrWrapAndRegister)
 			.filter(Objects::nonNull)
 			.filter(wrapper -> !isSubjectTypeMatchingRuleContext(wrapper, subject))
-			.map(wrapper -> { evaluations.remove(wrapper.getRuleEvalObj().getURI()); wrapper.delete(); return wrapper; })
-			.collect(Collectors.toSet());				
+			.forEach(wrapper -> { evaluations.remove(wrapper.getRuleEvalObj().getURI()); wrapper.delete(); });				
 		
 		// TODO also look where the type info is used as property for casting or checking!!				
 		// for now we reeval all
@@ -405,7 +395,7 @@ public class RuleRepository {
 				}				
 			}			
 		}
-		// clean up scopes //TODO check if some empty pointers with eval Wrappers remain!
+		// clean up scopes
 		scopes.forEach(Resource::removeProperties);
 		// delete eval wrapper
 		evals.stream().filter(Objects::nonNull)

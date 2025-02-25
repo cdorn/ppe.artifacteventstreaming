@@ -179,7 +179,7 @@ public class BranchImpl  implements Branch, Runnable {
 			handlers.remove(handler);
 			configs.remove(pos+1); //RDF lists are 1-indexed!
 		}				
-		if (handlers.isEmpty() && isShutdown==false) { 
+		if (handlers.isEmpty() && !isShutdown) { 
 			log.debug(String.format("Shutting down inQueue thread for branch: %s", this.getBranchName()));
 			inQueue.add(PoisonPillCommit.POISONPILL);
 			// this stop dequeuing of commits, restarted upon anning one again

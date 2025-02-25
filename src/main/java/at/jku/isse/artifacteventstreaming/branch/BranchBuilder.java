@@ -70,7 +70,7 @@ public class BranchBuilder {
 	 * if not used, by default the 'main' branch will be created.
 	 */
 	public BranchBuilder setBranchLocalName(@NonNull String branchName) {
-		if (branchName.length() == 0) {
+		if (branchName.isEmpty()) {
 			throw new RuntimeException("Branchname cannot be empty");
 		}
 		this.branchName = branchName;
@@ -219,9 +219,9 @@ public class BranchBuilder {
 	
 	
 	private void addCommitHandlers(Branch branch) {
-		incomingCommitHandlers.stream().forEach(handler -> branch.appendIncomingCommitMerger(handler));
-		services.stream().forEach(service -> branch.appendBranchInternalCommitService(service));		
-		outgoingCommitDistributers.stream().forEach(service -> branch.appendOutgoingCommitDistributer(service));
+		incomingCommitHandlers.stream().forEach(branch::appendIncomingCommitMerger);
+		services.stream().forEach(branch::appendBranchInternalCommitService);		
+		outgoingCommitDistributers.stream().forEach(branch::appendOutgoingCommitDistributer);
 
 	}
 	

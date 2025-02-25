@@ -22,7 +22,8 @@ public class CommitJoiner {
 	public Commit join() {
 		if (commitsToJoin.isEmpty()) {
 			return null;
-		} if (commitsToJoin.size() == 1) {
+		} 
+		if (commitsToJoin.size() == 1) {
 			return commitsToJoin.get(0);
 		} else {			
 			List<ContainedStatement> addedStmts = new LinkedList<>();			

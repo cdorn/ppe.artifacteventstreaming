@@ -33,7 +33,6 @@ public class RDFRuleDefinitionImpl implements RDFRuleDefinition {
 								, @NonNull RuleSchemaProvider factory) {
 		var def = new RDFRuleDefinitionImpl(ruleDefinition, factory);
 		if (!def.reloadContextAndExpressionSuccessful()) {
-			def = null;
 			return null;
 		} else
 			return def;
@@ -47,7 +46,7 @@ public class RDFRuleDefinitionImpl implements RDFRuleDefinition {
 	
 	protected boolean reloadContextAndExpressionSuccessful() {
 		var expression = getRuleExpression();
-		if (expression == null || expression.length() == 0) {
+		if (expression == null || expression.isEmpty()) {
 			log.warn("Cannot load rule definition from Rule Definition "+ontObject.getURI()+" as it does not have a rule expression");			
 			return false;
 		} else {
@@ -84,6 +83,7 @@ public class RDFRuleDefinitionImpl implements RDFRuleDefinition {
 		return this.ontObject.as(OntClass.class);
 	}
 	
+	@SuppressWarnings("rawtypes")
 	private void generateSyntaxTree(@NonNull String expression) {		
 		
 		ArlType contextType = this.getContextType(); 
@@ -145,7 +145,7 @@ public class RDFRuleDefinitionImpl implements RDFRuleDefinition {
 	}
 
 	public boolean hasExpressionError() {
-		return !(getExpressionError() == null || getExpressionError().length() == 0);
+		return !(getExpressionError() == null || getExpressionError().isEmpty());
 	}
 
 	@Override

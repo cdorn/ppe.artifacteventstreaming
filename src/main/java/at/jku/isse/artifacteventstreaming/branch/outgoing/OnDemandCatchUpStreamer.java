@@ -8,8 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class OnDemandCatchUpStreamer { //implements CommitHandler {
 
-	private final Branch sourceBranch;
-	private final Branch destinationBranch;
+//	private final Branch sourceBranch;
+//	private final Branch destinationBranch;
 	
 	// reads persisted commits from source branch
 	// reads cache entry from desitantionbranch latest merge

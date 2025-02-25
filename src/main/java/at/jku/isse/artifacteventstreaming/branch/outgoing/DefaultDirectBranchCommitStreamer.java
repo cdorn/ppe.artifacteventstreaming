@@ -47,15 +47,15 @@ public class DefaultDirectBranchCommitStreamer extends AbstractHandlerBase {
 		BranchStateKeeper sourceState = sourceBranch.getStateKeeper();
 		if (lastForwardedCommit == null) {
 			// we never have forwarded anything, hence get the history and forward it
-			sourceState.getHistory().stream().forEach(commit -> handleCommit(commit));
+			sourceState.getHistory().stream().forEach(this::handleCommit);
 		} else {
 			if (lastForwardedCommit.equals(lastCommit.getCommitId())) {// all is up to date
-				return; 
+				
 			} else {
 			// get only any commits after the last forwarded one	
 				List<Commit> commitsToForward = sourceState.getCommitsForwardIncludingFrom(lastForwardedCommit);
 				if (commitsToForward.size() > 1) { 					
-					commitsToForward.subList(1, commitsToForward.size()).stream().forEach(commit -> handleCommit(commit));
+					commitsToForward.subList(1, commitsToForward.size()).stream().forEach(this::handleCommit);
 				} // else wont be reached as covered above
 			}
 		}

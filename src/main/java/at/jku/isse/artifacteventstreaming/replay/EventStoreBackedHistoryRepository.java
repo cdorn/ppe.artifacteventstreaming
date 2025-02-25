@@ -172,5 +172,4 @@ public class EventStoreBackedHistoryRepository implements PerResourceHistoryRepo
 			+ "    }\r\n"
 			+ "})";
 
-
 }

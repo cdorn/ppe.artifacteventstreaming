@@ -43,20 +43,17 @@ public class CompleteCommitMerger extends AbstractHandlerBase {
 	}
 	
 	public static ServiceFactory getServiceFactory() {
-		return new ServiceFactory() {
-			@Override
-			public CommitHandler getCommitHandlerInstanceFor(Branch branch, OntIndividual serviceConfigEntryPoint) {
-				// simple, as we dont have any config to do
-				String name;
-				Resource labelRes = serviceConfigEntryPoint.getPropertyResourceValue(RDFS.label);
-				if (labelRes == null) {
-					name = "MergerFor"+branch.getBranchName();
-				} else {
-					name = labelRes.asLiteral().getString();
-				}
-				return new CompleteCommitMerger(name, branch);
+		return (branch, serviceConfigEntryPoint) -> {
+			String name;
+			Resource labelRes = serviceConfigEntryPoint.getPropertyResourceValue(RDFS.label);
+			if (labelRes == null) {
+				name = "MergerFor"+branch.getBranchName();
+			} else {
+				name = labelRes.asLiteral().getString();
 			}
+			return new CompleteCommitMerger(name, branch);
 		};
+		
 	}
 
 	@Override
