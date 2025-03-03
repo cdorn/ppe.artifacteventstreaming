@@ -57,7 +57,7 @@ public class EventStreamingWrapperFactory {
 	
 	public void signalExternalSetupComplete() throws PersistenceException, BranchConfigurationException {
 		branch.getDataset().commit();
-		branch.getDataset().end();
+		branch.getDataset().end();	
 		var unfinishedCommit = stateKeeper.loadState();
 		branch.startCommitHandlers(unfinishedCommit); 		 
 	}

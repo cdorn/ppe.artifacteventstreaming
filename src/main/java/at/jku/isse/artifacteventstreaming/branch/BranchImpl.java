@@ -76,6 +76,11 @@ public class BranchImpl  implements Branch, Runnable {
 	
 	@Override
 	public void startCommitHandlers(Commit unfinishedPreliminaryCommit) throws BranchConfigurationException, PersistenceException {
+		// if we have collected any model changes until here, they would have come from setup logic that we do not persist in commits,
+		// hence we clear the statement aggregator first
+		stmtAggregator.retrieveAddedStatements();
+		stmtAggregator.retrieveRemovedStatements();
+		
 		if (unfinishedPreliminaryCommit != null) {
 			// continue aborted processing: e.g., single internal commit not yet completely processed by services (can only be one)
 			dataset.begin();

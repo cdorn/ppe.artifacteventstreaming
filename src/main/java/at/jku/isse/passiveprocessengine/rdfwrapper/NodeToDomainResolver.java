@@ -373,7 +373,7 @@ public class NodeToDomainResolver implements SchemaRegistry, InstanceRepository,
 	@Override
 	public Set<PPEInstance> getAllInstancesOfTypeOrSubtype(@NonNull PPEInstanceType arg0) {
 		if (arg0 instanceof RDFInstanceType type) {
-			var indivs = type.getType().individuals().toList(); 
+			var indivs = type.getType().individuals(false).toList(); 
 			return indivs.stream()
 			.map(el -> instanceIndex.computeIfAbsent(el.getURI(), k->new RDFInstance(el, type, this)))
 			.collect(Collectors.toSet());
