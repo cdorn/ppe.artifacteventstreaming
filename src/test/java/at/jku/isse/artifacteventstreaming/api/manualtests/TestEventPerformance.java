@@ -39,7 +39,7 @@ class TestEventPerformance {
 	void removeStream() {
 		try {
 			cacheFactory = new RocksDBFactory("./branchStatusTestCache/");
-			cacheFactory.resetCache();
+			cacheFactory.clearAndCloseCache();
 			branchCache = cacheFactory.getCache();
 			factory.getClient().getStreamMetadata(repoURI.toString()); //throws exception if doesn't exist, then we wont need to delete
 			factory.getClient().deleteStream(repoURI.toString(), DeleteStreamOptions.get()).get();

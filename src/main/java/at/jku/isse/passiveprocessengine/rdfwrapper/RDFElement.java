@@ -35,7 +35,7 @@ public abstract class RDFElement {
 
 
 	
-	private boolean isDeleted = false; // in case someone holds on to wrapper object
+	protected boolean isDeleted = false; // in case someone holds on to wrapper object
 
 	public String getId() {
 		if (element.isAnon())
@@ -60,11 +60,36 @@ public abstract class RDFElement {
 
 	public void markAsDeleted() {
 		this.isDeleted = true;
-		collectionPropertyCache.values().forEach(coll -> coll.delete()); // ensures that collections are completely removed and dont linger empty without owner in memory
+		removeCollectionProperties();
 		element.removeProperties();		
 		//remove from cache is done in childclasses
 	}
 
+	protected void removeCollectionProperties() {
+		// if collections are never accessed before then they wont be deleted via the collectionPropertyCache
+				// , hence we first populate all properties, not very efficient but should work for now
+				this.getInstanceType().getPropertyNamesIncludingSuperClasses().stream()
+					.map(prop -> getInstanceType().getPropertyType(prop))
+					.forEach(prop -> { 
+						switch(prop.getCardinality()) {
+						case LIST:
+							getTypedProperty(prop.getName(), List.class);
+							break;
+						case MAP:
+							getTypedProperty(prop.getName(), Map.class);
+							break;
+						case SET:
+							getTypedProperty(prop.getName(), Set.class);
+							break;
+						case SINGLE:
+							getTypedProperty(prop.getName(), Object.class);
+							break;
+						default:
+							break;
+						}
+					});
+				collectionPropertyCache.values().forEach(coll -> coll.delete()); // ensures that collections are completely removed and dont linger empty without owner in memory
+	}
 
 	public boolean isMarkedAsDeleted() {
 		//we dont mark anything deleted, we just delete (for now)

@@ -23,6 +23,7 @@ import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonDeserializer;
 import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonSerializer;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -167,7 +168,7 @@ public class StateKeeperImpl implements BranchStateUpdater {
 	}
 
 	@Override
-	public void afterForwarded(Commit commit) throws PersistenceException {
+	public void afterForwarded(@NonNull Commit commit) throws PersistenceException {
 		cache.put(LAST_FORWARDED_COMMIT+branchURI, commit.getCommitId()); 
 	}
 

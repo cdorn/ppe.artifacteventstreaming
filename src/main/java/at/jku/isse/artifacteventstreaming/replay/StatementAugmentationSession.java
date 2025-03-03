@@ -21,6 +21,7 @@ import org.apache.jena.vocabulary.RDFS;
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -112,8 +113,8 @@ public class StatementAugmentationSession {
 	
 	private Stream<Resource> getAnyTypeDeletion(List<StatementWrapper> wrappers) {
 		return wrappers.stream()
-			.filter(wrapper -> wrapper.op().equals(AES.OPTYPE.REMOVE))	
-			.map(StatementWrapper::stmt)
+			.filter(wrapper -> wrapper.getOp().equals(AES.OPTYPE.REMOVE))	
+			.map(StatementWrapper::getStmt)
 			.filter(stmt -> stmt.getPredicate().equals(RDF.type))
 			.map(Statement::getResource);
 	}
@@ -195,8 +196,8 @@ public class StatementAugmentationSession {
 	}
 	
 	private Optional<Resource> getFormerMapEntryOwner(List<StatementWrapper> stmts) {
-		return stmts.stream().filter(wrapper -> wrapper.op().equals(AES.OPTYPE.REMOVE))
-			.map(StatementWrapper::stmt)
+		return stmts.stream().filter(wrapper -> wrapper.getOp().equals(AES.OPTYPE.REMOVE))
+			.map(StatementWrapper::getStmt)
 			.filter(stmt -> stmt.getPredicate().equals(schemaUtils.getMapType().getContainerProperty().asProperty()))
 			.map(Statement::getResource)
 			.findAny();
@@ -261,9 +262,15 @@ public class StatementAugmentationSession {
 	}
 	
 	protected void wrapInContainmentStatements(List<StatementWrapper> stmts, Resource container, Property containmentProperty) {
-		stmts.stream().forEach(stmt -> stmt.stmt().augmentWithContainment(container, containmentProperty));
+		stmts.stream().forEach(stmt -> stmt.getStmt().augmentWithContainment(container, containmentProperty));
 	}
 
-	public static record StatementWrapper(ContainedStatement stmt, AES.OPTYPE op) {}
+	//public static record StatementWrapper(ContainedStatement stmt, AES.OPTYPE op) {}
+	
+	@Data
+	public static class StatementWrapper {
+		final ContainedStatement stmt;
+		final AES.OPTYPE op;
+	}
 	
 }

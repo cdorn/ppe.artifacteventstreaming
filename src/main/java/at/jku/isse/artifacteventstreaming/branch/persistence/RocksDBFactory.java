@@ -12,18 +12,17 @@ public class RocksDBFactory {
 
 	public static final String DEFAULT_STORAGEPATH = "./branchStatusCache/";
 	
-	private final Options options;
+	private Options options;
 	private RocksDB db;
 	private final String path;
 	
-	public RocksDBFactory(String path) throws RocksDBException {
+	public RocksDBFactory(String path)  {
 		this.path = path;
 		RocksDB.loadLibrary();
 		options = new Options().setCreateIfMissing(true) ;
-		db = RocksDB.open(options, getStoragePath())  ;
 	}
 	
-	public RocksDBFactory() throws RocksDBException {
+	public RocksDBFactory() {
 		this(DEFAULT_STORAGEPATH);
 	}
 	
@@ -31,7 +30,10 @@ public class RocksDBFactory {
 		return path;
 	}
 
-	public BranchStateCache getCache() {
+	public BranchStateCache getCache() throws RocksDBException {
+		if (db == null) {
+			db = RocksDB.open(options, getStoragePath())  ;
+		}
 		return new RocksDbCache(db);
 	}
 	
@@ -39,17 +41,19 @@ public class RocksDBFactory {
 	 * deletes the persisted cache from disk and invalidates any prior cache instances
 	 * @throws RocksDBException 
 	 */
-	public void resetCache() throws RocksDBException {
-		if (db != null && !db.isClosed()) {
-			db.close();
+	public void clearAndCloseCache() throws RocksDBException {
+		closeCache();
+		if (options != null) {
+			RocksDB.destroyDB(getStoragePath(), options);
+			db = null;
 		}
-		RocksDB.destroyDB(getStoragePath(), options);
-		db = RocksDB.open(options, getStoragePath())  ;
+		//db = RocksDB.open(options, getStoragePath())  ;
 	}
 	
 	public void closeCache() {
 		if (db != null && !db.isClosed()) {
 			db.close();
+			db = null;
 		}
 	}
 	

@@ -109,8 +109,8 @@ public class MetaModelSchemaTypes {
 	}
 
 	public Optional<Resource> getFormerListOwner(List<StatementWrapper> stmts) {
-		return stmts.stream().filter(wrapper -> wrapper.op().equals(AES.OPTYPE.REMOVE))
-			.map(StatementWrapper::stmt)
+		return stmts.stream().filter(wrapper -> wrapper.getOp().equals(AES.OPTYPE.REMOVE))
+			.map(StatementWrapper::getStmt)
 			.filter(stmt -> stmt.getPredicate().equals(getListType().getContainerProperty().asProperty()))
 			.map(Statement::getResource)
 			.findAny();

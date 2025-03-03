@@ -1,6 +1,7 @@
 package at.jku.isse.artifacteventstreaming.api;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.util.List;
@@ -15,8 +16,10 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rocksdb.RocksDBException;
 
 import com.eventstore.dbclient.DeleteStreamOptions;
 import com.fasterxml.jackson.databind.json.JsonMapper;
@@ -39,11 +42,15 @@ class TestEventsPersistanceOnlyBranchServices {
 	private static EventStoreFactory factory = new EventStoreFactory();
 	private static BranchStateCache branchCache;
 			
+	@BeforeAll
+	void setupCache() {
+		cacheFactory = new RocksDBFactory("./branchStatusTestCache/");
+	}
+	
 	@BeforeEach
-	void removeStream() {
+	void removeStream() throws RocksDBException {
 		try {
-			cacheFactory = new RocksDBFactory("./branchStatusTestCache/");
-			cacheFactory.resetCache();
+			cacheFactory.clearAndCloseCache();
 		}catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -125,7 +132,7 @@ class TestEventsPersistanceOnlyBranchServices {
 				.build();		
 		OntModel model2 = branch2.getModel();
 		stateKeeper2.loadState();
-		assert(stateKeeper2.getHistory().size() > 0);
+		assertTrue(stateKeeper2.getHistory().size() > 0);
 	}
 	
 	

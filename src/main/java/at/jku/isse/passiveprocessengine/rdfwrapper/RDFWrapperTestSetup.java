@@ -8,12 +8,14 @@ import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
+import org.rocksdb.RocksDBException;
 
 import com.eventstore.dbclient.DeleteStreamOptions;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
+import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory.EventStoreImpl;
 import at.jku.isse.artifacteventstreaming.branch.persistence.FilebasedDatasetLoader;
 import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
@@ -35,6 +37,7 @@ import lombok.Getter;
 @Getter
 public class RDFWrapperTestSetup implements DesignspaceTestSetup {
 
+	private static final String RDF_WRAPPER_TEST_CACHE_DIR = "./RDFWrapperTestCache/";
 	public static final URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/rdfwrapper");
 	public static final URI branchURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/rdfwrapper/testbranch");
 	
@@ -49,6 +52,7 @@ public class RDFWrapperTestSetup implements DesignspaceTestSetup {
 	private OntModel loadedModel = OntModelFactory.createModel();
 	
 	private RuleTriggerObserverFactory observerFactory;
+	private static RocksDBFactory cacheFactory = new RocksDBFactory(RDF_WRAPPER_TEST_CACHE_DIR);
 	
 	@Override
 	public void setup() {
@@ -95,18 +99,14 @@ public class RDFWrapperTestSetup implements DesignspaceTestSetup {
 
 	public void setupPersistedBranch() throws Exception {
 		
-		var cacheFactory = new RocksDBFactory("./RDFWrapperTestCache/");
 		var eventstoreFactory = new EventStoreFactory();
 		
 		var datasetLoader = new FilebasedDatasetLoader();
 		var modelDataset = datasetLoader.loadDataset(branchURI);
-		
 		if (modelDataset.isEmpty()) throw new RuntimeException(branchURI+" could not be loaded");
 		
 		modelDataset.get().begin(ReadWrite.WRITE);
-		
 		var stateKeeper = new StateKeeperImpl(branchURI, cacheFactory.getCache(), eventstoreFactory.getEventStore(branchURI.toString()));
-		
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		try {
@@ -154,16 +154,27 @@ public class RDFWrapperTestSetup implements DesignspaceTestSetup {
 
 	public static void resetPersistence() {		
 		try {
-			
-			
-			var cacheFactory = new RocksDBFactory("./branchStatusTestCache/");
-			cacheFactory.resetCache();
-			EventStoreFactory factory = new EventStoreFactory();
-			var branchCache = cacheFactory.getCache();
+			new FilebasedDatasetLoader().removeDataset(branchURI);
+			cacheFactory.clearAndCloseCache();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		EventStoreFactory factory = new EventStoreFactory();
+		try {
 			factory.getClient().getStreamMetadata(branchURI.toString()); //throws exception if doesn't exist, then we wont need to delete
 			factory.getClient().deleteStream(branchURI.toString(), DeleteStreamOptions.get()).get();
 		}catch (Exception e) {
 			// ignore
 		}
+		try {		
+			factory.getClient().getStreamMetadata(branchURI.toString()+EventStoreImpl.INCOMING_COMMITS_STREAM_POSTFIX); //throws exception if doesn't exist, then we wont need to delete
+			factory.getClient().deleteStream(branchURI.toString()+EventStoreImpl.INCOMING_COMMITS_STREAM_POSTFIX, DeleteStreamOptions.get()).get();
+		}catch (Exception e) {
+			// ignore
+		}
+	}
+	
+	public static void prepareForPersistedReloadWithoutDataRemoval() throws RocksDBException {
+		cacheFactory.closeCache();
 	}
 }
