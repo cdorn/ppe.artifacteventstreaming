@@ -26,7 +26,9 @@ import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.Met
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.PPEPropertyType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.PrimitiveTypesFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType;
 
 class TestRDFInstanceType {
 
@@ -35,6 +37,7 @@ class TestRDFInstanceType {
 	static NodeToDomainResolver resolver;
 	RDFInstanceType typeBase;
 	RDFInstanceType typeChild;
+	PrimitiveTypesFactory typeFactory;
 	
 	@BeforeEach
 	void setup() throws URISyntaxException, Exception {
@@ -44,6 +47,7 @@ class TestRDFInstanceType {
 				.setBranchLocalName("branch1")
 				.build();		
 		m = branch.getModel();
+		typeFactory = new PrimitiveTypesFactory(m);
 		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
 		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
 		var cardUtil = new MetaModelSchemaTypes(m, metaModel); // this adds list , mapentry and metaclass type
@@ -51,13 +55,13 @@ class TestRDFInstanceType {
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
 		typeBase = resolver.createNewInstanceType(NS+"artifact");
-		var succ = typeBase.createSinglePropertyType("priority", BuildInType.INTEGER);
+		var succ = typeBase.createSinglePropertyType("priority", typeFactory.getIntType());
 		assertNotNull(succ);		
 		typeChild = resolver.createNewInstanceType(NS+"issue", typeBase);		
-		succ = typeChild.createListPropertyType("listOfArt", typeBase);
+		succ = typeChild.createListPropertyType("listOfArt", typeBase.getAsPropertyType());
 		assertNotNull(succ);
 		
-		var prop = typeBase.createMapPropertyType(NS+"hasMap", BuildInType.STRING, typeChild);
+		var prop = typeBase.createMapPropertyType(NS+"hasMap", typeChild.getAsPropertyType());
 		//var prop = resolver.getCardinalityUtil().getMapType().addObjectMapProperty(typeBase.getType(), NS+"hasMap", typeChild.getType());
 		assertNotEquals(null, prop);
 	}
@@ -77,18 +81,18 @@ class TestRDFInstanceType {
 		assertTrue(names.contains("priority"));
 		assertTrue(names.contains("listOfArt"));
 		
-		PPEPropertyType listProp = typeChild.getPropertyType("listOfArt");
+		RDFPropertyType listProp = typeChild.getPropertyType("listOfArt");
 		assertNotEquals(null, listProp);
-		assertEquals(typeBase, listProp.getInstanceType());
+		assertEquals(typeBase, listProp.getValueType());
 		assertTrue(typeChild.hasPropertyType("priority"));
-		PPEPropertyType nonExistantProp = typeChild.getPropertyType("sdfdsfdsf");
+		RDFPropertyType nonExistantProp = typeChild.getPropertyType("sdfdsfdsf");
 		assertNull(nonExistantProp);
 		
 		//assertEquals(resolver.resolveToType(null)e.METATYPE, typeChild.getInstanceType());
 		assertEquals(null, typeBase.getParentType());
 		
 		var propType = typeBase.getPropertyType(NS+"hasMap");
-		assertEquals(typeChild, propType.getValueType());
+		assertEquals(typeChild.getAsPropertyType(), propType.getValueType());
 	}
 	
 	@Test

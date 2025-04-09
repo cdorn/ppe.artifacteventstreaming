@@ -1,4 +1,4 @@
-package at.jku.isse.passiveprocessengine.rdfwrapper;
+package at.jku.isse.passiveprocessengine.rdfwrapper.rule;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -27,15 +27,17 @@ import at.jku.isse.designspace.rule.arl.parser.ArlType;
 import at.jku.isse.designspace.rule.arl.repair.AlternativeRepairNode;
 import at.jku.isse.designspace.rule.arl.repair.RepairNode;
 import at.jku.isse.designspace.rule.arl.repair.RepairSingleValueOption;
-import at.jku.isse.passiveprocessengine.core.RuleEvaluationService;
-import at.jku.isse.passiveprocessengine.core.RuleEvaluationService.ResultEntry;
+import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEvaluationService.ResultEntry;
 import lombok.Getter;
 
-public class RuleEnabledResolver extends NodeToDomainResolver /*implements RuleEvaluationService*/ {
+public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEvaluationService {
 
-	final RepairService repairService;
-	@Getter final RuleSchemaProvider ruleSchema;	
-	final RuleRepositoryInspector inspector;
+	private final RepairService repairService;
+	@Getter private final RuleSchemaProvider ruleSchema;	
+	private final RuleRepositoryInspector inspector;
 	
 	public RuleEnabledResolver(Branch branch, RepairService repairService, RuleSchemaProvider ruleSchema, RuleRepository repo, MetaModelSchemaTypes cardinalityTypes) {
 		super(branch, repo, cardinalityTypes);
@@ -102,24 +104,16 @@ public class RuleEnabledResolver extends NodeToDomainResolver /*implements RuleE
 
 
 	public void setPropertyRepairable(RDFInstanceType type, String property, boolean isRepairable) {
-		if (type instanceof RDFInstanceType rdfType) {
-			rdfType.resolveToPropertyType(property).ifPresent(prop ->
-				repairService.setPropertyRepairable(rdfType.getType(), prop.getProperty().asProperty(), isRepairable));			
-		} else {
-			throw new RuntimeException("Expected RDFInstanceType but received "+type.getClass());
-		}
+		type.resolveToPropertyType(property).ifPresent(prop ->
+				repairService.setPropertyRepairable(type.getType(), prop.getProperty().asProperty(), isRepairable));			
 	}
 	
 
 	public boolean isPropertyRepairable(RDFInstanceType type, String property) {
-		if (type instanceof RDFInstanceType rdfType) {
-			var optProp = rdfType.resolveToPropertyType(property);
-			if (optProp.isPresent()) {			
-				return repairService.isPropertyRepairable(rdfType.getType(), optProp.get().getProperty().asProperty());
-			} else return false;
-		} else {
-			throw new RuntimeException("Expected RDFInstanceType but received "+type.getClass());
-		}
+		var optProp = type.resolveToPropertyType(property);
+		if (optProp.isPresent()) {			
+			return repairService.isPropertyRepairable(type.getType(), optProp.get().getProperty().asProperty());
+		} else return false;
 	}
 
 
@@ -148,7 +142,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver /*implements RuleE
 					Boolean result = ruleEval.getError() == null ? (boolean) ruleEval.getResult() : null;			
 					EvaluationNode rootEvalNode = ruleEval.getEvaluationTree(); 
 					RepairNode rootRepairNode = null;
-					if (!result) {
+					if (Boolean.FALSE.equals(result)) {
 						RepairNode repairTree = new AlternativeRepairNode(null);				
 						rootEvalNode.expression.generateRepairTree(repairTree,RepairSingleValueOption.TRUE, rootEvalNode);
 						repairTree.flattenRepairTree();
@@ -177,12 +171,10 @@ public class RuleEnabledResolver extends NodeToDomainResolver /*implements RuleE
 		return ruleDefImpl;
 	}
 
-e
-	public Set<ResultEntry> getEvaluationResults(RDFRuleDefinitionWrapper rule) throws Exception {
-		if (rule instanceof RDFRuleDefinitionWrapper wrapper) {
-			var def = wrapper.getRuleDef().getRuleDefinition();
-			var evals =  ruleRepo.getEvaluations();
-			return def.individuals()
+	public Set<ResultEntry> getEvaluationResults(RDFRuleDefinitionWrapper rule) {
+		var def = rule.getRuleDef().getRuleDefinition();
+		var evals =  ruleRepo.getEvaluations();
+		return def.individuals()
 				.map(eval -> evals.get(eval.getURI()))
 				.filter(Objects::nonNull)
 				.map(evalWrapper -> {
@@ -195,39 +187,26 @@ e
 					return new ResultEntry(ctxWrapper, result, error, evalRoot, repairRoot);
 				})
 				.collect(Collectors.toSet());
-		} else 
-			throw new RuntimeException("Expected RDFPPERuleDefinitionWrapperImpl but received "+rule.getClass());
 	}
 
-
-	public Map<RDFRuleDefinitionWrapper, Set<ResultEntry>> getEvaluationResultsWithInstanceInScope(RDFInstance instance)
-			throws Exception {
-		if (instance instanceof RDFInstance rdfEl) {
-			Map<RDFRuleDefinitionWrapper, Set<ResultEntry>> resultMap = new HashMap<>();
-			var indiv = rdfEl.getInstance();
-			var evals =  ruleRepo.getEvaluations();
-			inspector.getEvalWrappersFromScopes(indiv).stream()
-				.map(evalObj -> evals.get(evalObj.getURI()))
-				.forEach(evalWrapper -> {
-					var result = evalWrapper.isConsistent();
-					var error = evalWrapper.getEvaluationError();
-					var ctx = evalWrapper.getContextInstance();
-					var ctxWrapper = instanceIndex.computeIfAbsent(ctx.getURI(), k -> new RDFInstance(ctx, null, this));
-					var evalRoot = evalWrapper.getDelegate().getEvaluationTree();
-					var repairRoot = evalWrapper.getDelegate().getRepairTree();
-					var entry = new ResultEntry(ctxWrapper, result, error, evalRoot, repairRoot);
-					var ruleDef = evalWrapper.getDefinition();
-					var defWrapper = typeIndex.computeIfAbsent(ruleDef.getRuleDefinition(), k-> new RDFRuleDefinitionWrapper(ruleDef, this));
-					resultMap.computeIfAbsent(defWrapper, k -> new HashSet<ResultEntry>()).add(entry);
-				});
-			return resultMap;
-		} else {
-			throw new RuntimeException("Expected RDFElement but received "+instance.getClass());
-		}
-	}
-
-
-
-	
-	
+	public Map<RDFRuleDefinitionWrapper, Set<ResultEntry>> getEvaluationResultsWithInstanceInScope(RDFInstance instance) {
+		Map<RDFRuleDefinitionWrapper, Set<ResultEntry>> resultMap = new HashMap<>();
+		var indiv = instance.getInstance();
+		var evals =  ruleRepo.getEvaluations();
+		inspector.getEvalWrappersFromScopes(indiv).stream()
+		.map(evalObj -> evals.get(evalObj.getURI()))
+		.forEach(evalWrapper -> {
+			var result = evalWrapper.isConsistent();
+			var error = evalWrapper.getEvaluationError();
+			var ctx = evalWrapper.getContextInstance();
+			var ctxWrapper = instanceIndex.computeIfAbsent(ctx.getURI(), k -> new RDFInstance(ctx, null, this));
+			var evalRoot = evalWrapper.getDelegate().getEvaluationTree();
+			var repairRoot = evalWrapper.getDelegate().getRepairTree();
+			var entry = new ResultEntry(ctxWrapper, result, error, evalRoot, repairRoot);
+			var ruleDef = evalWrapper.getDefinition();
+			RDFRuleDefinitionWrapper defWrapper = (RDFRuleDefinitionWrapper)typeIndex.computeIfAbsent(ruleDef.getRuleDefinition(), k-> new RDFRuleDefinitionWrapper(ruleDef, this));
+			resultMap.computeIfAbsent(defWrapper, k -> new HashSet<ResultEntry>()).add(entry);
+		});
+		return resultMap;
+	}	
 }

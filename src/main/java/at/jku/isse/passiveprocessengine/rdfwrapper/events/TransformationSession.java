@@ -1,4 +1,4 @@
-package at.jku.isse.passiveprocessengine.rdfwrapper;
+package at.jku.isse.passiveprocessengine.rdfwrapper.events;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -21,8 +21,10 @@ import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.passiveprocessengine.core.PPEInstance;
-import at.jku.isse.passiveprocessengine.core.PropertyChange;
-import at.jku.isse.passiveprocessengine.core.PropertyChange.Update;
+import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFElement;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
+import at.jku.isse.passiveprocessengine.rdfwrapper.events.PropertyChange.Update;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -104,7 +106,7 @@ public class TransformationSession extends StatementAugmentationSession {
 	@Override
 	protected void handleMapEntryChange(List<StatementWrapper> stmts, Property prop, Resource owner) {
 		super.handleMapEntryChange(stmts, prop, owner);
-		PPEInstance changeSubject = (PPEInstance) resolver.resolveToRDFElement(owner);
+		var changeSubject = resolver.resolveToRDFElement(owner);
 		
 		var keyOpt = findFirstStatementAboutProperty(stmts, resolver.getCardinalityUtil().getMapType().getKeyProperty().asProperty());
 		var litValueOpt = findFirstStatementAboutProperty(stmts, resolver.getCardinalityUtil().getMapType().getLiteralValueProperty().asProperty());
@@ -194,7 +196,7 @@ public class TransformationSession extends StatementAugmentationSession {
 					var element = inspector.getElementFromScope(scope); // from scope object to owner instance of that scope
 					if (element != null) {
 						var subject = resolver.convertFromRDF(element);
-						if (subject instanceof PPEInstance instSubject) {
+						if (subject instanceof RDFElement instSubject) {
 							if (wrapper.getOp().equals(AES.OPTYPE.ADD)) {
 								return new PropertyChange.Add(propName, instSubject, wrapper.getStmt().getResource().getLocalName());
 							} else {

@@ -112,7 +112,7 @@ public class RDFInstanceType extends RDFElement {
 	}
 
 
-	public RDFPropertyType createMapPropertyType(String name, RDFInstanceType ignored, PrimitiveOrClassType valueType) {
+	public RDFPropertyType createMapPropertyType(String name, PrimitiveOrClassType valueType) {
 		if (valueType.isPrimitiveType()) {
 			var prop = resolver.getCardinalityUtil().getMapType().addLiteralMapProperty(this.type, makePropertyURI(name), valueType.getPrimitiveType());
 			if (prop == null) { 
@@ -220,15 +220,15 @@ public class RDFInstanceType extends RDFElement {
 	}
 
 	public boolean isOfTypeOrAnySubtype(RDFInstanceType instanceToCompareType) {
-		if (instanceToCompareType instanceof RDFInstanceType rdfType) {
-			if (this.getId().equals(rdfType.getId())) {
-					return true;
-			} else {
-				return type.asNamed().hasSuperClass(rdfType.getType(), false);
-			}
+		if (this.getId().equals(instanceToCompareType.getId())) {
+			return true;
 		} else {
-			return false;
+			return type.asNamed().hasSuperClass(instanceToCompareType.getType(), false);
 		}
+	}
+	
+	public PrimitiveOrClassType getAsPropertyType() {
+		return new PrimitiveOrClassType(this.type);
 	}
 
 	@Override

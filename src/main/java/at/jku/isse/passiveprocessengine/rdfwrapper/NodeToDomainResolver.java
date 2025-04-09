@@ -40,12 +40,15 @@ import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.InstanceRepository;
 import at.jku.isse.passiveprocessengine.core.RuleDefinition;
 import at.jku.isse.passiveprocessengine.core.SchemaRegistry;
+import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RDFRuleDefinitionWrapper;
+import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RDFRuleResultWrapper;
+import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEnabledResolver;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class NodeToDomainResolver /*implements SchemaRegistry, InstanceRepository, AbstractionMapper */ {
+public class NodeToDomainResolver /*implements SchemaRegistry, InstanceRepository */ {
 
 	public static final String BASE_NS = "http://isse.jku.at/artifactstreaming/rdfwrapper#";
 	public static final String propertyMetadataPredicate = BASE_NS+"propertyMetadata";
@@ -220,9 +223,7 @@ public class NodeToDomainResolver /*implements SchemaRegistry, InstanceRepositor
 					log.warn("provided null superclass, ignoring");
 					continue;
 				}
-				if ( !BuildInType.isAtomicType(superClass)) {
-					ontClass.addSuperClass(superClass.getType());
-				}
+				ontClass.addSuperClass(superClass.getType());
 			}
 			var type = new RDFInstanceType(ontClass, this);
 			type.cacheSuperProperties();
@@ -284,14 +285,14 @@ public class NodeToDomainResolver /*implements SchemaRegistry, InstanceRepositor
 	}
 	
 
-	public RuleDefinition getRuleByNameAndContext(String arg0, RDFInstanceType arg1) {
+	public RDFRuleDefinitionWrapper getRuleByNameAndContext(String arg0, RDFInstanceType arg1) {
 		// we ignore type and just use the name as a URI
 		if (!isValidURL(arg0)) {
 			arg0 = BASE_NS+arg0;
 		}	
 		var def = ruleRepo.findRuleDefinitionForURI(arg0);
 		if (def != null) {
-			return (RuleDefinition) typeIndex.computeIfAbsent(def.getRuleDefinition(), k-> new RDFRuleDefinitionWrapper(def, (RuleEnabledResolver) this));
+			return (RDFRuleDefinitionWrapper) typeIndex.computeIfAbsent(def.getRuleDefinition(), k-> new RDFRuleDefinitionWrapper(def, (RuleEnabledResolver) this));
 		} else {
 			return null;
 		}
@@ -326,7 +327,7 @@ public class NodeToDomainResolver /*implements SchemaRegistry, InstanceRepositor
 		
 	}
 
-	public RDFInstance createInstance(@NonNull String id, @NonNull RDFInstanceType arg1) {
+	public RDFInstance createInstance(@NonNull String id, @NonNull RDFInstanceType type) {
 		boolean wasValidId = true;
 		String uri;
 		if (!isValidURL(id)) {
@@ -335,13 +336,9 @@ public class NodeToDomainResolver /*implements SchemaRegistry, InstanceRepositor
 		} else {
 			uri = id;
 		}
-		if (arg1 instanceof RDFInstanceType type) {
-			var individual = model.createIndividual(uri, type.getType());
-			individual.addLabel(wasValidId ? individual.getLocalName() : id);
-			return instanceIndex.computeIfAbsent(individual.getURI(), k -> new RDFInstance(individual, type, this));
-		}
-		else 
-			throw new RuntimeException("RDFInstance object not a RDFInstance but "+arg1.getClass());
+		var individual = model.createIndividual(uri, type.getType());
+		individual.addLabel(wasValidId ? individual.getLocalName() : id);
+		return instanceIndex.computeIfAbsent(individual.getURI(), k -> new RDFInstance(individual, type, this));
 	}
 
 	/**
@@ -406,7 +403,7 @@ public class NodeToDomainResolver /*implements SchemaRegistry, InstanceRepositor
 		return model;
 	}
 
-	protected Object convertFromRDF(RDFNode possiblyNull) {
+	public Object convertFromRDF(RDFNode possiblyNull) {
 		if (possiblyNull == null)
 			return null;
 		if (possiblyNull.isLiteral()) {
@@ -429,11 +426,8 @@ public class NodeToDomainResolver /*implements SchemaRegistry, InstanceRepositor
 	}
 
 
-	public OntClass mapProcessDomainInstanceTypeToOntClass(RDFInstanceType ppeType) {
-		if (ppeType instanceof RDFInstanceType rdfType) {
-			return rdfType.getType();
-		}
-		else throw new RuntimeException("Expected RDFInstanceType but received "+ppeType.getClass().toString());
+	public OntClass mapProcessDomainInstanceTypeToOntClass(RDFInstanceType type) {
+		return type.getType();
 	}
 	
 	public static boolean isValidURL(String url)  {

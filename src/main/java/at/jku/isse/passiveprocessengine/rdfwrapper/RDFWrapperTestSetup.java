@@ -26,12 +26,15 @@ import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.designspace.artifactconnector.core.repository.CoreTypeFactory;
-import at.jku.isse.passiveprocessengine.core.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.core.DesignspaceTestSetup;
 import at.jku.isse.passiveprocessengine.core.InstanceRepository;
 import at.jku.isse.passiveprocessengine.core.RepairTreeProvider;
-import at.jku.isse.passiveprocessengine.core.RuleEvaluationService;
 import at.jku.isse.passiveprocessengine.core.SchemaRegistry;
+import at.jku.isse.passiveprocessengine.rdfwrapper.events.ChangeEventTransformer;
+import at.jku.isse.passiveprocessengine.rdfwrapper.events.CommitChangeEventTransformer;
+import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RDFRepairTreeProvider;
+import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEnabledResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEvaluationService;
 import lombok.Getter;
 
 @Getter

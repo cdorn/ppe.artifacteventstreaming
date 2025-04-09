@@ -166,14 +166,14 @@ public abstract class RDFElement {
 		}
 	}
 	
-	protected Optional<RDFPropertyType> resolveToPropertyType(String property) {
+	public Optional<RDFPropertyType> resolveToPropertyType(String property) {
 		//property = makePropertyURI(property);
 		
 //		if (this instanceof RDFInstanceType rdfType)
 //			return Optional.ofNullable( (RDFPropertyType) rdfType.getPropertyType(property));		
 		var ppeType = getInstanceType();		
 		if (ppeType != null) {						
-			return Optional.ofNullable( (RDFPropertyType) ppeType.getPropertyType(property));
+			return Optional.ofNullable( ppeType.getPropertyType(property));
 		} else
 			return Optional.empty();
 	}

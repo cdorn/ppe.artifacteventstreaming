@@ -1,4 +1,4 @@
-package at.jku.isse.passiveprocessengine.rdfwrapper;
+package at.jku.isse.passiveprocessengine.rdfwrapper.events;
 
 import org.apache.jena.ontapi.model.OntModel;
 
@@ -7,14 +7,13 @@ import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
 import at.jku.isse.artifacteventstreaming.replay.CommitContainmentAugmenter;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
-import at.jku.isse.passiveprocessengine.core.ChangeEventTransformer;
-import at.jku.isse.passiveprocessengine.core.ProcessInstanceChangeListener;
+import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class CommitChangeEventTransformer extends CommitContainmentAugmenter implements ChangeEventTransformer, IncrementalCommitHandler {
 
-	ProcessInstanceChangeListener eventSink;
+	ChangeListener eventSink;
 	NodeToDomainResolver resolver;
 	RuleSchemaProvider ruleSchema;
 	
@@ -30,7 +29,7 @@ public class CommitChangeEventTransformer extends CommitContainmentAugmenter imp
 	}
 	
 	@Override
-	public void registerWithWorkspace(ProcessInstanceChangeListener eventSink) {
+	public void registerWithBranch(ChangeListener eventSink) {
 		this.eventSink = eventSink;		
 	}
 	

@@ -30,6 +30,7 @@ import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.Met
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.CARDINALITIES;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.PrimitiveTypesFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType;
 
@@ -45,15 +46,17 @@ class TestRDFPropertyType {
 	static MapResourceType mapFactory;
 	static ListResourceType listFactory;
 	static SingleResourceType singleFactory;
+	PrimitiveTypesFactory typeFactory;
 	
 	@BeforeEach
-	void setup() throws URISyntaxException, Exception {
+	void setup() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);			
 		BranchImpl branch = (BranchImpl) new BranchBuilder(new URI(NS+"repo"), repoDataset, repoModel )	
 				.setBranchLocalName("branch1")
 				.build();		
-		m = branch.getModel();		
+		m = branch.getModel();	
+		typeFactory = new PrimitiveTypesFactory(m);
 		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
 		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
 		var cardUtil = new MetaModelSchemaTypes(m, metaModel);
@@ -78,7 +81,7 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.LIST, propType.getCardinality());
-		assertEquals("other", propType.getValueType().getName());
+		assertEquals("other", propType.getValueType().toString());
 		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
 	}
 	
@@ -90,7 +93,7 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.MAP, propType.getCardinality());
-		assertEquals("other", propType.getValueType().getName());
+		assertEquals("other", propType.getValueType().toString());
 	}
 
 	@Test
@@ -103,13 +106,13 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SET, propType.getCardinality());
-		assertEquals("other", propType.getValueType().getName());
+		assertEquals("other", propType.getValueType().toString());
 	}
 	
 	@Test
 	void testDetectSingleProperty() {
 		String propURI = NS+"hasSet";
-		var propType = ppeArtifact.createSinglePropertyType(propURI, ppeOther);
+		var propType = ppeArtifact.createSinglePropertyType(propURI, ppeOther.getAsPropertyType());
 //		var prop = m.createObjectProperty(propURI);
 //		prop.addRange(otherType);
 //		prop.addDomain(artifactType);
@@ -121,7 +124,7 @@ class TestRDFPropertyType {
 		artifactType.superClasses().forEach(superType -> System.out.println(superType));
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
-		assertEquals("other", propType.getValueType().getName());
+		assertEquals("other", propType.getValueType().toString());
 	}
 	
 	@Test
@@ -132,7 +135,7 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.LIST, propType.getCardinality());
-		assertEquals("FLOAT", propType.getValueType().getName());
+		assertEquals("FLOAT", propType.getValueType().toString());
 	}
 	
 	@Test
@@ -143,7 +146,7 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.MAP, propType.getCardinality());
-		assertEquals("STRING", propType.getValueType().getName());
+		assertEquals("STRING", propType.getValueType().toString());
 	}
 
 	@Test
@@ -156,13 +159,13 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SET, propType.getCardinality());
-		assertEquals("STRING", propType.getValueType().getName());
+		assertEquals("STRING", propType.getValueType().toString());
 	}
 	
 	@Test
 	void testDetectSingleDataProperty() {
 		String propURI = NS+"hasSet";
-		var propType = ppeArtifact.createSinglePropertyType(propURI, BuildInType.STRING);
+		var propType = ppeArtifact.createSinglePropertyType(propURI, typeFactory.getStringType());
 //		var prop = m.createDataProperty(propURI);
 //		prop.addRange(m.getDatatype(XSD.xstring));
 //		prop.addDomain(artifactType);
@@ -172,7 +175,7 @@ class TestRDFPropertyType {
 //		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 //		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
-		assertEquals("STRING", propType.getValueType().getName());
+		assertEquals("STRING", propType.getValueType().toString());
 	}
 	
 	@Test
@@ -183,7 +186,7 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.MAP, propType.getCardinality());
-		assertEquals(BuildInType.INTEGER.getName(), propType.getValueType().getName());
+		assertEquals(typeFactory.getIntType().toString(), propType.getValueType().toString());
 	}
 
 	@Test
@@ -196,7 +199,7 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SET, propType.getCardinality());
-		assertEquals(BuildInType.INTEGER.getName(), propType.getValueType().getName());
+		assertEquals(typeFactory.getIntType().toString(), propType.getValueType().toString());
 	}
 	
 	@Test
@@ -209,13 +212,13 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SET, propType.getCardinality());
-		assertEquals(BuildInType.STRING.getName(), propType.getValueType().getName());
+		assertEquals(typeFactory.getStringType().toString(), propType.getValueType().toString());
 	}
 	
 	@Test
 	void testDetectSingleIntegerProperty() {
 		String propURI = NS+"hasSet";
-		var propType = ppeArtifact.createSinglePropertyType(propURI, BuildInType.INTEGER);
+		var propType = ppeArtifact.createSinglePropertyType(propURI, typeFactory.getIntType());
 //		var prop = m.createDataProperty(propURI);
 //		prop.addRange(m.getDatatype(XSD.xlong));
 //		prop.addDomain(artifactType);
@@ -225,13 +228,13 @@ class TestRDFPropertyType {
 //		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 //		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
-		assertEquals(BuildInType.INTEGER.getName(), propType.getValueType().getName());
+		assertEquals(typeFactory.getIntType().toString(), propType.getValueType().toString());
 	}
 	
 	@Test
 	void testDetectSingleBooleanProperty() {
 		String propURI = NS+"hasSet";
-		var propType = ppeArtifact.createSinglePropertyType(propURI, BuildInType.BOOLEAN);
+		var propType = ppeArtifact.createSinglePropertyType(propURI, typeFactory.getBooleanType());
 //		var prop = m.createDataProperty(propURI);
 //		prop.addRange(m.getDatatype(XSD.xboolean));
 //		prop.addDomain(artifactType);
@@ -241,13 +244,13 @@ class TestRDFPropertyType {
 //		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
-		assertEquals(BuildInType.BOOLEAN.getName(), propType.getValueType().getName());
+		assertEquals(typeFactory.getBooleanType().toString(), propType.getValueType().toString());
 	}
 	
 	@Test
 	void testDetectSingleFloatProperty() {
 		String propURI = NS+"hasSet";		
-		var propType = ppeArtifact.createSinglePropertyType(propURI, BuildInType.FLOAT);
+		var propType = ppeArtifact.createSinglePropertyType(propURI, typeFactory.getFloatType());
 //		var prop = m.createDataProperty(propURI);
 //		prop.addRange(m.getDatatype(XSD.xfloat));
 //		prop.addDomain(artifactType);
@@ -258,7 +261,7 @@ class TestRDFPropertyType {
 //		
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
-		assertEquals(BuildInType.FLOAT.getName(), propType.getValueType().getName());
+		assertEquals(typeFactory.getFloatType().toString(), propType.getValueType().toString());
 	}
 	
 //	@Test
@@ -274,7 +277,7 @@ class TestRDFPropertyType {
 ////		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 //		
 //		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
-//		assertEquals(BuildInType.FLOAT.getName(), propType.getInstanceType().getName());
+//		assertEquals(BuildInType.FLOAT.toString(), propType.getInstanceType().toString());
 //	}
 	
 //	@Test
@@ -289,13 +292,13 @@ class TestRDFPropertyType {
 //		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 //		
 //		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
-//		assertEquals(BuildInType.STRING.getName(), propType.getInstanceType().getName());
+//		assertEquals(BuildInType.STRING.toString(), propType.getInstanceType().toString());
 //	}
 	
 	@Test
 	void testDetectSingleUnsupportedDateProperty() {
 		String propURI = NS+"hasSet";
-		var propType = ppeArtifact.createSinglePropertyType(propURI, BuildInType.DATE);
+		var propType = ppeArtifact.createSinglePropertyType(propURI, typeFactory.getDateType());
 //		var prop = m.createDataProperty(propURI);
 //		prop.addRange(m.getDatatype(XSD.date));
 //		prop.addDomain(artifactType);
@@ -305,6 +308,6 @@ class TestRDFPropertyType {
 //		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
-		assertEquals(BuildInType.STRING.getName(), propType.getValueType().getName());
+		assertEquals(typeFactory.getDateType().toString(), propType.getValueType().toString());
 	}
 }
