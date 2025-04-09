@@ -27,7 +27,7 @@ public abstract class RDFElement {
 
 	@Getter
 	protected final OntObject element;
-	protected PPEInstanceType instanceType;
+	protected RDFInstanceType instanceType;
 	protected final NodeToDomainResolver resolver;
 	
 	// caches are filled as they are accessed
@@ -58,7 +58,7 @@ public abstract class RDFElement {
 		element.addLabel(Objects.toString(name));		
 	}
 
-	public void markAsDeleted() {
+	public void delete() {
 		this.isDeleted = true;
 		removeCollectionProperties();
 		element.removeProperties();		
@@ -117,34 +117,8 @@ public abstract class RDFElement {
 	}
 	
 
-	public abstract PPEInstanceType getInstanceType();
-	//{
-//		if (instanceType == null && element.canAs(OntIndividual.class)) {	
-//			var optType = resolveInstanceType();
-//			if (optType.isPresent()) {
-//				instanceType = resolver.resolveToType(optType.get());
-//			} else {
-//				throw new RuntimeException("Instance "+this.getId()+" has no instance type");
-//			}			
-//		}
-//		return instanceType;
-//	}
+	public abstract RDFInstanceType getInstanceType();
 	
-//	private Optional<OntClass> resolveInstanceType() {
-//		return element.as(OntIndividual.class).classes(true).findFirst();
-//		//					.filter(superClass -> !(superClass instanceof CardinalityRestriction))
-//		//					.filter(superClass -> !(superClass instanceof ValueRestriction))	
-//		
-//	}
-	
-//	public static Set<OntClass> getSuperTypesAndSuperclasses(OntIndividual ind) {
-//		var types = ind.classes(true);		// perhaps replace this with RDFS Reasoner if this is a performance problem here
-//		var superClasses = ind.classes(true).flatMap(type -> type.superClasses()
-//											.filter(superClass -> !(superClass instanceof CardinalityRestriction))
-//											.filter(superClass -> !(superClass instanceof ValueRestriction))
-//											  );
-//		return Stream.concat(types, superClasses).collect(Collectors.toSet());
-//	}
 
 	/**
 	 * Expects fully qualified named properties , i.e., as they are used at the RDF layer
@@ -231,24 +205,24 @@ public abstract class RDFElement {
 	
 	private Object getPropertyAsMap(@NonNull RDFPropertyType prop) {
 		var named = (OntObjectProperty.Named) prop.getProperty();
-		return collectionPropertyCache.computeIfAbsent(prop.getId(),  k -> new MapWrapper(resolver.resolveTypeToClassOrDatarange(prop.getInstanceType()), 
+		return collectionPropertyCache.computeIfAbsent(prop.getId(),  k -> new MapWrapper(prop.getValueType().getAsPrimitiveOrClass(), 
 																							resolver, 
 																							MapResource.asUnsafeMapResource(this.element, named, resolver.getCardinalityUtil().getMapType()))); 					
 	}
 
 	private Object getPropertyAsList(@NonNull RDFPropertyType prop) {
 		var named = (OntObjectProperty.Named) prop.getProperty();
-		return collectionPropertyCache.computeIfAbsent(prop.getId(),  k -> new ListWrapper(this.element, named, resolver, resolver.resolveTypeToClassOrDatarange(prop.getInstanceType())));
+		return collectionPropertyCache.computeIfAbsent(prop.getId(),  k -> new ListWrapper(this.element, named, resolver, prop.getValueType().getAsPrimitiveOrClass()));
 	}
 	
 	private Object getPropertyAsSet(@NonNull RDFPropertyType prop) {
-		return collectionPropertyCache.computeIfAbsent(prop.getId(),  k -> new SetWrapper(this.element, prop.getProperty(), resolver, resolver.resolveTypeToClassOrDatarange(prop.getInstanceType())));
+		return collectionPropertyCache.computeIfAbsent(prop.getId(),  k -> new SetWrapper(this.element, prop.getProperty(), resolver, prop.getValueType().getAsPrimitiveOrClass()));
 	}
 
 	private Object getSingleProperty(@NonNull RDFPropertyType prop) {
 		var stmt = element.getProperty(prop.getProperty().asProperty());
 		if (stmt == null) return null; // when there is no value available yet.
-		if (BuildInType.isAtomicType(prop.getInstanceType()) ) { // then a  literal
+		if (prop.getValueType().isPrimitiveType() ) { // then a  literal
 			return stmt.getLiteral().getValue();
 		} else { // a resource
 			return resolver.resolveToRDFElement(stmt.getResource());

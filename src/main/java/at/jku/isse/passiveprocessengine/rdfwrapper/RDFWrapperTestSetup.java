@@ -82,7 +82,7 @@ public class RDFWrapperTestSetup implements DesignspaceTestSetup {
 			
 			instanceRepository = resolver;
 			schemaRegistry = resolver;
-			repairTreeProvider = new RDFRepairTreeProvider(repairService, observer.getRepo(), resolver, observer); 			
+			repairTreeProvider = new RDFRepairTreeProvider(repairService, observer.getRepo()); 			
 			ruleEvaluationService = resolver;
 			changeEventTransformer = changeTransformer;
 			coreTypeFactory = new CoreTypeFactory(resolver, resolver);
@@ -141,7 +141,7 @@ public class RDFWrapperTestSetup implements DesignspaceTestSetup {
 			
 			instanceRepository = resolver;
 			schemaRegistry = resolver;
-			repairTreeProvider = new RDFRepairTreeProvider(repairService, observer.getRepo(), resolver, observer);
+			repairTreeProvider = new RDFRepairTreeProvider(repairService, observer.getRepo());
 			System.out.println("Size after repair tree build: "+model1.size());
 			ruleEvaluationService = resolver;
 			changeEventTransformer = changeTransformer;

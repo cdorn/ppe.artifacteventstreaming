@@ -51,6 +51,16 @@ public class MetaModelSchemaTypes {
 	}
 	
 	/**
+	 * 
+	 * @param model  pre-filled model that already contains metamodelontology
+	 */
+	public MetaModelSchemaTypes(OntModel model) {									
+		singleType = new SingleResourceType(model);
+		mapType = new MapResourceType(model, singleType); 
+		listType = new ListResourceType(model, singleType); 		
+	}
+	
+	/**
 	 * @param ontClass and any of its subclasses to delete including all properties that were explicitly 
 	 * defined to be in the domain of these classes, 
 	 * do not use if an affected property is in the domain of multiple classes  

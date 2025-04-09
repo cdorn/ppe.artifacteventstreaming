@@ -78,7 +78,7 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.LIST, propType.getCardinality());
-		assertEquals("other", propType.getInstanceType().getName());
+		assertEquals("other", propType.getValueType().getName());
 		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
 	}
 	
@@ -90,7 +90,7 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.MAP, propType.getCardinality());
-		assertEquals("other", propType.getInstanceType().getName());
+		assertEquals("other", propType.getValueType().getName());
 	}
 
 	@Test
@@ -103,7 +103,7 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SET, propType.getCardinality());
-		assertEquals("other", propType.getInstanceType().getName());
+		assertEquals("other", propType.getValueType().getName());
 	}
 	
 	@Test
@@ -121,7 +121,7 @@ class TestRDFPropertyType {
 		artifactType.superClasses().forEach(superType -> System.out.println(superType));
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
-		assertEquals("other", propType.getInstanceType().getName());
+		assertEquals("other", propType.getValueType().getName());
 	}
 	
 	@Test
@@ -132,7 +132,7 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.LIST, propType.getCardinality());
-		assertEquals("FLOAT", propType.getInstanceType().getName());
+		assertEquals("FLOAT", propType.getValueType().getName());
 	}
 	
 	@Test
@@ -143,7 +143,7 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.MAP, propType.getCardinality());
-		assertEquals("STRING", propType.getInstanceType().getName());
+		assertEquals("STRING", propType.getValueType().getName());
 	}
 
 	@Test
@@ -156,7 +156,7 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SET, propType.getCardinality());
-		assertEquals("STRING", propType.getInstanceType().getName());
+		assertEquals("STRING", propType.getValueType().getName());
 	}
 	
 	@Test
@@ -172,7 +172,7 @@ class TestRDFPropertyType {
 //		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 //		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
-		assertEquals("STRING", propType.getInstanceType().getName());
+		assertEquals("STRING", propType.getValueType().getName());
 	}
 	
 	@Test
@@ -183,7 +183,7 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.MAP, propType.getCardinality());
-		assertEquals(BuildInType.INTEGER.getName(), propType.getInstanceType().getName());
+		assertEquals(BuildInType.INTEGER.getName(), propType.getValueType().getName());
 	}
 
 	@Test
@@ -196,7 +196,7 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SET, propType.getCardinality());
-		assertEquals(BuildInType.INTEGER.getName(), propType.getInstanceType().getName());
+		assertEquals(BuildInType.INTEGER.getName(), propType.getValueType().getName());
 	}
 	
 	@Test
@@ -209,7 +209,7 @@ class TestRDFPropertyType {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SET, propType.getCardinality());
-		assertEquals(BuildInType.STRING.getName(), propType.getInstanceType().getName());
+		assertEquals(BuildInType.STRING.getName(), propType.getValueType().getName());
 	}
 	
 	@Test
@@ -225,7 +225,7 @@ class TestRDFPropertyType {
 //		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 //		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
-		assertEquals(BuildInType.INTEGER.getName(), propType.getInstanceType().getName());
+		assertEquals(BuildInType.INTEGER.getName(), propType.getValueType().getName());
 	}
 	
 	@Test
@@ -241,7 +241,7 @@ class TestRDFPropertyType {
 //		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
-		assertEquals(BuildInType.BOOLEAN.getName(), propType.getInstanceType().getName());
+		assertEquals(BuildInType.BOOLEAN.getName(), propType.getValueType().getName());
 	}
 	
 	@Test
@@ -258,7 +258,7 @@ class TestRDFPropertyType {
 //		
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
-		assertEquals(BuildInType.FLOAT.getName(), propType.getInstanceType().getName());
+		assertEquals(BuildInType.FLOAT.getName(), propType.getValueType().getName());
 	}
 	
 //	@Test
@@ -305,6 +305,6 @@ class TestRDFPropertyType {
 //		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		
 		assertEquals(CARDINALITIES.SINGLE, propType.getCardinality());
-		assertEquals(BuildInType.STRING.getName(), propType.getInstanceType().getName());
+		assertEquals(BuildInType.STRING.getName(), propType.getValueType().getName());
 	}
 }

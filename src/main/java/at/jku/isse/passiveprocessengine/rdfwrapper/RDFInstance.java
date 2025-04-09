@@ -7,28 +7,26 @@ import org.apache.jena.vocabulary.RDF;
 import at.jku.isse.passiveprocessengine.core.BuildInType;
 import at.jku.isse.passiveprocessengine.core.PPEInstance;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType.PrimitiveOrClassType;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class RDFInstance extends RDFElement implements PPEInstance {
+public class RDFInstance extends RDFElement {
 
 	@Getter
 	protected final OntIndividual instance;
 	
-	
-
 	public RDFInstance(@NonNull OntIndividual element, RDFInstanceType type, @NonNull NodeToDomainResolver resolver) {		
 		super(element, resolver);
 		super.instanceType = type; // we allow null type, to enable subtypes where more info is needed to set the type
 		this.instance = element;
 		//this.type = getInstanceType(); // does not work for RDFRuleResult that need the ruleRepo for its getInstanceType() method
 	}
-
 	
 	@Override
-	public PPEInstanceType getInstanceType() {
+	public RDFInstanceType getInstanceType() {
 		if (instanceType == null) {	
 			var optType = instance.classes(true).findFirst();
 			if (optType.isPresent()) {
@@ -39,24 +37,19 @@ public class RDFInstance extends RDFElement implements PPEInstance {
 		}
 		return instanceType;
 	}
-	
-	@Override
-	public void setInstanceType(PPEInstanceType childType) {
-		if (BuildInType.isAtomicType(childType)) {
-			log.warn(String.format("Tried to set instance type of %s to atomic type %s, not allowed, ignoring", instance.getURI(), childType.getId()));			
-		} else {
-			//if type is already a superclass
-			var newType = ((RDFInstanceType)childType).getType();
-			if (!instance.hasOntClass(newType, false)) {
-				instance.addProperty(RDF.type, newType);
-				//TODO: we assume we are setting to a more specific subtype, never a super type, in any case, we override the local cached type
-				super.instanceType = childType;
-			}
+
+	public void setInstanceType(RDFInstanceType childType) {
+		//if type is already a superclass
+		var newType = childType.getType();
+		if (!instance.hasOntClass(newType, false)) {
+			instance.addProperty(RDF.type, newType);
+			//TODO: we assume we are setting to a more specific subtype, never a super type, in any case, we override the local cached type
+			super.instanceType = childType;
 		}
 	}
 
 	public boolean isInstanceOf(@NonNull OntClass named) {
-		var type = (RDFInstanceType)this.getInstanceType();
+		var type = this.getInstanceType();
 		return type.getType().equals(named) || type.getAllSuperClasses().contains(named);		
 	}
 
@@ -66,8 +59,8 @@ public class RDFInstance extends RDFElement implements PPEInstance {
 	}
 	
 	@Override
-	public void markAsDeleted() {
+	public void delete() {
 		resolver.removeInstanceFromIndex(this);
-		super.markAsDeleted();
+		super.delete();
 	}
 }

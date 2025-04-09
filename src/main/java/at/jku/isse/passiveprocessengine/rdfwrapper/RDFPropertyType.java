@@ -3,8 +3,6 @@ package at.jku.isse.passiveprocessengine.rdfwrapper;
 import java.util.AbstractMap;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Set;
-
 import org.apache.jena.datatypes.RDFDatatype;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
@@ -13,58 +11,58 @@ import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
+import org.apache.jena.rdf.model.RDFNode;
 
 import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
 import at.jku.isse.passiveprocessengine.core.PPEInstanceType.CARDINALITIES;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType.PPEPropertyType;
 import lombok.Getter;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 
 
-public class RDFPropertyType implements PPEPropertyType {
+public class RDFPropertyType  {
 
 
 	@Getter
 	private final OntRelationalProperty property;
 	private final CARDINALITIES cardinality;
-	private final PPEInstanceType valueType;
-	private final Entry<OntObject, CARDINALITIES> rdfTypeAndCardinality;
+	private final PrimitiveOrClassType valueType;	
 
 	public RDFPropertyType(OntRelationalProperty property, NodeToDomainResolver resolver) {
 		super();
 		this.property = property;
-		rdfTypeAndCardinality = determineValueTypeAndCardinality(property, resolver.getCardinalityUtil().getMapType(), resolver.getCardinalityUtil().getListType(), resolver.getCardinalityUtil().getSingleType());
+		var rdfTypeAndCardinality = determineValueTypeAndCardinality(property, resolver.getCardinalityUtil().getMapType(), resolver.getCardinalityUtil().getListType(), resolver.getCardinalityUtil().getSingleType());
 		this.cardinality = rdfTypeAndCardinality.getValue();
 		if (rdfTypeAndCardinality.getKey() == null) { 
 			this.valueType = null;
 			return;
 		}
-		this.valueType = resolver.resolveToType(rdfTypeAndCardinality.getKey());
+		this.valueType = PrimitiveOrClassType.fromRDFNode(rdfTypeAndCardinality.getKey());
 	}
 
 	protected boolean isValid() {
 		return valueType != null;
 	}
-	
 
-	@Override
+
+
 	public String getId() {
 		return property.getURI();
 	}
 
-	@Override
+
 	public String getName() {
 		return property.getLocalName();
 	}
 
-	@Override
+
 	public void setName(String name) {
 		throw new RuntimeException("Cannot change name of property");
 	}
-	
-	
+
+
 	/**
 	 * We make some assumptions here:
 	 * if no restriction found, then we assume this property is a set
@@ -77,7 +75,7 @@ public class RDFPropertyType implements PPEPropertyType {
 	public static Entry<OntObject, CARDINALITIES> determineValueTypeAndCardinality(OntRelationalProperty property, MapResourceType mapBaseType, ListResourceType listBaseType, SingleResourceType singleType) {
 		OntObject valueObj = null;
 		CARDINALITIES cardinality = null;				
-		
+
 		if (property instanceof OntDataProperty dataProp) {
 			//single or set
 			if (singleType.isSingleProperty(dataProp)) {
@@ -101,81 +99,9 @@ public class RDFPropertyType implements PPEPropertyType {
 				valueObj = getValueTypeFromProperty(property);
 			}
 		}				
-//		Optional<CardinalityRestriction> optRestriction = property.referringRestrictions()
-//				.filter(CardinalityRestriction.class::isInstance)
-//				.map(CardinalityRestriction.class::cast)
-//				.findAny();
-//		// makes some default assumptions here
-//		if (optRestriction.isEmpty()) {
-//			//if the property has range of MapEntry, then this is a map
-//			Optional<OntClass> optMapEntry = property.ranges()
-//					.filter(OntClass.class::isInstance)
-//					.map(OntClass.class::cast)
-//					.filter(range -> range.hasSuperClass(mapEntryBaseType, true)) //immediate super class
-//					.findFirst();
-//			if (optMapEntry.isPresent()) { 	// now optMapEntry is a Map that
-//				var valueProperty = optMapEntry.get().declaredProperties(true)
-//						.filter(OntRelationalProperty.class::isInstance)
-//						.map(OntRelationalProperty.class::cast)
-//						.filter(MapResourceType::isEntryProperty)
-//						.filter(prop -> prop.ranges().count() > 0)
-//						.findFirst();
-//				if (valueProperty.isPresent()) {
-//					var valueType = valueProperty.get().ranges().findFirst();
-//					if (valueType.isPresent()) {
-//						valueObj = valueType.get();
-//					}
-//				}
-//				cardinality = CARDINALITIES.MAP;
-//			} else	{				
-//				var valueType = property.ranges().findFirst();
-//				if (valueType.isPresent()) {
-//					valueObj = valueType.get();
-//				} // always must have exactly one range for our purpose
-//					cardinality = CARDINALITIES.SET;				
-//			}
-//		} else {
-//			CardinalityRestriction restr = optRestriction.get();
-//			if (restr.getCardinality() == 1) {
-//				Optional<OntClass> optList = property.ranges()
-//						.filter(OntClass.class::isInstance)
-//						.map(OntClass.class::cast)
-//						.filter(range -> range.hasSuperClass(listBaseType, true)) //immediate super class
-//						.findFirst();	
-//				if (optList.isPresent()) {
-//					// check for ValueRestriction for case of list
-//					var listType = optList.get();
-//					var optProperty = listType.declaredProperties(true)
-//					.filter(OntRelationalProperty.class::isInstance)
-//					.map(OntRelationalProperty.class::cast)
-//					.filter(ListResourceType::isLiProperty)
-//					.filter(prop -> prop.ranges().count() > 0)
-//					.findFirst();
-//					if (optProperty.isPresent()) {
-//						var optObj = optProperty.get().ranges().findFirst();
-//						if (optObj.isPresent()) {		
-//							valueObj = optObj.get();
-//						}
-//					}
-//					cardinality = CARDINALITIES.LIST;
-//				} else {								
-//					var valueType = property.ranges().findFirst();
-//					if (valueType.isPresent()) {
-//						valueObj = valueType.get();
-//					} // always must have exactly one range for our purpose
-//					cardinality = CARDINALITIES.SINGLE;
-//				}
-//			} else { // if cardinality great than 1, then we have a set 
-//				var valueType = property.ranges().findFirst();
-//				if (valueType.isPresent()) {
-//					valueObj = valueType.get();
-//				} // always must have exactly one range for our purpose
-//				cardinality = CARDINALITIES.SET;
-//			}
-//		}
 		return new AbstractMap.SimpleEntry<>(valueObj, cardinality);
 	}
-	
+
 	private static OntObject getValueTypeFromProperty(OntRelationalProperty property) {
 		var vType = property.ranges().findFirst();
 		if (vType.isPresent()) {
@@ -206,7 +132,7 @@ public class RDFPropertyType implements PPEPropertyType {
 		}
 		return null;
 	}
-	
+
 	private static OntObject getValueTypeForListContainerProperty(OntObjectProperty property, OntClass listBaseType) {
 		Optional<OntClass> optList = property.ranges()
 				.filter(OntClass.class::isInstance)
@@ -218,8 +144,8 @@ public class RDFPropertyType implements PPEPropertyType {
 			var listType = optList.get();
 			var props = RDFInstanceType.getExplicitlyDeclaredProperties(listType, true);
 			var optProperty = props.stream()			
-			.filter(ListResourceType::isLiProperty)			
-			.findFirst();
+					.filter(ListResourceType::isLiProperty)			
+					.findFirst();
 			if (optProperty.isPresent()) {
 				var relProp = optProperty.get().as(OntRelationalProperty.class);
 				var optObj = relProp.ranges().findFirst();
@@ -231,20 +157,20 @@ public class RDFPropertyType implements PPEPropertyType {
 		return null;
 	}
 
-	@Override
+
 	public CARDINALITIES getCardinality() {
 		return cardinality;
 	}
-	@Override
-	public PPEInstanceType getInstanceType() {
+
+	public PrimitiveOrClassType getValueType() {
 		return valueType;
 	}
 
-	@Override
+
 	public boolean isAssignable(Object arg0) {
-		var rdfType = rdfTypeAndCardinality.getKey();
-		if (rdfType instanceof OntDataRange.Named named) {
-			RDFDatatype datatype = named.toRDFDatatype();
+		var rdfType = valueType;
+		if (rdfType.isPrimitiveType()) {
+			RDFDatatype datatype = rdfType.getPrimitiveType().toRDFDatatype();
 			if (arg0 instanceof RDFInstance inst) {
 				return datatype.isValidValue(inst.getElement());
 			} else if (arg0 instanceof RDFInstanceType instType) {
@@ -252,12 +178,12 @@ public class RDFPropertyType implements PPEPropertyType {
 			} else {
 				return datatype.isValidValue(arg0);
 			}
-		} else if (rdfType instanceof OntClass.Named named) {
-			
+		} else if (rdfType.isClassType()) {
+
 			if (arg0 instanceof RDFInstance inst) {
-				return inst.isInstanceOf(named);
+				return inst.isInstanceOf(rdfType.getClassType());
 			} else if (arg0 instanceof RDFInstanceType instType) {
-				return instType.getType().as(OntIndividual.class).hasOntClass(named, false);
+				return instType.getType().as(OntIndividual.class).hasOntClass(rdfType.getClassType(), false);
 			} else {
 				throw new RuntimeException("Expected RDFInstance or RDFInstanceType but received: "+arg0);
 			}
@@ -268,70 +194,55 @@ public class RDFPropertyType implements PPEPropertyType {
 
 	@Override
 	public String toString() {
-		return "RDFPropertyType [" + property.getLocalName() + " [" + cardinality + "] of type=" + valueType.getName();
+		return "RDFPropertyType [" + property.getLocalName() + " [" + cardinality + "] of type=" + valueType.toString();
 	}
 
+	@Slf4j
+	public static class PrimitiveOrClassType {
 
-	/// not needed below
+		@Getter private final OntDataRange.Named primitiveType;
+		@Getter private final OntClass classType;
 
+		public static PrimitiveOrClassType fromRDFNode(@NonNull RDFNode node) {
+			if (node instanceof OntDataRange.Named named) {				
+				return new PrimitiveOrClassType(named); 
+			} else if (node instanceof OntClass ontClass) {
+				return new PrimitiveOrClassType(ontClass);
+			} else if (node.canAs(OntClass.class)) {
+				return new PrimitiveOrClassType(node.as(OntClass.class));				
+			}
+			log.warn(String.format("Unknown RDFNode type %s cannot be resolved to a RDFInstanceType", node.toString()));
+			return null;
+		}
+		
+		public PrimitiveOrClassType(OntDataRange.Named primitiveType) {
+			this.primitiveType = primitiveType;
+			this.classType = null;
+		}
 
-	@Override
-	public void add(String arg0, Object arg1) {
-		// TODO Auto-generated method stub
+		public PrimitiveOrClassType(OntClass classType) {
+			this.primitiveType = null;
+			this.classType = classType;
+		}
+
+		public boolean isPrimitiveType() {
+			return primitiveType != null;
+		}
+
+		public boolean isClassType() {
+			return classType != null;
+		}
+
+		public OntObject getAsPrimitiveOrClass() {
+			return isPrimitiveType() ? primitiveType : classType;
+		}
+		
+		@Override
+		public String toString() {
+			return isPrimitiveType() ? primitiveType.getURI() : classType.getURI();
+		}
+
 
 	}
-	@Override
-	public void addOwner(String arg0) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public Set<String> getOwners() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	@Override
-	public <T> T getTypedProperty(String arg0, Class<T> arg1) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	@Override
-	public <T> T getTypedProperty(String arg0, Class<T> arg1, T arg2) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	@Override
-	public boolean isMarkedAsDeleted() {
-		// TODO Auto-generated method stub
-		return false;
-	}
-	@Override
-	public boolean isOwner(String arg0) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-	@Override
-	public void markAsDeleted() {
-		// TODO Auto-generated method stub
-	}
-	@Override
-	public void put(String arg0, String arg1, Object arg2) {
-		// TODO Auto-generated method stub
-
-	}
-	@Override
-	public void setInstanceType(PPEInstanceType arg0) {
-		// TODO Auto-generated method stub
-
-	}
-	@Override
-	public void setSingleProperty(String arg0, Object arg1) {
-		// TODO Auto-generated method stub
-
-	}
-
-
-
 
 }

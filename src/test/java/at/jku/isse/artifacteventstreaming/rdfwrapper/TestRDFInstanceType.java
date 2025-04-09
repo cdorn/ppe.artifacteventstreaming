@@ -88,7 +88,7 @@ class TestRDFInstanceType {
 		assertEquals(null, typeBase.getParentType());
 		
 		var propType = typeBase.getPropertyType(NS+"hasMap");
-		assertEquals(typeChild, propType.getInstanceType());
+		assertEquals(typeChild, propType.getValueType());
 	}
 	
 	@Test
@@ -109,7 +109,7 @@ class TestRDFInstanceType {
 	@Test
 	void testRemoveType() {
 		assertEquals(typeBase, resolver.findAllInstanceTypesByFQN(typeBase.getId()).iterator().next());
-		typeBase.markAsDeleted();
+		typeBase.delete();
 		assertTrue(resolver.findAllInstanceTypesByFQN(typeBase.getId()).isEmpty());
 		assertEquals(2, resolver.getAllNonDeletedInstanceTypes().size());
 	}

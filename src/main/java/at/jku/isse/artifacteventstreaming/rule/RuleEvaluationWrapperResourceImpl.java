@@ -264,7 +264,7 @@ public class RuleEvaluationWrapperResourceImpl implements RuleEvaluationWrapperR
 
 	@Override
 	public Object getEvaluationResult() {
-		if (result == null && getEvaluationError().isEmpty()) { // never evaluated so far
+		if (result == null && getEvaluationError().isEmpty()) { // never evaluated so far or not locally evaluated yet
 			 evaluate();
 		} 
 		return result;		

@@ -14,7 +14,7 @@ import at.jku.isse.passiveprocessengine.core.RuleResult;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class RDFRuleResultWrapper extends RDFInstance implements RuleResult {
+public class RDFRuleResultWrapper extends RDFInstance{
 
 	private final RuleRepository ruleRepo;
 	private final RuleEvaluationWrapperResource evalWrapper;
@@ -31,7 +31,7 @@ public class RDFRuleResultWrapper extends RDFInstance implements RuleResult {
 	}
 	
 	@Override
-	public PPEInstanceType getInstanceType() {
+	public RDFInstanceType getInstanceType() {
 		if (super.instanceType == null) {
 			var types = element.as(OntIndividual.class).classes(true).toList();
 			var optType = types.stream()
@@ -40,22 +40,18 @@ public class RDFRuleResultWrapper extends RDFInstance implements RuleResult {
 					.findFirst();
 			if (optType.isPresent()) {
 				var type = resolver.findNonDeletedInstanceTypeByFQN(optType.get().getURI());
-				if (type.isPresent() && type.get() instanceof RuleDefinition def)
+				if (type.isPresent() && type.get() instanceof RDFRuleDefinitionWrapper def)
 					instanceType = def;
 			}
 		}
 		return super.instanceType;
 	}
 
-
-
-	@Override
 	public Boolean isConsistent() {
 		return super.getTypedProperty(RuleSchemaFactory.ruleHasConsistentResultURI, Boolean.class, false);
 	}
 
-	@Override
-	public PPEInstance getContextInstance() {
+	public RDFInstance getContextInstance() {
 		var scope = element.getPropertyResourceValue(ruleRepo.getFactory().getContextElementScopeProperty().asProperty());
 		if (scope != null) {
 			var el = ruleRepo.getInspector().getElementFromScope(scope);
@@ -72,7 +68,7 @@ public class RDFRuleResultWrapper extends RDFInstance implements RuleResult {
 	}
 	
 	@Override
-	public void markAsDeleted() {		
+	public void delete() {		
 		evalWrapper.delete();
 	}
 

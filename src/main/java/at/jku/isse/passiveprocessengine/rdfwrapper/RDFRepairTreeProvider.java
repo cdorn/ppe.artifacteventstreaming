@@ -14,9 +14,7 @@ import lombok.RequiredArgsConstructor;
 public class RDFRepairTreeProvider implements RepairTreeProvider, RuleAnalysisService {
 
 	final RepairService repairService;
-	final RuleRepository ruleRepo;
-	final AbstractionMapper mapper;
-	final RuleTriggerObserver observer;
+	final RuleRepository ruleRepo;	
 	
 	@Override
 	public Object getRepairTree(RuleResult ruleResult) {

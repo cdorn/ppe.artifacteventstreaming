@@ -15,8 +15,12 @@ import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
+import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.FilebasedDatasetLoader;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryEventStore;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryStateKeeperFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
@@ -43,7 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Getter
 @RequiredArgsConstructor
-public class EventStreamingWrapperFactory {
+public class FrontendEventStreamingWrapperFactory {
 
 	private final InstanceRepository instanceRepository;
 	private final SchemaRegistry schemaRegistry;
@@ -56,87 +60,74 @@ public class EventStreamingWrapperFactory {
 	@Getter(value = AccessLevel.NONE) private final BranchStateUpdater stateKeeper;
 	
 	public void signalExternalSetupComplete() throws PersistenceException, BranchConfigurationException {
-		branch.getDataset().commit();
-		branch.getDataset().end();	
-		var unfinishedCommit = stateKeeper.loadState();
-		branch.startCommitHandlers(unfinishedCommit); 		 
+		// nothing to load statewise as inmemory and clean copy from backend		
+		branch.startCommitHandlers(null); 		 
 	}
 	
 	
 	@Slf4j
+	@RequiredArgsConstructor
 	public static class FactoryBuilder {
-	
-		public static final String defaultRepoURI = "http://at.jku.isse.artifacteventstreaming/repository";
-		public static final String defaultBranchBaseURI = "http://at.jku.isse.artifacteventstreaming/repository/branch";
-		public static final String defaultBranchName = "main";
-		public static final String defaultCacheDirectoryPath = "./artifacteventstreamingcache/";
-		
-		private URI repoURI;
-
-		private String branchLocalName = defaultBranchName;	
-		private String relativeCachePath = defaultCacheDirectoryPath;
-		
-		public FactoryBuilder withRepoURI(@NonNull URI repoURI) {
-			this.repoURI = repoURI;
-			return this;
-		}
-		
-		public FactoryBuilder withBranchName(@NonNull String branchName) {
+						
+		public static final String defaultFrontendBranchName = "frontend";
+				
+		private final EventStreamingWrapperFactory backendFactory;
+		private String branchLocalName = defaultFrontendBranchName;	
+						
+		public FactoryBuilder withFrontendBranchName(@NonNull String branchName) {
 			this.branchLocalName = branchName;
 			return this;
 		}
-		
-		public FactoryBuilder withRelativeCachePath(@NonNull String cachePath) {
-			this.relativeCachePath = cachePath;
-			return this;
-		}
-		
-		public EventStreamingWrapperFactory build() {
-			try {
-				// setting up persistence
-				var cacheFactory = new RocksDBFactory(relativeCachePath);
-				var eventstoreFactory = new EventStoreFactory();											
-				var datasetLoader = new FilebasedDatasetLoader();
-				URI datasetURI = new URI(defaultBranchBaseURI+"/"+branchLocalName);
-				var modelDataset = datasetLoader.loadDataset(datasetURI);			
-				if (modelDataset.isEmpty()) 
-					throw new RuntimeException(datasetURI+" could not be loaded");			
-				modelDataset.get().begin(ReadWrite.WRITE);
-				
-				Dataset repoDataset = DatasetFactory.createTxnMem(); // we are not persisting the repository itself 
-				OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
-				
-				// add logic here, when history access is needed
-				
-				// setting up branch
-				if (repoURI == null) repoURI = new URI(defaultRepoURI);
-				var branchURI = BranchBuilder.generateBranchURI(new URI(defaultBranchBaseURI), branchLocalName);
-				var stateKeeper = new StateKeeperImpl(branchURI, cacheFactory.getCache(), eventstoreFactory.getEventStore(branchURI.toString()));				
-				var branch = new BranchBuilder(repoURI, repoDataset, repoModel)
+						
+		public FrontendEventStreamingWrapperFactory build() {
+			try {											
+				//create inmemory model for branch and repo						
+				Dataset repoDataset = DatasetFactory.createTxnMem(); // we are not persisting the repository itself (not the same inmemory repo as backend wrapper!)
+				OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);				
+				Dataset modelDataset = DatasetFactory.create();
+						
+				// no persistence, all inmemory				
+				var branchURI = BranchBuilder.generateBranchURI(new URI(EventStreamingWrapperFactory.FactoryBuilder.defaultBranchBaseURI), branchLocalName);
+				var stateKeeper = new StateKeeperImpl(branchURI,  new InMemoryBranchStateCache(), new InMemoryEventStore());				
+				var branch = new BranchBuilder(new URI(backendFactory.getBranch().getRepositoryURI()), repoDataset, repoModel)
 						.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF)		
-						.setDataset(modelDataset.get())
+						.setDataset(modelDataset)
 						.setStateKeeper(stateKeeper)
 						.setBranchURI(branchURI)
 						.build();		
 				var model1 = branch.getModel();	
 				
-				// setting up branch commit handlers
-				var metaModel = MetaModelOntology.buildDBbackedOntology(); 
-				new RuleSchemaFactory(metaModel); // add rule schema to meta model
-				var cardUtil = new MetaModelSchemaTypes(model1, metaModel);				
+				//copy state/model from backend branch				
+				var sourceBranch = backendFactory.getBranch();
+				var backendDataset = sourceBranch.getDataset();
+				var backendModel = sourceBranch.getModel();
+				backendDataset.begin(ReadWrite.READ);
+				model1.add(backendModel);				
+				backendDataset.end();
+				sourceBranch.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(sourceBranch, branch, new InMemoryBranchStateCache()));				
+								
+				var cardUtil = new MetaModelSchemaTypes(model1);									
+				// setting up branch commit handlers				 														
+				// we need to update rule repo without executing rules
 				var observerFactory = new RuleTriggerObserverFactory(cardUtil);
-				var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);				
-				var repairService = new RepairService(model1, observer.getRepo());
-				RuleEnabledResolver resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
-				var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, observer.getFactory());
+				var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);					
+				//TODO we need to ensure that the rule repo has exactly same content as backend branch but does not reevaluate rules
+				// for now, rules get re-evaluated
 				branch.appendBranchInternalCommitService(observer);
+				
+				var repairService = new RepairService(model1, observer.getRepo()); 
+				RuleEnabledResolver resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);								
+				var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, observer.getFactory());				
+				//	this enables refreshing of abstraction layer cache upon any changes
 				branch.appendBranchInternalCommitService(changeTransformer);
-				branch.appendBranchInternalCommitService(new LazyLoadingLoopControllerService("LazyLoadingLoopController", repoModel, model1));								
+				//AND no need for loop controller as there is no lazy loading here, that happened already in backend,
+													
 				
 				// set up additional wrapper components
+				//TODO make this a cached repair tree provider, we want to reuse persisted repair trees
 				var repairTreeProvider = new RDFRepairTreeProvider(repairService, observer.getRepo());
 				var coreTypeFactory = new CoreTypeFactory(resolver, resolver);
-				return new EventStreamingWrapperFactory(resolver, resolver, repairTreeProvider, resolver, changeTransformer
+				return new FrontendEventStreamingWrapperFactory(resolver, resolver, repairTreeProvider, resolver, changeTransformer
 						, coreTypeFactory, observer.getFactory(), branch, stateKeeper);																			
 			} catch (Exception e) {
 				throw new RuntimeException(e);
