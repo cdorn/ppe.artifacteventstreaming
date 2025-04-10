@@ -34,7 +34,7 @@ public class RDFPropertyType  {
 	public RDFPropertyType(OntRelationalProperty property, NodeToDomainResolver resolver) {
 		super();
 		this.property = property;
-		var rdfTypeAndCardinality = determineValueTypeAndCardinality(property, resolver.getCardinalityUtil().getMapType(), resolver.getCardinalityUtil().getListType(), resolver.getCardinalityUtil().getSingleType());
+		var rdfTypeAndCardinality = determineValueTypeAndCardinality(property, resolver.getMetaschemata().getMapType(), resolver.getMetaschemata().getListType(), resolver.getMetaschemata().getSingleType());
 		this.cardinality = rdfTypeAndCardinality.getValue();
 		if (rdfTypeAndCardinality.getKey() == null) { 
 			this.valueType = null;

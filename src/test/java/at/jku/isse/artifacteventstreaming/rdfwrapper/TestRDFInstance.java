@@ -23,6 +23,8 @@ import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import at.jku.isse.passiveprocessengine.rdfwrapper.PrimitiveTypesFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes.WrapperMetaModelOntology;
 
 public class TestRDFInstance {
 
@@ -57,9 +59,9 @@ public class TestRDFInstance {
 		m = branch.getModel();	
 		m.setNsPrefix("test", NS);
 		typeFactory = new PrimitiveTypesFactory(m);
-		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+		var metaModel = WrapperMetaModelOntology.buildInMemoryOntology(); 
 		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
-		var cardUtil = new MetaModelSchemaTypes(m, metaModel);
+		var cardUtil = new WrapperMetaModelSchemaTypes(m, metaModel);
 		resolver = new NodeToDomainResolver(branch, null, cardUtil);
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();

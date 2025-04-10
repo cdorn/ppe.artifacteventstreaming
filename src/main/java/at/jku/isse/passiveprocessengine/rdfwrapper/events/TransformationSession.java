@@ -43,7 +43,7 @@ public class TransformationSession extends StatementAugmentationSession {
 
 	public TransformationSession(List<ContainedStatement> addedStatements, List<ContainedStatement> removedStatements,
 			NodeToDomainResolver resolver, RuleSchemaProvider ruleSchema) {
-		super(addedStatements, removedStatements, resolver.getCardinalityUtil());
+		super(addedStatements, removedStatements, resolver.getMetaschemata());
 		this.resolver = resolver;
 		this.inspector = new RuleRepositoryInspector(ruleSchema);
 	}
@@ -96,8 +96,8 @@ public class TransformationSession extends StatementAugmentationSession {
 	private boolean isMapValueProperty(Property property) {
 		if (property.canAs(OntProperty.class)) { 
 			var prop = property.as(OntProperty.class);
-			return resolver.getCardinalityUtil().getMapType().getLiteralValueProperty().hasSubProperty(prop, true) 
-					|| resolver.getCardinalityUtil().getMapType().getObjectValueProperty().hasSubProperty(prop, true);
+			return resolver.getMetaschemata().getMapType().getLiteralValueProperty().hasSubProperty(prop, true) 
+					|| resolver.getMetaschemata().getMapType().getObjectValueProperty().hasSubProperty(prop, true);
 		}
 		else return false;
 	}
@@ -107,9 +107,9 @@ public class TransformationSession extends StatementAugmentationSession {
 		super.handleMapEntryChange(stmts, prop, owner);
 		var changeSubject = resolver.resolveToRDFElement(owner);
 		
-		var keyOpt = findFirstStatementAboutProperty(stmts, resolver.getCardinalityUtil().getMapType().getKeyProperty().asProperty());
-		var litValueOpt = findFirstStatementAboutProperty(stmts, resolver.getCardinalityUtil().getMapType().getLiteralValueProperty().asProperty());
-		var objValueOpt = findFirstStatementAboutProperty(stmts, resolver.getCardinalityUtil().getMapType().getObjectValueProperty().asProperty());
+		var keyOpt = findFirstStatementAboutProperty(stmts, resolver.getMetaschemata().getMapType().getKeyProperty().asProperty());
+		var litValueOpt = findFirstStatementAboutProperty(stmts, resolver.getMetaschemata().getMapType().getLiteralValueProperty().asProperty());
+		var objValueOpt = findFirstStatementAboutProperty(stmts, resolver.getMetaschemata().getMapType().getObjectValueProperty().asProperty());
 		// we are not interested in back reference
 		if (keyOpt.isEmpty() || (litValueOpt.isEmpty() && objValueOpt.isEmpty())) {
 			log.error("MapEntry change has inconsistent statements, cannot generate change event");
@@ -213,7 +213,7 @@ public class TransformationSession extends StatementAugmentationSession {
 		if (obj.isLiteral()) return false;
 		if (obj.canAs(OntIndividual.class)) { // perhaps a mapEntry or list
 			var ind = obj.as(OntIndividual.class);
-			return resolver.getCardinalityUtil().getMapType().isMapEntry(ind) || resolver.getCardinalityUtil().getListType().isListCollection(ind);
+			return resolver.getMetaschemata().getMapType().isMapEntry(ind) || resolver.getMetaschemata().getListType().isListCollection(ind);
 		} // Seq is an OntInd
 		return false;
 	}

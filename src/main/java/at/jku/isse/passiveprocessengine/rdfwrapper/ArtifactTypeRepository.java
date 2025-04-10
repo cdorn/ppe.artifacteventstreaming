@@ -53,9 +53,9 @@ public class ArtifactTypeRepository {
 		String fullname = fqnPrefix+localUniqueName;
 		var type = schemaReg.createNewInstanceType(fullname, baseType);
 		//injecting metadata from the base type to the newly created one
-    	Map<String, String> baseTypePropertyMetadata = (Map<String, String>) baseType.getTypedProperty(MetaElementFactory.propertyMetadataPredicate, Map.class);
+    	Map<String, String> baseTypePropertyMetadata = (Map<String, String>) baseType.getTypedProperty(MetaElementFactory.propertyMetadataPredicate_URI, Map.class);
         for (var entry : baseTypePropertyMetadata.entrySet()) {
-        	type.put(MetaElementFactory.propertyMetadataPredicate, entry.getKey(), entry.getValue());
+        	type.put(MetaElementFactory.propertyMetadataPredicate_URI, entry.getKey(), entry.getValue());
         }
         return type;
 	}

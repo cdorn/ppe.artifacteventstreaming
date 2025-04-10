@@ -21,10 +21,10 @@ import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.passiveprocessengine.rdfwrapper.CoreTypeFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.CommitChangeEventTransformer;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RDFRepairTreeProvider;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEnabledResolver;
 import lombok.AccessLevel;
@@ -92,7 +92,7 @@ public class FrontendEventStreamingWrapperFactory {
 				backendDataset.end();
 				sourceBranch.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(sourceBranch, branch, new InMemoryBranchStateCache()));				
 								
-				var cardUtil = new MetaModelSchemaTypes(model1);									
+				var cardUtil = new WrapperMetaModelSchemaTypes(model1);									
 				// setting up branch commit handlers				 														
 				// we need to update rule repo without executing rules
 				var observerFactory = new RuleTriggerObserverFactory(cardUtil);

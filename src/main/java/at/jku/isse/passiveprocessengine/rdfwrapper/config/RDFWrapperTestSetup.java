@@ -22,12 +22,13 @@ import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.passiveprocessengine.rdfwrapper.CoreTypeFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.LazyLoadingLoopControllerService;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.CommitChangeEventTransformer;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes.WrapperMetaModelOntology;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RDFRepairTreeProvider;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEnabledResolver;
 import lombok.Getter;
@@ -60,9 +61,9 @@ public class RDFWrapperTestSetup {
 					.setBranchLocalName("main")
 					.build();		
 			var model1 = branch.getModel();
-			var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+			var metaModel = WrapperMetaModelOntology.buildInMemoryOntology(); 
 			new RuleSchemaFactory(metaModel); // add rule schema to meta model
-			var cardUtil = new MetaModelSchemaTypes(model1, metaModel);				
+			var cardUtil = new WrapperMetaModelSchemaTypes(model1, metaModel);				
 			observerFactory = new RuleTriggerObserverFactory(cardUtil);
 			var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);
 			var repairService = new RepairService(model1, observer.getRepo());
@@ -110,9 +111,9 @@ public class RDFWrapperTestSetup {
 			var model1 = branch.getModel();	
 			loadedModel.add(model1);
 			System.out.println("loaded model of size: "+model1.size());
-			var metaModel = MetaModelOntology.buildDBbackedOntology(); 
+			var metaModel = WrapperMetaModelOntology.buildDBbackedOntology(); 
 			new RuleSchemaFactory(metaModel); // add rule schema to meta model
-			var cardUtil = new MetaModelSchemaTypes(model1, metaModel);				
+			var cardUtil = new WrapperMetaModelSchemaTypes(model1, metaModel);				
 			observerFactory = new RuleTriggerObserverFactory(cardUtil);												
 			System.out.println("Size after observer factory build: "+model1.size());
 			var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);

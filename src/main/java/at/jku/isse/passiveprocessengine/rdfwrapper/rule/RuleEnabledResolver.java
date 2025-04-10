@@ -15,7 +15,6 @@ import at.jku.isse.artifacteventstreaming.rule.RuleException;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.designspace.rule.arl.evaluator.EvaluationNode;
 import at.jku.isse.designspace.rule.arl.evaluator.RuleDefinitionImpl;
 import at.jku.isse.designspace.rule.arl.evaluator.RuleEvaluation;
@@ -27,6 +26,7 @@ import at.jku.isse.designspace.rule.arl.repair.RepairSingleValueOption;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
 import lombok.Getter;
 
 public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEvaluationService {
@@ -35,8 +35,8 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 	@Getter private final RuleSchemaProvider ruleSchema;	
 	private final RuleRepositoryInspector inspector;
 	
-	public RuleEnabledResolver(Branch branch, RepairService repairService, RuleSchemaProvider ruleSchema, RuleRepository repo, MetaModelSchemaTypes cardinalityTypes) {
-		super(branch, repo, cardinalityTypes);
+	public RuleEnabledResolver(Branch branch, RepairService repairService, RuleSchemaProvider ruleSchema, RuleRepository repo, WrapperMetaModelSchemaTypes metaschema) {
+		super(branch, repo, metaschema);
 		this.repairService = repairService;
 		this.ruleSchema = ruleSchema;		
 		this.inspector = new RuleRepositoryInspector(ruleSchema);
@@ -57,7 +57,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 			var type = new RDFInstanceType(ontClass, this);
 			typeIndex.put(ontClass, type);
 			type.cacheSuperProperties();
-			if (!ontClass.equals(metaClass)) {
+			if (!ontClass.equals(getMetaschemata().getMetaElements().getMetaClass())) {
 				var individuals = ontClass.individuals(true).toList();
 				individuals.forEach(indiv -> instanceIndex.putIfAbsent(indiv.getURI(), new RDFInstance(indiv, type, this)));
 			}

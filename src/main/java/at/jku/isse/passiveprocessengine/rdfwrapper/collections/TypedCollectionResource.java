@@ -40,7 +40,7 @@ public abstract class TypedCollectionResource {
 			if (!node.asResource().canAs(OntIndividual.class)) {// not a typed resource
 				return false;
 			}
-			if (objectType.equals(resolver.getMetaClass())) {
+			if (objectType.equals(resolver.getMetaschemata().getMetaElements().getMetaClass())) {
 				// we accept any ont classes here incl metaclass itself
 				return node.canAs(OntClass.class);
 			} 			

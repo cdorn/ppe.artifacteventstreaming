@@ -69,7 +69,7 @@ public class MapResourceType  {
 		return property.getLocalName().endsWith(MapResourceType.LITERAL_VALUE) || property.getLocalName().endsWith(MapResourceType.OBJECT_VALUE);
 	}
 	
-	public boolean isMapEntrySubclass(OntObjectProperty.Named mapEntryProperty) {
+	public boolean isMapEntrySubclass(OntObjectProperty mapEntryProperty) {
 		return  mapEntryProperty.ranges(true).anyMatch(rangeClass -> rangeClass.equals(mapEntryClass)
 				|| rangeClass.hasSuperClass(mapEntryClass, true));
 	}

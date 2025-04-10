@@ -214,7 +214,7 @@ public abstract class RDFElement {
 		var named = (OntObjectProperty.Named) prop.getProperty();
 		return collectionPropertyCache.computeIfAbsent(prop.getId(),  k -> new MapWrapper(prop.getValueType().getAsPrimitiveOrClass(), 
 																							resolver, 
-																							MapResource.asUnsafeMapResource(this.element, named, resolver.getCardinalityUtil().getMapType()))); 					
+																							MapResource.asUnsafeMapResource(this.element, named, resolver.getMetaschemata().getMapType()))); 					
 	}
 
 	private Object getPropertyAsList(@NonNull RDFPropertyType prop) {

@@ -73,7 +73,7 @@ public class RDFInstanceType extends RDFElement {
 	}	
 
 	public RDFInstanceType getInstanceType() {
-		return resolver.resolveToType(resolver.metaClass);
+		return resolver.resolveToType(resolver.getMetaschemata().getMetaElements().getMetaClass());
 	}
 
 	public void setInstanceType(RDFInstanceType arg0) {
@@ -87,23 +87,23 @@ public class RDFInstanceType extends RDFElement {
 		//then we remove the hierarchy below, then itself (instances need to be removed via resolver, not our concern here)
 		var subclasses = resolver.removeInstancesAndTypeInclSubclassesFromIndex(this); // this removes also instances
 		subclasses.forEach(subClass -> 			
-			resolver.getCardinalityUtil().deleteOntClassInclOwnedProperties(subClass)
+			resolver.getMetaschemata().deleteOntClassInclOwnedProperties(subClass)
 		);
-		resolver.getCardinalityUtil().deleteOntClassInclOwnedProperties(type);
+		resolver.getMetaschemata().deleteOntClassInclOwnedProperties(type);
 		this.isDeleted = true;
 	}
 	
 
 	public RDFPropertyType createListPropertyType(String name, PrimitiveOrClassType type) {
 		if (type.isPrimitiveType()) {
-			var prop = resolver.getCardinalityUtil().getListType().addLiteralListProperty(this.type, makePropertyURI(name), type.getPrimitiveType());
+			var prop = resolver.getMetaschemata().getListType().addLiteralListProperty(this.type, makePropertyURI(name), type.getPrimitiveType());
 			if (prop == null) { 
 				return null;
 			} else {
 				return insertAndReturn(prop);
 			}
 		} else {
-			var prop = resolver.getCardinalityUtil().getListType().addObjectListProperty(this.type, makePropertyURI(name), type.getClassType());
+			var prop = resolver.getMetaschemata().getListType().addObjectListProperty(this.type, makePropertyURI(name), type.getClassType());
 			if (prop == null) { 
 				return null;
 			} else {
@@ -115,14 +115,14 @@ public class RDFInstanceType extends RDFElement {
 
 	public RDFPropertyType createMapPropertyType(String name, PrimitiveOrClassType valueType) {
 		if (valueType.isPrimitiveType()) {
-			var prop = resolver.getCardinalityUtil().getMapType().addLiteralMapProperty(this.type, makePropertyURI(name), valueType.getPrimitiveType());
+			var prop = resolver.getMetaschemata().getMapType().addLiteralMapProperty(this.type, makePropertyURI(name), valueType.getPrimitiveType());
 			if (prop == null) { 
 				return null;
 			} else {
 				return insertAndReturn(prop);
 			}
 		} else {
-			var prop = resolver.getCardinalityUtil().getMapType().addObjectMapProperty(this.type, makePropertyURI(name), valueType.getClassType());
+			var prop = resolver.getMetaschemata().getMapType().addObjectMapProperty(this.type, makePropertyURI(name), valueType.getClassType());
 			if (prop == null) { 
 				return null;
 			} else {
@@ -143,9 +143,9 @@ public class RDFInstanceType extends RDFElement {
 	private OntRelationalProperty createBasePropertyType(String name, PrimitiveOrClassType type) {
 		var propUri = makePropertyURI(name);
 		if (type.isPrimitiveType()) {
-			return resolver.getCardinalityUtil().getSingleType().createBaseDataPropertyType(propUri, this.type, type.getPrimitiveType());
+			return resolver.getMetaschemata().getSingleType().createBaseDataPropertyType(propUri, this.type, type.getPrimitiveType());
 		} else {
-			return resolver.getCardinalityUtil().getSingleType().createBaseObjectPropertyType(propUri, this.type, type.getClassType());
+			return resolver.getMetaschemata().getSingleType().createBaseObjectPropertyType(propUri, this.type, type.getClassType());
 		}
 	}
 	
@@ -164,9 +164,9 @@ public class RDFInstanceType extends RDFElement {
 		var propUri = makePropertyURI(name);
 		if (propWrappers.containsKey(propUri)) return propWrappers.get(propUri);
 		var prop = type.isPrimitiveType() ? 
-				resolver.getCardinalityUtil().getSingleType().createSingleDataPropertyType(propUri, this.type, type.getPrimitiveType())
+				resolver.getMetaschemata().getSingleType().createSingleDataPropertyType(propUri, this.type, type.getPrimitiveType())
 				: 
-				resolver.getCardinalityUtil().getSingleType().createSingleObjectPropertyType(propUri, this.type, type.getClassType());
+				resolver.getMetaschemata().getSingleType().createSingleObjectPropertyType(propUri, this.type, type.getClassType());
 		if (prop != null)
 			return insertAndReturn(prop);
 		else 

@@ -27,7 +27,7 @@ public class ListWrapper extends TypedCollectionResource implements List<Object>
 	
 	public ListWrapper(@NonNull OntObject owner, @NonNull Named listReferenceProperty, @NonNull NodeToDomainResolver resolver, OntObject classOrDataRange) {
 		super(classOrDataRange, resolver);
-		this.listContent = resolver.getCardinalityUtil().getListType().getOrCreateSequenceFor(owner, listReferenceProperty);
+		this.listContent = resolver.getMetaschemata().getListType().getOrCreateSequenceFor(owner, listReferenceProperty);
 	}
 	
 	@Override

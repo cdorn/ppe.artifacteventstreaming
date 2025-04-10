@@ -31,6 +31,8 @@ import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import at.jku.isse.passiveprocessengine.rdfwrapper.PrimitiveTypesFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes.WrapperMetaModelOntology;
 
 class TestRDFPropertyType {
 
@@ -55,15 +57,15 @@ class TestRDFPropertyType {
 				.build();		
 		m = branch.getModel();	
 		typeFactory = new PrimitiveTypesFactory(m);
-		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+		var metaModel = WrapperMetaModelOntology.buildInMemoryOntology(); 
 		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
-		var cardUtil = new MetaModelSchemaTypes(m, metaModel);
+		var cardUtil = new WrapperMetaModelSchemaTypes(m, metaModel);
 		resolver = new NodeToDomainResolver(branch, null, cardUtil);
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
-		mapFactory = resolver.getCardinalityUtil().getMapType();
-		listFactory = resolver.getCardinalityUtil().getListType();
-		singleFactory = resolver.getCardinalityUtil().getSingleType();
+		mapFactory = resolver.getMetaschemata().getMapType();
+		listFactory = resolver.getMetaschemata().getListType();
+		singleFactory = resolver.getMetaschemata().getSingleType();
 		ppeArtifact = ((RDFInstanceType) resolver.createNewInstanceType(NS+"artifact"));
 		artifactType = ppeArtifact.getType();
 		ppeOther = ((RDFInstanceType) resolver.createNewInstanceType(NS+"other"));

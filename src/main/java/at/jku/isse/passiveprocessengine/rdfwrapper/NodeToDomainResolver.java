@@ -24,7 +24,6 @@ import org.apache.jena.shared.Lock;
 import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
-import org.apache.jena.vocabulary.XSD;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
@@ -33,10 +32,8 @@ import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
-import at.jku.isse.passiveprocessengine.core.InstanceWrapper;
-import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.MetaElementFactory;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RDFRuleDefinitionWrapper;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RDFRuleResultWrapper;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEnabledResolver;
@@ -48,62 +45,40 @@ import lombok.extern.slf4j.Slf4j;
 public class NodeToDomainResolver {
 
 	public static final String BASE_NS = "http://isse.jku.at/artifactstreaming/rdfwrapper#";
-	private static final String CONSTRUCTORS_URI = BASE_NS+"Constructors";
-	private static final String PREDICATE_FORCLASS_URI = BASE_NS+"useConstructorForClass";
+
 	protected final OntModel model;
 	protected final Dataset dataset;			
 	protected final Branch branch;	
 	protected final Map<OntClass, RDFInstanceType> typeIndex = new HashMap<>();	
 	protected final Map<String, RDFInstance> instanceIndex = new HashMap<>();		
-	protected final Map<String, Constructor<? extends RDFInstance>> instanceConstructors;
+	
 	
 	protected long commitSessionCounter = 1;
 	protected Lock writeLock;
 	
 	@Getter protected final RuleRepository ruleRepo;
-	@Getter protected final OntClass metaClass;
-	@Getter private final MetaModelSchemaTypes cardinalityUtil;
-	@Getter private final PrimitiveTypesFactory primitiveTypesFactory;	
+	@Getter private final WrapperMetaModelSchemaTypes metaschemata;
+		
 	
-	public NodeToDomainResolver(Branch branch, RuleRepository ruleRepo, MetaModelSchemaTypes cardinalityUtil) {
+	public NodeToDomainResolver(Branch branch, RuleRepository ruleRepo, WrapperMetaModelSchemaTypes cardinalityUtil) {
 		super();
 		this.ruleRepo = ruleRepo;
 		this.branch = branch;
 		this.model = branch.getModel();
 		this.dataset = branch.getDataset();	
-		this.cardinalityUtil = cardinalityUtil; 
-		metaClass = createMetaClass();	//typeIndex.put(meta, new RDFInstanceType(meta, this));
-		primitiveTypesFactory = new PrimitiveTypesFactory(model);
-		instanceConstructors = loadInstanceSubtypeClasses();
+		this.metaschemata = cardinalityUtil; 	
+		var metaClass = metaschemata.getMetaElements().getMetaClass();
+		typeIndex.put(metaClass, new RDFInstanceType(metaClass, this));
 		init();		
-	}
-	
-	private Map<String, Constructor<? extends RDFInstance>> loadInstanceSubtypeClasses() {
-		var constructors = model.createOntClass(CONSTRUCTORS_URI);
-		var prop = cardinalityUtil.getMapType().addLiteralMapProperty(constructors, PREDICATE_FORCLASS_URI, model.getDatatype(XSD.xstring));
-		// load from branch
-		return new HashMap<>();
-	}
-	
-	public void registerInstanceSpecificClass(@NonNull String namespace, @NonNull Class<? extends RDFInstance> clazz) {
-		try {
-			var constructor = clazz.getConstructor(OntIndividual.class, RDFInstanceType.class, NodeToDomainResolver.class);
-			instanceConstructors.put(namespace, constructor);
-			//store with branch
-			
-		} catch (NoSuchMethodException | SecurityException e) {
-			e.printStackTrace();
-			log.error(e.getMessage());
-		}		
 	}
 
 	protected void init() {
 		model.classes()
 		.filter(ontClass -> !isBlacklistedNamespace(ontClass.getNameSpace()))		
 		.forEach(ontClass -> { 
-			var constructor = instanceConstructors.get(ontClass.getNameSpace());
+			var constructor = metaschemata.getMetaElements().getConstructorForNamspace(ontClass.getURI());
 			var type = initOrGetType(ontClass);
-			if (!ontClass.equals(metaClass)) {
+			if (!ontClass.equals(metaschemata.getMetaElements().getMetaClass())) {
 				ontClass.individuals(true).forEach(indiv -> instanceIndex.putIfAbsent(indiv.getURI(), createMostSpecificInstance(indiv, type, constructor)));
 			}
 		} );		
@@ -141,17 +116,6 @@ public class NodeToDomainResolver {
 				namespace.equals(SingleResourceType.SINGLE_NS) ||
 				namespace.equals(ListResourceType.LIST_NS) ||
 				namespace.equals(RuleSchemaFactory.uri);
-	}
-	
-	private OntClass createMetaClass() {
-		var meta = model.getOntClass(BASE_NS+"MetaClass");
-		if (meta == null) { 			
-			meta = model.createOntClass(BASE_NS+"MetaClass");
-			// add metadata property						
-			cardinalityUtil.getMapType().addLiteralMapProperty(meta, MetaElementFactory.propertyMetadataPredicate, model.getDatatype(XSD.xstring));
-			typeIndex.put(meta, new RDFInstanceType(meta, this));
-		}
-		return meta;
 	}
 	
 	public RDFInstanceType resolveToType(@NonNull OntClass ontClass) {
@@ -196,11 +160,11 @@ public class NodeToDomainResolver {
 	}
 	
 	public OntClass getMapEntryBaseType() {		
-		return getCardinalityUtil().getMapType().getMapEntryClass();
+		return metaschemata.getMapType().getMapEntryClass();
 	}	
 
 	public OntClass getListBaseType() {
-		return getCardinalityUtil().getListType().getListClass();
+		return metaschemata.getListType().getListClass();
 	}
 	
 //	public OntDataRange resolveAtomicInstanceType(RDFInstanceType type) {
@@ -282,7 +246,7 @@ public class NodeToDomainResolver {
 		if (typeIndex.containsKey(ontClass))  {
 			return typeIndex.get(ontClass); // already have this class definition, not creating another wrapper around
 		} else { 
-			ontClass.addProperty(RDF.type, metaClass);
+			ontClass.addProperty(RDF.type, metaschemata.getMetaElements().getMetaClass());
 			for (var superClass : directSuperClasses) {
 				if (superClass == null) {
 					log.warn("provided null superclass, ignoring");
@@ -292,11 +256,7 @@ public class NodeToDomainResolver {
 			}
 			var type = new RDFInstanceType(ontClass, this);
 			type.cacheSuperProperties();
-			
 			typeIndex.put(ontClass, type);
-			
-			
-			
 			return type;
 		}
 	}	

@@ -31,11 +31,11 @@ public class CoreTypeFactory {
 		
 		baseType = schemaReg.findNonDeletedInstanceTypeByFQN(BASE_TYPE_URI).orElseGet(() ->	{	
 			baseType = schemaReg.createNewInstanceType(BASE_TYPE_URI);
-			baseType.createSinglePropertyType(EXTERNAL_DEFAULT_ID_URI, schemaReg.getPrimitiveTypesFactory().getStringType());
-			baseType.createSinglePropertyType(URL_URI, schemaReg.getPrimitiveTypesFactory().getStringType());
-			baseType.createSinglePropertyType(EXTERNAL_TYPE_URI, schemaReg.getPrimitiveTypesFactory().getStringType());
-			baseType.createSinglePropertyType(LAST_UPDATE_URI, schemaReg.getPrimitiveTypesFactory().getDateType());
-			baseType.createSinglePropertyType(RDFInstanceType.propertyIsFullyFetchedPredicate, schemaReg.getPrimitiveTypesFactory().getBooleanType());
+			baseType.createSinglePropertyType(EXTERNAL_DEFAULT_ID_URI, schemaReg.getMetaschemata().getPrimitiveTypesFactory().getStringType());
+			baseType.createSinglePropertyType(URL_URI, schemaReg.getMetaschemata().getPrimitiveTypesFactory().getStringType());
+			baseType.createSinglePropertyType(EXTERNAL_TYPE_URI, schemaReg.getMetaschemata().getPrimitiveTypesFactory().getStringType());
+			baseType.createSinglePropertyType(LAST_UPDATE_URI, schemaReg.getMetaschemata().getPrimitiveTypesFactory().getDateType());
+			baseType.createSinglePropertyType(RDFInstanceType.propertyIsFullyFetchedPredicate, schemaReg.getMetaschemata().getPrimitiveTypesFactory().getBooleanType());
 			return baseType;
 		});
 	}

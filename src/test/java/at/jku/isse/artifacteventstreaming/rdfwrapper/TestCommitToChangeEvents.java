@@ -37,6 +37,8 @@ import at.jku.isse.passiveprocessengine.rdfwrapper.collections.MapWrapper;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.ChangeListener;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.CommitChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.PropertyChange.Update;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes.WrapperMetaModelOntology;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEnabledResolver;
 import lombok.Getter;
 
@@ -66,9 +68,9 @@ class TestCommitToChangeEvents {
 				.build();		
 		m = branch.getModel();		
 		typeFactory = new PrimitiveTypesFactory(m);
-		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+		var metaModel = WrapperMetaModelOntology.buildInMemoryOntology(); 
 		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
-		var cardUtil = new MetaModelSchemaTypes(m, metaModel);
+		var cardUtil = new WrapperMetaModelSchemaTypes(m, metaModel);
 		var observerFactory = new RuleTriggerObserverFactory(cardUtil);
 		var observer = observerFactory.buildInstance("RuleTriggeringObserver", m, repoModel);
 		var repairService = new RepairService(m, observer.getRepo());

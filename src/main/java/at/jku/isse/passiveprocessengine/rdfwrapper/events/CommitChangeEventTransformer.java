@@ -18,7 +18,7 @@ public class CommitChangeEventTransformer extends CommitContainmentAugmenter imp
 	RuleSchemaProvider ruleSchema;
 	
 	public CommitChangeEventTransformer(String serviceName, OntModel repoModel, NodeToDomainResolver resolver, RuleSchemaProvider ruleSchema) {
-		super(serviceName, repoModel, resolver.getCardinalityUtil());
+		super(serviceName, repoModel, resolver.getMetaschemata());
 		this.resolver = resolver;
 		this.ruleSchema = ruleSchema;
 	}	

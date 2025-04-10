@@ -23,10 +23,14 @@ import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
+import at.jku.isse.passiveprocessengine.core.BuildInType;
+import at.jku.isse.passiveprocessengine.core.PPEInstanceType.PPEPropertyType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import at.jku.isse.passiveprocessengine.rdfwrapper.PrimitiveTypesFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes.WrapperMetaModelOntology;
 
 class TestRDFInstanceType {
 
@@ -38,7 +42,7 @@ class TestRDFInstanceType {
 	PrimitiveTypesFactory typeFactory;
 	
 	@BeforeEach
-	void setup() throws URISyntaxException, Exception {
+	void setup() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);			
 		BranchImpl branch = (BranchImpl) new BranchBuilder(new URI(NS+"repo"), repoDataset, repoModel )	
@@ -46,9 +50,9 @@ class TestRDFInstanceType {
 				.build();		
 		m = branch.getModel();
 		typeFactory = new PrimitiveTypesFactory(m);
-		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+		var metaModel = WrapperMetaModelOntology.buildInMemoryOntology(); 
 		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
-		var cardUtil = new MetaModelSchemaTypes(m, metaModel); // this adds list , mapentry and metaclass type
+		var cardUtil = new WrapperMetaModelSchemaTypes(m, metaModel); // this adds list , mapentry and metaclass type
 		resolver = new NodeToDomainResolver(branch, null, cardUtil);
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
@@ -81,7 +85,7 @@ class TestRDFInstanceType {
 		
 		RDFPropertyType listProp = typeChild.getPropertyType("listOfArt");
 		assertNotEquals(null, listProp);
-		assertEquals(typeBase, listProp.getValueType());
+		assertEquals(typeBase.getAsPropertyType(), listProp.getValueType());
 		assertTrue(typeChild.hasPropertyType("priority"));
 		RDFPropertyType nonExistantProp = typeChild.getPropertyType("sdfdsfdsf");
 		assertNull(nonExistantProp);
