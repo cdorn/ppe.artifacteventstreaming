@@ -8,9 +8,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.jena.ontapi.model.OntClass;
-import org.apache.jena.vocabulary.OWL2;
-import org.apache.jena.vocabulary.RDF;
-import org.apache.jena.vocabulary.RDFS;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
@@ -30,7 +27,6 @@ import at.jku.isse.designspace.rule.arl.repair.RepairSingleValueOption;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
-import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEvaluationService.ResultEntry;
 import lombok.Getter;
 
 public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEvaluationService {

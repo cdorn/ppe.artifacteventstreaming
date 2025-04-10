@@ -1,8 +1,6 @@
 package at.jku.isse.passiveprocessengine.rdfwrapper.rule;
 
 import at.jku.isse.artifacteventstreaming.rule.RDFRuleDefinition;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
-import at.jku.isse.passiveprocessengine.core.RuleDefinition;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
 import lombok.Getter;
 

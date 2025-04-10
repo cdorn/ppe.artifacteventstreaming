@@ -23,8 +23,6 @@ import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
-import at.jku.isse.passiveprocessengine.core.BuildInType;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType.PPEPropertyType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import at.jku.isse.passiveprocessengine.rdfwrapper.PrimitiveTypesFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;

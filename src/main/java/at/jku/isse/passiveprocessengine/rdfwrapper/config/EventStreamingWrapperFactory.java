@@ -10,7 +10,6 @@ import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.api.BranchStateKeeper;
 import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
@@ -25,16 +24,12 @@ import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
-import at.jku.isse.designspace.artifactconnector.core.repository.CoreTypeFactory;
-import at.jku.isse.passiveprocessengine.core.InstanceRepository;
-import at.jku.isse.passiveprocessengine.core.RepairTreeProvider;
-import at.jku.isse.passiveprocessengine.core.SchemaRegistry;
+import at.jku.isse.passiveprocessengine.rdfwrapper.CoreTypeFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.LazyLoadingLoopControllerService;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.CommitChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RDFRepairTreeProvider;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEnabledResolver;
-import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEvaluationService;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
@@ -45,13 +40,12 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class EventStreamingWrapperFactory {
 
-	private final InstanceRepository instanceRepository;
-	private final SchemaRegistry schemaRegistry;
-	private final RepairTreeProvider repairTreeProvider;
-	private final RuleEvaluationService ruleEvaluationService;
+	
+	private final RuleEnabledResolver resolver;
 	private final ChangeEventTransformer changeEventTransformer;
 	private final CoreTypeFactory coreTypeFactory;
 	private final RuleSchemaProvider ruleSchemaProvider;
+	private final RDFRepairTreeProvider repairTreeProvider;
 	private final Branch branch;	
 	@Getter(value = AccessLevel.NONE) private final BranchStateUpdater stateKeeper;
 	
@@ -135,9 +129,9 @@ public class EventStreamingWrapperFactory {
 				
 				// set up additional wrapper components
 				var repairTreeProvider = new RDFRepairTreeProvider(repairService, observer.getRepo());
-				var coreTypeFactory = new CoreTypeFactory(resolver, resolver);
-				return new EventStreamingWrapperFactory(resolver, resolver, repairTreeProvider, resolver, changeTransformer
-						, coreTypeFactory, observer.getFactory(), branch, stateKeeper);																			
+				var coreTypeFactory = new CoreTypeFactory(resolver);
+				return new EventStreamingWrapperFactory(resolver, changeTransformer
+						, coreTypeFactory, observer.getFactory(), repairTreeProvider, branch, stateKeeper);																			
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}

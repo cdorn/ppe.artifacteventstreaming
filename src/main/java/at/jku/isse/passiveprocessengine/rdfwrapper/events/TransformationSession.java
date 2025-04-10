@@ -20,7 +20,6 @@ import at.jku.isse.artifacteventstreaming.replay.StatementAugmentationSession;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
-import at.jku.isse.passiveprocessengine.core.PPEInstance;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFElement;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;

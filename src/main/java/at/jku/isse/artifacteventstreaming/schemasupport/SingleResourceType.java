@@ -3,7 +3,6 @@ package at.jku.isse.artifacteventstreaming.schemasupport;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.ontapi.model.OntClass;
@@ -13,9 +12,7 @@ import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntProperty;
-import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.AnonId;
-import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.OWL2;

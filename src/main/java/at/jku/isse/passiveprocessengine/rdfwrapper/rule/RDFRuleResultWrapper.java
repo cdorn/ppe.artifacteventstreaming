@@ -4,25 +4,22 @@ import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.vocabulary.OWL2;
 
 import at.jku.isse.artifacteventstreaming.rule.RuleEvaluationWrapperResource;
-import at.jku.isse.artifacteventstreaming.rule.RuleEvaluationWrapperResourceImpl;
+import at.jku.isse.artifacteventstreaming.rule.RuleEvaluationWrapperResource;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
-import at.jku.isse.passiveprocessengine.core.PPEInstance;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
-import at.jku.isse.passiveprocessengine.core.RuleDefinition;
-import at.jku.isse.passiveprocessengine.core.RuleResult;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class RDFRuleResultWrapper extends RDFInstance{
 
 	private final RuleRepository ruleRepo;
-	private final RuleEvaluationWrapperResource evalWrapper;
+	@Getter private final RuleEvaluationWrapperResource evalWrapper;
 	
-	public RDFRuleResultWrapper(RuleEvaluationWrapperResourceImpl evalWrapper, NodeToDomainResolver resolver, RuleRepository ruleRepo) {
+	public RDFRuleResultWrapper(RuleEvaluationWrapperResource evalWrapper, NodeToDomainResolver resolver, RuleRepository ruleRepo) {
 		super(evalWrapper.getRuleEvalObj() , null, resolver);
 		this.evalWrapper = evalWrapper;
 		this.ruleRepo = ruleRepo;

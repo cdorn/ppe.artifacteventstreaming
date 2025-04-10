@@ -2,7 +2,6 @@ package at.jku.isse.artifacteventstreaming.branch.persistence;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitDeliveryEvent;

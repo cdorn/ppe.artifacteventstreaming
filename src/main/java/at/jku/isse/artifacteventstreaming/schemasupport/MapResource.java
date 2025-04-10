@@ -22,7 +22,7 @@ import org.apache.jena.rdf.model.impl.ModelCom;
 import org.apache.jena.rdf.model.impl.StatementImpl;
 import org.apache.jena.vocabulary.RDF;
 
-import at.jku.isse.passiveprocessengine.rdfwrapper.ResourceMismatchException;
+import at.jku.isse.passiveprocessengine.rdfwrapper.collections.ResourceMismatchException;
 
 public class MapResource implements Map<String, RDFNode> {	
 

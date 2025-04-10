@@ -3,6 +3,7 @@ package at.jku.isse.passiveprocessengine.rdfwrapper;
 import java.util.AbstractMap;
 import java.util.Map.Entry;
 import java.util.Optional;
+
 import org.apache.jena.datatypes.RDFDatatype;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
@@ -13,10 +14,10 @@ import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.RDFNode;
 
+import at.jku.isse.artifacteventstreaming.schemasupport.Cardinalities;
 import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType.CARDINALITIES;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +28,7 @@ public class RDFPropertyType  {
 
 	@Getter
 	private final OntRelationalProperty property;
-	private final CARDINALITIES cardinality;
+	private final Cardinalities cardinality;
 	private final PrimitiveOrClassType valueType;	
 
 	public RDFPropertyType(OntRelationalProperty property, NodeToDomainResolver resolver) {
@@ -72,30 +73,30 @@ public class RDFPropertyType  {
 	 * 		if there is no qualification --> LIST (we assume, realized as an rdf:seq)
 	 * 		
 	 */
-	public static Entry<OntObject, CARDINALITIES> determineValueTypeAndCardinality(OntRelationalProperty property, MapResourceType mapBaseType, ListResourceType listBaseType, SingleResourceType singleType) {
+	public static Entry<OntObject, Cardinalities> determineValueTypeAndCardinality(OntRelationalProperty property, MapResourceType mapBaseType, ListResourceType listBaseType, SingleResourceType singleType) {
 		OntObject valueObj = null;
-		CARDINALITIES cardinality = null;				
+		Cardinalities cardinality = null;				
 
 		if (property instanceof OntDataProperty dataProp) {
 			//single or set
 			if (singleType.isSingleProperty(dataProp)) {
-				cardinality = CARDINALITIES.SINGLE;
+				cardinality = Cardinalities.SINGLE;
 			} else {
-				cardinality = CARDINALITIES.SET;
+				cardinality = Cardinalities.SET;
 			}						
 			valueObj = getValueTypeFromProperty(property);			
 		} else if (property instanceof OntObjectProperty objProp) {
 			if (singleType.isSingleProperty(objProp)) {
-				cardinality = CARDINALITIES.SINGLE;
+				cardinality = Cardinalities.SINGLE;
 				valueObj = getValueTypeFromProperty(property);
 			} else if (listBaseType.getListReferenceSuperProperty().hasSubProperty(objProp, false)) {
-				cardinality = CARDINALITIES.LIST;
+				cardinality = Cardinalities.LIST;
 				valueObj = getValueTypeForListContainerProperty(objProp, listBaseType.getListClass());
 			} else if (mapBaseType.getMapReferenceSuperProperty().hasSubProperty(objProp, false)) {
-				cardinality = CARDINALITIES.MAP;
+				cardinality = Cardinalities.MAP;
 				valueObj = getValueTypeForMapContainerProperty(objProp, mapBaseType.getMapEntryClass());
 			} else {
-				cardinality = CARDINALITIES.SET;
+				cardinality = Cardinalities.SET;
 				valueObj = getValueTypeFromProperty(property);
 			}
 		}				
@@ -158,7 +159,7 @@ public class RDFPropertyType  {
 	}
 
 
-	public CARDINALITIES getCardinality() {
+	public Cardinalities getCardinality() {
 		return cardinality;
 	}
 

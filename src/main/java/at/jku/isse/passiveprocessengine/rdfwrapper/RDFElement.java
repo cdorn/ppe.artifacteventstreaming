@@ -11,13 +11,17 @@ import java.util.Set;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
+import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.StmtIterator;
 import org.apache.jena.vocabulary.RDFS;
 
+import at.jku.isse.artifacteventstreaming.schemasupport.Cardinalities;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
-import at.jku.isse.passiveprocessengine.core.BuildInType;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType.CARDINALITIES;
+import at.jku.isse.passiveprocessengine.rdfwrapper.collections.ListWrapper;
+import at.jku.isse.passiveprocessengine.rdfwrapper.collections.MapWrapper;
+import at.jku.isse.passiveprocessengine.rdfwrapper.collections.SetWrapper;
+import at.jku.isse.passiveprocessengine.rdfwrapper.collections.TypedCollectionResource;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +33,9 @@ public abstract class RDFElement {
 	protected final OntObject element;
 	protected RDFInstanceType instanceType;
 	protected final NodeToDomainResolver resolver;
+	
+	public static final String propertyModifiedByPredicate = NodeToDomainResolver.BASE_NS+"modifiedBy";
+	private Property owner = ResourceFactory.createProperty(propertyModifiedByPredicate);
 	
 	// caches are filled as they are accessed
 	protected final Map<String, TypedCollectionResource> collectionPropertyCache = new HashMap<>();
@@ -103,12 +110,12 @@ public abstract class RDFElement {
 
 
 	public void addOwner(String ownerId) {
-		element.addProperty(PPECORE.owner, ownerId);
+		element.addProperty(owner, ownerId);
 	}
 
 
 	public Set<String> getOwners() {
-		StmtIterator iter = element.listProperties(PPECORE.owner);
+		StmtIterator iter = element.listProperties(owner);
 		Set<String> owners = new HashSet<>();
 		while (iter.hasNext()){
 			owners.add(iter.next().getString());
@@ -124,7 +131,7 @@ public abstract class RDFElement {
 	 * Expects fully qualified named properties , i.e., as they are used at the RDF layer
 	 */
 	public void setSingleProperty(String property, Object value) {		
-			var prop = resolveProperty(property, CARDINALITIES.SINGLE);
+			var prop = resolveProperty(property, Cardinalities.SINGLE);
 			element.removeAll(prop.asProperty());
 			if (value instanceof RDFElement inst && value != null) { // then a resource and not a literal
 				element.addProperty(prop.asProperty(), inst.getElement());
@@ -141,7 +148,7 @@ public abstract class RDFElement {
 		}
 	}
 	
-	protected OntRelationalProperty resolveProperty(String property, CARDINALITIES... expectedCardinalities) {
+	protected OntRelationalProperty resolveProperty(String property, Cardinalities... expectedCardinalities) {
 		var expCardi = Set.of(expectedCardinalities);
 		RDFInstanceType type = (RDFInstanceType) getInstanceType();
 		if (type == null) { // we are untyped, thus return just the property, consumer needs to know what they are doing
@@ -186,16 +193,16 @@ public abstract class RDFElement {
 		else {
 		// check if single or collection property
 			var prop = optProp.get();
-			if (prop.getCardinality().equals(CARDINALITIES.SINGLE)) {
+			if (prop.getCardinality().equals(Cardinalities.SINGLE)) {
 				return (T) getSingleProperty(prop);
 			}
-			if (Set.class.isAssignableFrom(clazz) && prop.getCardinality().equals(CARDINALITIES.SET)) {
+			if (Set.class.isAssignableFrom(clazz) && prop.getCardinality().equals(Cardinalities.SET)) {
 				return (T) getPropertyAsSet(prop);
 			} 
-			if (List.class.isAssignableFrom(clazz) && prop.getCardinality().equals(CARDINALITIES.LIST)) {
+			if (List.class.isAssignableFrom(clazz) && prop.getCardinality().equals(Cardinalities.LIST)) {
 				return (T) getPropertyAsList(prop);
 			} 
-			if (Map.class.isAssignableFrom(clazz) && prop.getCardinality().equals(CARDINALITIES.MAP)) {
+			if (Map.class.isAssignableFrom(clazz) && prop.getCardinality().equals(Cardinalities.MAP)) {
 				return (T) getPropertyAsMap(prop);
 			}	
 			throw new IllegalArgumentException(String.format("Property %s does exist on element %s but of cardinality %s incompatible with clazz %s "
@@ -253,10 +260,10 @@ public abstract class RDFElement {
 		var optProp = resolveToPropertyType(property);
 		if (optProp.isPresent()) {
 			var prop = optProp.get();
-			if (prop.getCardinality().equals(CARDINALITIES.LIST)) {
+			if (prop.getCardinality().equals(Cardinalities.LIST)) {
 				((List<Object>) getPropertyAsList(prop)).add(value);
 			} else
-			if (prop.getCardinality().equals(CARDINALITIES.SET)) {
+			if (prop.getCardinality().equals(Cardinalities.SET)) {
 				((Set<Object>) getPropertyAsSet(prop)).add(value);
 			} else {
 				throw new IllegalArgumentException(String.format("Property %s on element %s cannot be called with add()", property, element.getURI()));

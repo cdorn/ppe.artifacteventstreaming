@@ -8,36 +8,30 @@ import java.util.stream.Stream;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntClass;
-import org.apache.jena.ontapi.model.OntDataProperty;
-import org.apache.jena.ontapi.model.OntDataRange;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntProperty;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
-import org.apache.jena.tdb.TDBFactory;
 import org.apache.jena.tdb2.TDB2Factory;
 import org.apache.jena.vocabulary.RDFS;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.replay.StatementAugmentationSession.StatementWrapper;
 import lombok.Getter;
-import lombok.NonNull;
 
 public class MetaModelSchemaTypes {
 
 	private static final String METAONTOLOGY = "metaontology";
 	
 	@Getter
-	private MapResourceType mapType;
+	private final MapResourceType mapType;
 	@Getter
-	private ListResourceType listType;
+	private final ListResourceType listType;
 	@Getter
-	private SingleResourceType singleType;	
+	private final SingleResourceType singleType;	
 	
 	public MetaModelSchemaTypes(OntModel model, MetaModelOntology meta) {			
 		// we init this model with the model fron the meta ontology

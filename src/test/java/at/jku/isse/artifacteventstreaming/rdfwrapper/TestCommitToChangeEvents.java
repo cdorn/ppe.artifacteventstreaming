@@ -4,7 +4,6 @@ import static at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType.M
 import static org.junit.Assert.assertEquals;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -31,10 +30,10 @@ import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
-import at.jku.isse.passiveprocessengine.rdfwrapper.MapWrapper;
 import at.jku.isse.passiveprocessengine.rdfwrapper.PrimitiveTypesFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.collections.MapWrapper;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.ChangeListener;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.CommitChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.PropertyChange.Update;

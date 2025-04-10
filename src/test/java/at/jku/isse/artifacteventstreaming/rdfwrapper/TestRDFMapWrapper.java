@@ -15,9 +15,8 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.Test;
 
-import at.jku.isse.passiveprocessengine.core.PPEInstance;
-import at.jku.isse.passiveprocessengine.rdfwrapper.MapWrapper;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
+import at.jku.isse.passiveprocessengine.rdfwrapper.collections.MapWrapper;
 
 public class TestRDFMapWrapper extends TestRDFInstance {
 
@@ -28,7 +27,7 @@ public class TestRDFMapWrapper extends TestRDFInstance {
 		var art2 = resolver.createInstance(NS+"art2", typeChild);
 		art1.setSingleProperty(parent.getId(), art2);
 		
-		var result = art1.getTypedProperty(parent.getId(), PPEInstance.class);
+		var result = art1.getTypedProperty(parent.getId(), RDFInstance.class);
 		assertEquals(result, art2);
 	}
 	

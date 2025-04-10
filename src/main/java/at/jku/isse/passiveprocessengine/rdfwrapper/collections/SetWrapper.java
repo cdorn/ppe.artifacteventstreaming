@@ -1,4 +1,4 @@
-package at.jku.isse.passiveprocessengine.rdfwrapper;
+package at.jku.isse.passiveprocessengine.rdfwrapper.collections;
 
 import java.util.Collection;
 import java.util.Iterator;
@@ -16,6 +16,7 @@ import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.StmtIterator;
 
+import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 

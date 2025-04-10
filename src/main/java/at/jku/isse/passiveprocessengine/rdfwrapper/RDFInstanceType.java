@@ -27,6 +27,7 @@ public class RDFInstanceType extends RDFElement {
 	protected final Map<String, RDFPropertyType> propWrappers = new HashMap<>();
 	@Getter
 	protected final Set<OntClass> allSuperClasses = new HashSet<>();
+	public static final String propertyIsFullyFetchedPredicate = NodeToDomainResolver.BASE_NS+"isFullyFetched";
 	
 	public RDFInstanceType(OntClass element,  NodeToDomainResolver resolver) {
 		super(element, resolver);

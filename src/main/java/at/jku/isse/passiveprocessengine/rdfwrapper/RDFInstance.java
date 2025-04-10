@@ -4,10 +4,6 @@ import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.vocabulary.RDF;
 
-import at.jku.isse.passiveprocessengine.core.BuildInType;
-import at.jku.isse.passiveprocessengine.core.PPEInstance;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
-import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType.PrimitiveOrClassType;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;

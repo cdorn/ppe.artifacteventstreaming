@@ -1,20 +1,21 @@
 package at.jku.isse.passiveprocessengine.rdfwrapper;
 
+import java.lang.reflect.Constructor;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.jena.datatypes.RDFDatatype;
 import org.apache.jena.ontapi.model.OntClass;
+import org.apache.jena.ontapi.model.OntClass.CardinalityRestriction;
 import org.apache.jena.ontapi.model.OntClass.Named;
-import org.apache.jena.ontapi.model.OntDataRange;
+import org.apache.jena.ontapi.model.OntClass.ValueRestriction;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.RDFNode;
@@ -28,18 +29,14 @@ import org.apache.jena.vocabulary.XSD;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
-import at.jku.isse.artifacteventstreaming.rule.RDFRuleDefinition;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
-import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
-import at.jku.isse.passiveprocessengine.core.BuildInType;
-import at.jku.isse.passiveprocessengine.core.InstanceRepository;
-import at.jku.isse.passiveprocessengine.core.RuleDefinition;
-import at.jku.isse.passiveprocessengine.core.SchemaRegistry;
+import at.jku.isse.passiveprocessengine.core.InstanceWrapper;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.MetaElementFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RDFRuleDefinitionWrapper;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RDFRuleResultWrapper;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEnabledResolver;
@@ -48,22 +45,25 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class NodeToDomainResolver /*implements SchemaRegistry, InstanceRepository */ {
+public class NodeToDomainResolver {
 
 	public static final String BASE_NS = "http://isse.jku.at/artifactstreaming/rdfwrapper#";
-	public static final String propertyMetadataPredicate = BASE_NS+"propertyMetadata";
-	
+	private static final String CONSTRUCTORS_URI = BASE_NS+"Constructors";
+	private static final String PREDICATE_FORCLASS_URI = BASE_NS+"useConstructorForClass";
 	protected final OntModel model;
-	protected final Dataset dataset;
-	@Getter protected final RuleRepository ruleRepo;		
+	protected final Dataset dataset;			
+	protected final Branch branch;	
 	protected final Map<OntClass, RDFInstanceType> typeIndex = new HashMap<>();	
-	protected final Map<String, RDFInstance> instanceIndex = new HashMap<>();	
-	protected final Branch branch;
-	protected final OntClass metaClass;
-	protected long commitSessionCounter = 1;
+	protected final Map<String, RDFInstance> instanceIndex = new HashMap<>();		
+	protected final Map<String, Constructor<? extends RDFInstance>> instanceConstructors;
 	
-	@Getter private MetaModelSchemaTypes cardinalityUtil;
+	protected long commitSessionCounter = 1;
 	protected Lock writeLock;
+	
+	@Getter protected final RuleRepository ruleRepo;
+	@Getter protected final OntClass metaClass;
+	@Getter private final MetaModelSchemaTypes cardinalityUtil;
+	@Getter private final PrimitiveTypesFactory primitiveTypesFactory;	
 	
 	public NodeToDomainResolver(Branch branch, RuleRepository ruleRepo, MetaModelSchemaTypes cardinalityUtil) {
 		super();
@@ -72,21 +72,65 @@ public class NodeToDomainResolver /*implements SchemaRegistry, InstanceRepositor
 		this.model = branch.getModel();
 		this.dataset = branch.getDataset();	
 		this.cardinalityUtil = cardinalityUtil; 
-		metaClass = createMetaClass();	
+		metaClass = createMetaClass();	//typeIndex.put(meta, new RDFInstanceType(meta, this));
+		primitiveTypesFactory = new PrimitiveTypesFactory(model);
+		instanceConstructors = loadInstanceSubtypeClasses();
 		init();		
 	}
 	
+	private Map<String, Constructor<? extends RDFInstance>> loadInstanceSubtypeClasses() {
+		var constructors = model.createOntClass(CONSTRUCTORS_URI);
+		var prop = cardinalityUtil.getMapType().addLiteralMapProperty(constructors, PREDICATE_FORCLASS_URI, model.getDatatype(XSD.xstring));
+		// load from branch
+		return new HashMap<>();
+	}
+	
+	public void registerInstanceSpecificClass(@NonNull String namespace, @NonNull Class<? extends RDFInstance> clazz) {
+		try {
+			var constructor = clazz.getConstructor(OntIndividual.class, RDFInstanceType.class, NodeToDomainResolver.class);
+			instanceConstructors.put(namespace, constructor);
+			//store with branch
+			
+		} catch (NoSuchMethodException | SecurityException e) {
+			e.printStackTrace();
+			log.error(e.getMessage());
+		}		
+	}
+
 	protected void init() {
 		model.classes()
 		.filter(ontClass -> !isBlacklistedNamespace(ontClass.getNameSpace()))		
 		.forEach(ontClass -> { 
-			var type = new RDFInstanceType(ontClass, this);
-			typeIndex.put(ontClass, type);
-			type.cacheSuperProperties();
+			var constructor = instanceConstructors.get(ontClass.getNameSpace());
+			var type = initOrGetType(ontClass);
 			if (!ontClass.equals(metaClass)) {
-				ontClass.individuals(true).forEach(indiv -> instanceIndex.putIfAbsent(indiv.getURI(), new RDFInstance(indiv, type, this)));
+				ontClass.individuals(true).forEach(indiv -> instanceIndex.putIfAbsent(indiv.getURI(), createMostSpecificInstance(indiv, type, constructor)));
 			}
 		} );		
+	}
+	
+	
+	protected RDFInstance createMostSpecificInstance(OntIndividual indiv, RDFInstanceType type, Constructor<? extends RDFInstance> subClassConstructor) {
+		if (subClassConstructor == null) {
+			return new RDFInstance(indiv, type, this);
+		} else {
+			try {
+				return subClassConstructor.newInstance(indiv, type, this);
+			} catch (Exception e) {
+				e.printStackTrace();
+				log.error(e.getMessage());
+				return null;
+			}
+		}
+	}
+	
+	protected RDFInstanceType initOrGetType(OntClass ontClass) {
+		if (!typeIndex.containsKey(ontClass)) {
+			var type = new RDFInstanceType(ontClass, this);
+			typeIndex.put(ontClass, type);
+			type.cacheSuperProperties();			
+		}
+		return typeIndex.get(ontClass);
 	}
 	
 	protected boolean isBlacklistedNamespace(String namespace) {
@@ -104,7 +148,7 @@ public class NodeToDomainResolver /*implements SchemaRegistry, InstanceRepositor
 		if (meta == null) { 			
 			meta = model.createOntClass(BASE_NS+"MetaClass");
 			// add metadata property						
-			cardinalityUtil.getMapType().addLiteralMapProperty(meta, propertyMetadataPredicate, model.getDatatype(XSD.xstring));
+			cardinalityUtil.getMapType().addLiteralMapProperty(meta, MetaElementFactory.propertyMetadataPredicate, model.getDatatype(XSD.xstring));
 			typeIndex.put(meta, new RDFInstanceType(meta, this));
 		}
 		return meta;
@@ -139,9 +183,9 @@ public class NodeToDomainResolver /*implements SchemaRegistry, InstanceRepositor
 //			}
 //			
 //		} else if (node instanceof OntClass ontClass) {
-			if (ontClass.getURI().equals(RuleSchemaFactory.ruleDefinitionURI))
-				return BuildInType.RULE;
-			//if (ontClass.getURI().equals(OWL2.Class.getURI()))
+//			if (ontClass.getURI().equals(RuleSchemaFactory.ruleDefinitionURI))
+//				return BuildInType.RULE;
+//			//if (ontClass.getURI().equals(OWL2.Class.getURI()))
 			//	return BuildInType.METATYPE;
 			return typeIndex.get(ontClass);
 //		} else if (node.canAs(OntClass.class)) {
@@ -189,25 +233,46 @@ public class NodeToDomainResolver /*implements SchemaRegistry, InstanceRepositor
 		return type.getType();	
 	}
 
-	/**
-	 * @deprecated
-	 * use @findNonDeletedInstanceTypeByFQN instead
-	 */
-	@Deprecated
-	public RDFInstanceType getTypeByName(String arg0) {
-		if (isValidURL(arg0)) {
-			return typeIndex.values().stream()
-					.filter(type -> type.getId().equals(arg0))
-					.findAny()
-					.orElse(null);	
-		} else {
-			return typeIndex.values().stream()
-					.filter(type -> type.getName().equals(arg0))
-					.findAny()
-					.orElse(null);
-		}
-	}
+//	/**
+//	 * @deprecated
+//	 * use @findNonDeletedInstanceTypeByFQN instead
+//	 */
+//	@Deprecated
+//	public RDFInstanceType getTypeByName(String arg0) {
+//		if (isValidURL(arg0)) {
+//			return typeIndex.values().stream()
+//					.filter(type -> type.getId().equals(arg0))
+//					.findAny()
+//					.orElse(null);	
+//		} else {
+//			return typeIndex.values().stream()
+//					.filter(type -> type.getName().equals(arg0))
+//					.findAny()
+//					.orElse(null);
+//		}
+//	}
 
+	public Set<RDFInstance> findInstances(RDFPropertyType property, String value) {
+		var iter = branch.getModel().listResourcesWithProperty(property.getProperty().asProperty(), value);
+		var result = new HashSet<RDFInstance>();
+		while (iter.hasNext()) {
+			var r = iter.next();
+			if (instanceIndex.containsKey(r.getURI())) {
+				result.add(instanceIndex.get(r.getURI()));
+			} else if (r.canAs(OntIndividual.class)) {
+				var indiv = r.as(OntIndividual.class);
+				OntClass rdfType = indiv.classes(true).filter(superClass -> !(superClass instanceof CardinalityRestriction))
+						.filter(superClass -> !(superClass instanceof ValueRestriction))
+						.findAny().orElse(null);
+				if (rdfType != null) {
+					var type = initOrGetType(rdfType);
+					var instance = instanceIndex.putIfAbsent(indiv.getURI(), new RDFInstance(indiv, type, this));
+					result.add(instance);
+				}
+			}
+		}
+		return result;
+	}
 
 	public RDFInstanceType createNewInstanceType(String arg0, RDFInstanceType... directSuperClasses) {		
 		if (!isValidURL(arg0)) {
@@ -227,11 +292,14 @@ public class NodeToDomainResolver /*implements SchemaRegistry, InstanceRepositor
 			}
 			var type = new RDFInstanceType(ontClass, this);
 			type.cacheSuperProperties();
+			
 			typeIndex.put(ontClass, type);
+			
+			
+			
 			return type;
 		}
-	}
-
+	}	
 
 	public Set<RDFInstanceType> findAllInstanceTypesByFQN(String arg0) {
 		var optType = findNonDeletedInstanceTypeByFQN(arg0);
@@ -255,12 +323,6 @@ public class NodeToDomainResolver /*implements SchemaRegistry, InstanceRepositor
 			return Optional.ofNullable(defWrapper);
 		}
 	}
-
- // fqn is name as id with RDF --> using URI
-	public Optional<RDFInstanceType> findNonDeletedInstanceTypeById(String arg0) {
-		return findNonDeletedInstanceTypeByFQN(arg0);
-	}
-
 
 	public Set<RDFInstanceType> getAllNonDeletedInstanceTypes() {
 		return typeIndex.values().stream().collect(Collectors.toSet());
@@ -413,13 +475,13 @@ public class NodeToDomainResolver /*implements SchemaRegistry, InstanceRepositor
 		}
 	}
 
-	protected 	RDFNode convertToRDF(Object e) {
+	public	RDFNode convertToRDF(Object e) {
 		if (e instanceof RDFElement rdfEl) {
 			return rdfEl.getElement();
-		} else if (e.equals(BuildInType.RULE)) { 
-			 return model.getOntClass(RuleSchemaFactory.ruleDefinitionURI);
-		} else if (e.equals(BuildInType.METATYPE)) {
-			 return metaClass; //model.getOntClass(OWL2.Class.getURI());
+//		} else if (e.equals(BuildInType.RULE)) { 
+//			 return model.getOntClass(RuleSchemaFactory.ruleDefinitionURI);
+//		} else if (e.equals(BuildInType.METATYPE)) {
+//			 return metaClass; //model.getOntClass(OWL2.Class.getURI());
 		}else { // a literal
 			return getModel().createTypedLiteral(e);
 		}
@@ -438,7 +500,7 @@ public class NodeToDomainResolver /*implements SchemaRegistry, InstanceRepositor
 //	    } catch (Exception e) {
 //	        return false;
 //	    }
-		//FIXME: proper check
+		//FIXME: proper check, but the exception based check above is too slow.
 		return url.startsWith("http");
 	}
 

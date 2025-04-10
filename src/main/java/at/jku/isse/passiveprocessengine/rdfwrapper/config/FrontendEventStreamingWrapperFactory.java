@@ -10,35 +10,23 @@ import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.api.BranchStateKeeper;
 import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
-import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
-import at.jku.isse.artifacteventstreaming.branch.persistence.FilebasedDatasetLoader;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryEventStore;
-import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryStateKeeperFactory;
-import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
-import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
-import at.jku.isse.designspace.artifactconnector.core.repository.CoreTypeFactory;
-import at.jku.isse.passiveprocessengine.core.InstanceRepository;
-import at.jku.isse.passiveprocessengine.core.RepairTreeProvider;
-import at.jku.isse.passiveprocessengine.core.SchemaRegistry;
-import at.jku.isse.passiveprocessengine.rdfwrapper.LazyLoadingLoopControllerService;
+import at.jku.isse.passiveprocessengine.rdfwrapper.CoreTypeFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.CommitChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RDFRepairTreeProvider;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEnabledResolver;
-import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEvaluationService;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
@@ -49,10 +37,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class FrontendEventStreamingWrapperFactory {
 
-	private final InstanceRepository instanceRepository;
-	private final SchemaRegistry schemaRegistry;
-	private final RepairTreeProvider repairTreeProvider;
-	private final RuleEvaluationService ruleEvaluationService;
+	private final RuleEnabledResolver resolver;
+	private final RDFRepairTreeProvider repairTreeProvider;
 	private final ChangeEventTransformer changeEventTransformer;
 	private final CoreTypeFactory coreTypeFactory;
 	private final RuleSchemaProvider ruleSchemaProvider;
@@ -121,13 +107,13 @@ public class FrontendEventStreamingWrapperFactory {
 				//	this enables refreshing of abstraction layer cache upon any changes
 				branch.appendBranchInternalCommitService(changeTransformer);
 				//AND no need for loop controller as there is no lazy loading here, that happened already in backend,
-													
+				
+				var coreTypeFactory = new CoreTypeFactory(resolver);			
 				
 				// set up additional wrapper components
 				//TODO make this a cached repair tree provider, we want to reuse persisted repair trees
 				var repairTreeProvider = new RDFRepairTreeProvider(repairService, observer.getRepo());
-				var coreTypeFactory = new CoreTypeFactory(resolver, resolver);
-				return new FrontendEventStreamingWrapperFactory(resolver, resolver, repairTreeProvider, resolver, changeTransformer
+				return new FrontendEventStreamingWrapperFactory(resolver, repairTreeProvider, changeTransformer
 						, coreTypeFactory, observer.getFactory(), branch, stateKeeper);																			
 			} catch (Exception e) {
 				throw new RuntimeException(e);

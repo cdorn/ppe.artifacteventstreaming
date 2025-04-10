@@ -4,7 +4,6 @@ import static at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType.M
 import static org.junit.Assert.assertEquals;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;

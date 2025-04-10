@@ -13,12 +13,9 @@ import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntProperty;
-import org.apache.jena.ontapi.model.OntRelationalProperty;
-import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.vocabulary.RDFS;
 import org.apache.jena.vocabulary.XSD;
 
 import lombok.Getter;

@@ -1,4 +1,4 @@
-package at.jku.isse.passiveprocessengine.rdfwrapper;
+package at.jku.isse.passiveprocessengine.rdfwrapper.config;
 
 import java.net.URI;
 
@@ -8,7 +8,6 @@ import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
-import org.rocksdb.RocksDBException;
 
 import com.eventstore.dbclient.DeleteStreamOptions;
 
@@ -25,29 +24,23 @@ import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
-import at.jku.isse.designspace.artifactconnector.core.repository.CoreTypeFactory;
-import at.jku.isse.passiveprocessengine.core.DesignspaceTestSetup;
-import at.jku.isse.passiveprocessengine.core.InstanceRepository;
-import at.jku.isse.passiveprocessengine.core.RepairTreeProvider;
-import at.jku.isse.passiveprocessengine.core.SchemaRegistry;
+import at.jku.isse.passiveprocessengine.rdfwrapper.CoreTypeFactory;
+import at.jku.isse.passiveprocessengine.rdfwrapper.LazyLoadingLoopControllerService;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.CommitChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RDFRepairTreeProvider;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEnabledResolver;
-import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEvaluationService;
 import lombok.Getter;
 
 @Getter
-public class RDFWrapperTestSetup implements DesignspaceTestSetup {
+public class RDFWrapperTestSetup {
 
 	private static final String RDF_WRAPPER_TEST_CACHE_DIR = "./RDFWrapperTestCache/";
 	public static final URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/rdfwrapper");
 	public static final URI branchURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/rdfwrapper/testbranch");
 	
-	private InstanceRepository instanceRepository;
-	private SchemaRegistry schemaRegistry;
-	private RepairTreeProvider repairTreeProvider;
-	protected RuleEvaluationService ruleEvaluationService;
+	private RuleEnabledResolver resolver;
+	private RDFRepairTreeProvider repairTreeProvider;
 	private ChangeEventTransformer changeEventTransformer;
 	private CoreTypeFactory coreTypeFactory;
 	private RuleSchemaProvider ruleSchemaProvider;
@@ -57,7 +50,7 @@ public class RDFWrapperTestSetup implements DesignspaceTestSetup {
 	private RuleTriggerObserverFactory observerFactory;
 	private static RocksDBFactory cacheFactory = new RocksDBFactory(RDF_WRAPPER_TEST_CACHE_DIR);
 	
-	@Override
+
 	public void setup() {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
@@ -70,32 +63,27 @@ public class RDFWrapperTestSetup implements DesignspaceTestSetup {
 			var metaModel = MetaModelOntology.buildInMemoryOntology(); 
 			new RuleSchemaFactory(metaModel); // add rule schema to meta model
 			var cardUtil = new MetaModelSchemaTypes(model1, metaModel);				
-			var observerFactory = new RuleTriggerObserverFactory(cardUtil);
+			observerFactory = new RuleTriggerObserverFactory(cardUtil);
 			var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);
 			var repairService = new RepairService(model1, observer.getRepo());
-			RuleEnabledResolver resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
+			resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
 			var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, observer.getFactory());
 			branch.appendBranchInternalCommitService(observer);
 			branch.appendBranchInternalCommitService(changeTransformer);
 			branch.appendBranchInternalCommitService(new LazyLoadingLoopControllerService("LazyLoadingLoopController", repoModel, model1));
-			// add a loop lazy loading controller
 			
 			branch.startCommitHandlers(null);
 			branch.getDataset().begin();
-			
-			instanceRepository = resolver;
-			schemaRegistry = resolver;
+						
 			repairTreeProvider = new RDFRepairTreeProvider(repairService, observer.getRepo()); 			
-			ruleEvaluationService = resolver;
 			changeEventTransformer = changeTransformer;
-			coreTypeFactory = new CoreTypeFactory(resolver, resolver);
+			coreTypeFactory = new CoreTypeFactory(resolver);
 			ruleSchemaProvider = observer.getFactory();
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 	}
 
-	@Override
 	public void tearDown() {
 		// nothing to tear down, we just recreate everything upon a new setup call.
 	}
@@ -125,12 +113,12 @@ public class RDFWrapperTestSetup implements DesignspaceTestSetup {
 			var metaModel = MetaModelOntology.buildDBbackedOntology(); 
 			new RuleSchemaFactory(metaModel); // add rule schema to meta model
 			var cardUtil = new MetaModelSchemaTypes(model1, metaModel);				
-			var observerFactory = new RuleTriggerObserverFactory(cardUtil);												
+			observerFactory = new RuleTriggerObserverFactory(cardUtil);												
 			System.out.println("Size after observer factory build: "+model1.size());
 			var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);
 			System.out.println("Size after observer build: "+model1.size());
 			var repairService = new RepairService(model1, observer.getRepo());
-			RuleEnabledResolver resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
+			resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
 			var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, observer.getFactory());
 			branch.appendBranchInternalCommitService(observer);
 			branch.appendBranchInternalCommitService(changeTransformer);
@@ -141,14 +129,11 @@ public class RDFWrapperTestSetup implements DesignspaceTestSetup {
 			//var unfinishedCommit = stateKeeper.loadState();
 			// branch.startCommitHandlers(unfinishedCommit); // first complete other stuff on top
 			
-			
-			instanceRepository = resolver;
-			schemaRegistry = resolver;
 			repairTreeProvider = new RDFRepairTreeProvider(repairService, observer.getRepo());
 			System.out.println("Size after repair tree build: "+model1.size());
-			ruleEvaluationService = resolver;
+	
 			changeEventTransformer = changeTransformer;
-			coreTypeFactory = new CoreTypeFactory(resolver, resolver);
+			coreTypeFactory = new CoreTypeFactory(resolver);
 			ruleSchemaProvider = observer.getFactory();
 		} catch (Exception e) {
 			throw new RuntimeException(e);
@@ -177,7 +162,7 @@ public class RDFWrapperTestSetup implements DesignspaceTestSetup {
 		}
 	}
 	
-	public static void prepareForPersistedReloadWithoutDataRemoval() throws RocksDBException {
+	public static void prepareForPersistedReloadWithoutDataRemoval() {
 		cacheFactory.closeCache();
 	}
 }
