@@ -4,10 +4,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.jena.ontapi.model.OntClass;
+import org.apache.jena.ontapi.model.OntClass.Named;
+import org.apache.jena.rdf.model.Resource;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
@@ -24,6 +27,7 @@ import at.jku.isse.designspace.rule.arl.repair.AlternativeRepairNode;
 import at.jku.isse.designspace.rule.arl.repair.RepairNode;
 import at.jku.isse.designspace.rule.arl.repair.RepairSingleValueOption;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFElement;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
@@ -32,12 +36,14 @@ import lombok.Getter;
 public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEvaluationService {
 
 	private final RepairService repairService;
-	@Getter private final RuleSchemaProvider ruleSchema;	
+	@Getter private final RuleSchemaProvider ruleSchema;
+	@Getter protected final RuleRepository ruleRepo;
 	private final RuleRepositoryInspector inspector;
 	
 	public RuleEnabledResolver(Branch branch, RepairService repairService, RuleSchemaProvider ruleSchema, RuleRepository repo, WrapperMetaModelSchemaTypes metaschema) {
-		super(branch, repo, metaschema);
+		super(branch, metaschema);
 		this.repairService = repairService;
+		this.ruleRepo = repo;
 		this.ruleSchema = ruleSchema;		
 		this.inspector = new RuleRepositoryInspector(ruleSchema);
 		initOverride();
@@ -97,7 +103,51 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 			throw new RuntimeException("Unable to create rule: "+e.getMessage());
 		}
 	}
+	
+	public RDFRuleDefinitionWrapper getRuleByNameAndContext(String arg0, RDFInstanceType arg1) {
+		// we ignore type and just use the name as a URI
+		if (!isValidURL(arg0)) {
+			arg0 = BASE_NS+arg0;
+		}	
+		var def = ruleRepo.findRuleDefinitionForURI(arg0);
+		if (def != null) {
+			return (RDFRuleDefinitionWrapper) typeIndex.computeIfAbsent(def.getRuleDefinition(), k-> new RDFRuleDefinitionWrapper(def, (RuleEnabledResolver) this));
+		} else {
+			return null;
+		}
+	}
 
+	@Override
+	public Optional<RDFInstanceType> findNonDeletedInstanceTypeByFQN(String arg0) {		
+		if (!isValidURL(arg0)) {
+			arg0 = BASE_NS+arg0;
+		}	
+		Named ontClass = model.getOntClass(arg0);
+		if (ontClass == null) return Optional.empty();
+		var type = typeIndex.get(ontClass);
+		if (type != null) {
+			return Optional.ofNullable(type);
+		} else {
+			var ruleDef = ruleRepo.findRuleDefinitionForResource(ontClass);
+			if (ruleDef == null) return Optional.empty();
+			var defWrapper = typeIndex.computeIfAbsent(ruleDef.getRuleDefinition(), k-> new RDFRuleDefinitionWrapper(ruleDef, this));
+			return Optional.ofNullable(defWrapper);
+		}
+	}
+	
+	@Override
+	protected RDFElement findIndividual(Resource node) {
+		var localInst = super.findIndividual(node);
+		if (localInst != null)
+			return localInst;
+		else { 
+			var evalWrapper = ruleRepo.getEvaluations().get(node.getURI());
+			if (evalWrapper != null)
+				return new RDFRuleResultWrapper(evalWrapper, this); //FIXME: we are created new wrappers every time, but if we cache, we wont know when they need to be deleted					
+			return null;
+		}
+	}
+	
 
 	public void setPropertyRepairable(RDFInstanceType type, String property, boolean isRepairable) {
 		type.resolveToPropertyType(property).ifPresent(prop ->

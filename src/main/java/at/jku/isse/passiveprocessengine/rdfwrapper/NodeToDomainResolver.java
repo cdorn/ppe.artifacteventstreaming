@@ -56,13 +56,12 @@ public class NodeToDomainResolver {
 	protected long commitSessionCounter = 1;
 	protected Lock writeLock;
 	
-	@Getter protected final RuleRepository ruleRepo;
+	
 	@Getter private final WrapperMetaModelSchemaTypes metaschemata;
 		
 	
-	public NodeToDomainResolver(Branch branch, RuleRepository ruleRepo, WrapperMetaModelSchemaTypes cardinalityUtil) {
+	public NodeToDomainResolver(Branch branch, WrapperMetaModelSchemaTypes cardinalityUtil) {
 		super();
-		this.ruleRepo = ruleRepo;
 		this.branch = branch;
 		this.model = branch.getModel();
 		this.dataset = branch.getDataset();	
@@ -197,25 +196,6 @@ public class NodeToDomainResolver {
 		return type.getType();	
 	}
 
-//	/**
-//	 * @deprecated
-//	 * use @findNonDeletedInstanceTypeByFQN instead
-//	 */
-//	@Deprecated
-//	public RDFInstanceType getTypeByName(String arg0) {
-//		if (isValidURL(arg0)) {
-//			return typeIndex.values().stream()
-//					.filter(type -> type.getId().equals(arg0))
-//					.findAny()
-//					.orElse(null);	
-//		} else {
-//			return typeIndex.values().stream()
-//					.filter(type -> type.getName().equals(arg0))
-//					.findAny()
-//					.orElse(null);
-//		}
-//	}
-
 	public Set<RDFInstance> findInstances(RDFPropertyType property, String value) {
 		var iter = branch.getModel().listResourcesWithProperty(property.getProperty().asProperty(), value);
 		var result = new HashSet<RDFInstance>();
@@ -273,15 +253,8 @@ public class NodeToDomainResolver {
 		}	
 		Named ontClass = model.getOntClass(arg0);
 		if (ontClass == null) return Optional.empty();
-		var type = typeIndex.get(ontClass);
-		if (type != null) {
-			return Optional.ofNullable(type);
-		} else {
-			var ruleDef = ruleRepo.findRuleDefinitionForResource(ontClass);
-			if (ruleDef == null) return Optional.empty();
-			var defWrapper = typeIndex.computeIfAbsent(ruleDef.getRuleDefinition(), k-> new RDFRuleDefinitionWrapper(ruleDef, (RuleEnabledResolver) this));
-			return Optional.ofNullable(defWrapper);
-		}
+		var type = typeIndex.get(ontClass);		
+		return Optional.ofNullable(type);		
 	}
 
 	public Set<RDFInstanceType> getAllNonDeletedInstanceTypes() {
@@ -304,20 +277,6 @@ public class NodeToDomainResolver {
 	
 	public void removeInstanceFromIndex(RDFInstance rdfInstance) {
 		instanceIndex.remove(rdfInstance.getInstance().getURI());
-	}
-	
-
-	public RDFRuleDefinitionWrapper getRuleByNameAndContext(String arg0, RDFInstanceType arg1) {
-		// we ignore type and just use the name as a URI
-		if (!isValidURL(arg0)) {
-			arg0 = BASE_NS+arg0;
-		}	
-		var def = ruleRepo.findRuleDefinitionForURI(arg0);
-		if (def != null) {
-			return (RDFRuleDefinitionWrapper) typeIndex.computeIfAbsent(def.getRuleDefinition(), k-> new RDFRuleDefinitionWrapper(def, (RuleEnabledResolver) this));
-		} else {
-			return null;
-		}
 	}
 	
 
@@ -360,7 +319,8 @@ public class NodeToDomainResolver {
 		}
 		var individual = model.createIndividual(uri, type.getType());
 		individual.addLabel(wasValidId ? individual.getLocalName() : id);
-		return instanceIndex.computeIfAbsent(individual.getURI(), k -> new RDFInstance(individual, type, this));
+		var constructor = metaschemata.getMetaElements().getConstructorForNamspace(type.getType().getURI());		
+		return instanceIndex.computeIfAbsent(individual.getURI(), k -> createMostSpecificInstance(individual, type, constructor));
 	}
 
 	/**
@@ -406,19 +366,8 @@ public class NodeToDomainResolver {
 		}
 	}
 
-	private RDFElement findIndividual(Resource node) {
-		var localInst = instanceIndex.get(node.getURI());
-		if (localInst != null)
-			return localInst;
-		else { 
-			//var indiv = node.as(OntIndividual.class);
-			if (ruleRepo != null) { // mode with rule repo
-				var evalWrapper = ruleRepo.getEvaluations().get(node.getURI());
-				if (evalWrapper != null)
-					return new RDFRuleResultWrapper(evalWrapper, this, ruleRepo); //FIXME: we are created new wrappers every time, but if we cache, we wont know when they need to be deleted					
-			} 
-			return null;
-		}
+	protected RDFElement findIndividual(Resource node) {
+		return instanceIndex.get(node.getURI());
 	}
 	
 	public OntModel getModel() {

@@ -18,10 +18,10 @@ public class RDFRuleResultWrapper extends RDFInstance{
 	private final RuleRepository ruleRepo;
 	@Getter private final RuleEvaluationWrapperResource evalWrapper;
 	
-	public RDFRuleResultWrapper(RuleEvaluationWrapperResource evalWrapper, NodeToDomainResolver resolver, RuleRepository ruleRepo) {
+	public RDFRuleResultWrapper(RuleEvaluationWrapperResource evalWrapper, RuleEnabledResolver resolver) {
 		super(evalWrapper.getRuleEvalObj() , null, resolver);
 		this.evalWrapper = evalWrapper;
-		this.ruleRepo = ruleRepo;
+		this.ruleRepo = resolver.getRuleRepo();
 	}
 	
 	@Override

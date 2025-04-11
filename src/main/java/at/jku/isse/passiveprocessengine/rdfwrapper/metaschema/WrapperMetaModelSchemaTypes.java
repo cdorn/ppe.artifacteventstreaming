@@ -4,7 +4,6 @@ import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.ReadWrite;
 
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.passiveprocessengine.rdfwrapper.PrimitiveTypesFactory;
 import lombok.Getter;
 

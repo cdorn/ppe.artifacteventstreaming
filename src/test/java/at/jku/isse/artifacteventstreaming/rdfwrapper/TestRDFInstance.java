@@ -62,7 +62,7 @@ public class TestRDFInstance {
 		var metaModel = WrapperMetaModelOntology.buildInMemoryOntology(); 
 		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
 		var cardUtil = new WrapperMetaModelSchemaTypes(m, metaModel);
-		resolver = new NodeToDomainResolver(branch, null, cardUtil);
+		resolver = new NodeToDomainResolver(branch, cardUtil);
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
 		
