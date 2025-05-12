@@ -37,8 +37,7 @@ public class RuleSchemaFactory {
 	public static final String usedInRuleURI = uri+"usedInRule";
 	public static final String havingScopeURI = uri+"havingScope";
 
-
-	//both levels:
+	//both def and instance/eval levels:
 	public static final String ruleIsEnabledURI = uri+"isEnabled";
 
 	// to reference from instance to its use as context in rule evaluations, to know upon instance removal, which evaluations to remove
@@ -137,7 +136,9 @@ public class RuleSchemaFactory {
 
 		havingScopePartProperty = model.getObjectProperty(havingScopeURI);
 		if (havingScopePartProperty == null) {
-			havingScopePartProperty = singleType.createSingleObjectPropertyType(havingScopeURI, resultBaseType, ruleScopeCollection);
+			havingScopePartProperty = model.createObjectProperty(havingScopeURI);
+			havingScopePartProperty.addDomain(resultBaseType);
+			havingScopePartProperty.addRange(ruleScopeCollection);
 		}
 
 		var isEnabledProperty = model.getDataProperty(ruleIsEnabledURI);	
