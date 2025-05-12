@@ -1,36 +1,34 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
 import java.util.AbstractMap;
-import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Set;
+import java.util.stream.IntStream;
 
-import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntIndividual;
+import org.apache.jena.ontapi.model.OntObject;
+import org.apache.jena.ontapi.model.OntProperty;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 
 import at.jku.isse.designspace.rule.arl.evaluator.RuleEvaluation;
 import at.jku.isse.designspace.rule.arl.evaluator.RuleEvaluationImpl;
 import at.jku.isse.designspace.rule.arl.exception.EvaluationException;
+import at.jku.isse.designspace.rule.arl.repair.AbstractRepairAction;
+import at.jku.isse.designspace.rule.arl.repair.AbstractRepairNode;
 import at.jku.isse.designspace.rule.arl.repair.RepairNode;
+import at.jku.isse.designspace.rule.arl.repair.UnknownRepairValue;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class RuleEvaluationWrapperResource {
+public class RuleEvaluationWrapperResource extends RuleEvaluationDTO {
 
-	@Getter
-	private final OntIndividual ruleEvalObj;
-	private final RuleSchemaProvider schemaProvider;
-	private final OntIndividual contextInstance;
 	@Getter
 	private final RuleEvaluation delegate;
 	private Object result = null;
-	@Getter
-	private RDFRuleDefinition definition;
+	
 	
 	// either create new	
 	/**
@@ -45,10 +43,6 @@ public class RuleEvaluationWrapperResource {
 		evalObj.addLabel(def.getName());
 		addAddRuleEvaluationToNewOrExistingScope(contextInstance, evalObj, factory); // just to make sure that the context scope is set (no effect if already so)
 		return new RuleEvaluationWrapperResource(def, evalObj, contextInstance, factory);
-	}
-	
-	private static String createEvalURI(@NonNull RDFRuleDefinition def, @NonNull OntIndividual contextInstance) {
-		return def.getRuleDefinition().getURI()+"::"+contextInstance.getLocalName()+"::"+contextInstance.getURI().hashCode(); // we assume here that context instance come from the same namespace, hence are distinguishable based on their localname, but add the hashcode of the uri to be on a safer side
 	}
 	
 	private static void addAddRuleEvaluationToNewOrExistingScope(OntIndividual subject, OntIndividual ruleEval, RuleSchemaProvider factory) {
@@ -72,13 +66,6 @@ public class RuleEvaluationWrapperResource {
 		ruleEval.addProperty(factory.getContextElementScopeProperty().asNamed(), scope);
 	}
 	
-	private static OntIndividual createScopeSkeleton(Resource subject, RuleSchemaProvider factory) {
-		var scope = factory.getRuleScopeCollection().createIndividual();
-		scope.addProperty(factory.getUsingElementProperty().asNamed(), subject);
-		subject.addProperty(factory.getHasRuleScope().asProperty(), scope);
-		return scope;
-	}
-	
 	// or create from underlying ont object 
 	/**
 	 * @param ruleEvalObj pre-existing, that needs wrapping
@@ -98,66 +85,18 @@ public class RuleEvaluationWrapperResource {
 		return new RuleEvaluationWrapperResource(def, ruleEvalObj, ctx, factory);
 	}
 	
-	private static OntClass getRuleTypeClass(@NonNull OntIndividual ruleEvalObj, @NonNull RuleSchemaProvider factory) throws EvaluationException {
-		var result = ruleEvalObj.classes(true)
-				.filter(type -> factory.getResultBaseType().hasSubClass(type, false)).findAny(); // there should be only one
-		if (result.isEmpty()) {
-			throw new EvaluationException(String.format("Cannot create ruleevaluation wrapper for entity %s as it is not a subclass of %s", ruleEvalObj, factory.getResultBaseType().getURI()));
-		} else {
-			return result.get();
-		}
-	}
-	
-	private static OntIndividual getContextInstanceFrom(@NonNull OntIndividual ruleEvalObj, @NonNull RuleSchemaProvider factory) throws EvaluationException {
-		var res = ruleEvalObj.getPropertyResourceValue(factory.getContextElementScopeProperty().asProperty()); //the rule scope, only one possible
-		if (res == null)
-			throw new EvaluationException(String.format("Cannot create ruleevaluation wrapper for entity %s as it doesn't reference a context instance rule scope element via %s", ruleEvalObj, factory.getContextElementScopeProperty().getURI()));
-		if (res.canAs(OntIndividual.class)) {
-				var indiv = res.as(OntIndividual.class);
-				var element = indiv.getPropertyResourceValue(factory.getUsingElementProperty().asProperty());
-				if (element == null || !element.canAs(OntIndividual.class)) {				
-					var msg = String.format("Cannot create ruleevaluation wrapper for entity %s as the referenced context instace rule scope element doesn't point to an OntIndividual via %s ", ruleEvalObj, factory.getUsingElementProperty().getURI());
-					log.warn(msg);
-					throw new EvaluationException(msg);		
-				} else {
-					return element.as(OntIndividual.class);
-				}
-				
-		} else {
-			var msg = String.format("Cannot create ruleevaluation wrapper for entity %s as its referenced context instance rule scope %s is not an ontindividual", ruleEvalObj.getId(), res);
-			log.warn(msg);
-			throw new EvaluationException(msg);
-		}					
-	}
-	
-	private static RDFRuleDefinition resolveDefinition(@NonNull OntClass ruleDef, @NonNull RuleRepository repo) throws EvaluationException {
-		var def = repo.findRuleDefinitionForResource(ruleDef);
-		if (def == null)
-			return repo.storeRuleDefinition(ruleDef.as(OntIndividual.class)); // we dynamically register the definition
-		else 
-			return def;
-	}
-	
-
-	
 	@SuppressWarnings("rawtypes")
 	private RuleEvaluationWrapperResource(RDFRuleDefinition def, OntIndividual ruleEvalObj, OntIndividual contextInstance, RuleSchemaProvider factory ) {
-		super();
-		this.ruleEvalObj = ruleEvalObj;
-		this.contextInstance = contextInstance;
-		this.schemaProvider = factory;
-		this.definition = def;
+		super(def, ruleEvalObj, contextInstance, factory);
 		this.delegate = new RuleEvaluationImpl(def, contextInstance);
-		setEnabledIfNotStatusAvailable();		
-	
 	}
 	
-	private void setEnabledIfNotStatusAvailable() {
-		var stmt = ruleEvalObj.getProperty(schemaProvider.getIsEnabledProperty());
-		if (stmt == null) // not set, thus enable
-			setEnabledStatus(true);
-	}		
-	
+	public Object getEvaluationResult() {
+		if (result == null && getEvaluationError().isEmpty()) { // never evaluated so far or not locally evaluated yet
+			 evaluate();
+		} 
+		return result;		
+	}
 	
 	/**
 	 * If rule is disabled, returns null.
@@ -184,14 +123,6 @@ public class RuleEvaluationWrapperResource {
 			updateRuleScope();
 		}				
 		return new AbstractMap.SimpleEntry<>(delegate, !Objects.equals(priorConsistency, isConsistent())); // returns if the outcome has changed;
-	}
-
-	@SuppressWarnings("unchecked")
-	private void updateRuleScope() {
-		delegate.getAddedScopeElements().stream()		
-			.forEach(scopeEntry -> addPropertyToScope((Entry<Resource, Property>)scopeEntry, ruleEvalObj));
-		delegate.getRemovedScopeElements().stream()		
-		.forEach(scopeEntry -> removePropertyFromScope((Entry<Resource, Property>)scopeEntry, ruleEvalObj));                                       
 	}
 	
 	private void addPropertyToScope(Entry<Resource, Property> typed, OntIndividual ruleEval) {
@@ -227,6 +158,13 @@ public class RuleEvaluationWrapperResource {
 		}
 	}
 	
+	private static OntIndividual createScopeSkeleton(Resource subject, RuleSchemaProvider factory) {
+		var scope = factory.getRuleScopeCollection().createIndividual();
+		scope.addProperty(factory.getUsingElementProperty().asNamed(), subject);
+		subject.addProperty(factory.getHasRuleScope().asProperty(), scope);
+		return scope;
+	}
+	
 	private OntIndividual findScope(Resource subject, Property property) {
 		OntIndividual scope = null;
 		var iter = subject.listProperties(schemaProvider.getHasRuleScope().asProperty());
@@ -242,91 +180,100 @@ public class RuleEvaluationWrapperResource {
 		}
 		return scope;
 	}
-	
-	public boolean isConsistent() {
-		var stmt = ruleEvalObj.getProperty(schemaProvider.getEvaluationHasConsistentResultProperty());
-		return stmt != null ? stmt.getBoolean() : Boolean.TRUE; // if never has been set or if not a boolean result but no error, then True
-	}		
 
-	public String getEvaluationError() {
-		var stmt = ruleEvalObj.getProperty(schemaProvider.getEvaluationErrorProperty());
-		return stmt != null ? stmt.getString() : "";
-	}
-
-	public Object getEvaluationResult() {
-		if (result == null && getEvaluationError().isEmpty()) { // never evaluated so far or not locally evaluated yet
-			 evaluate();
-		} 
-		return result;		
-	}
-
-	public OntIndividual getContextInstance() {
-		return contextInstance;
-	}
-
-	public boolean isEnabled() {
-		if (ruleEvalObj == null) return false;
-		var stmt = ruleEvalObj.getProperty(schemaProvider.getIsEnabledProperty());
-		return stmt != null ? stmt.getBoolean() : Boolean.FALSE; //if not set, then assumed false, because when we delete, we wont have any statements, hence need to assume disabled
+	@SuppressWarnings("unchecked")
+	private void updateRuleScope() {
+		delegate.getAddedScopeElements().stream()		
+			.forEach(scopeEntry -> addPropertyToScope((Entry<Resource, Property>)scopeEntry, ruleEvalObj));
+		delegate.getRemovedScopeElements().stream()		
+		.forEach(scopeEntry -> removePropertyFromScope((Entry<Resource, Property>)scopeEntry, ruleEvalObj));                                       
 	}
 	
-	private void setEnabledStatus(boolean status) {
-		ruleEvalObj.removeAll(schemaProvider.getIsEnabledProperty())
-		.addLiteral(schemaProvider.getIsEnabledProperty(), status);	
-	}
-	
-	public void enable() {
-		if (!isEnabled()) {
-			setEnabledStatus(true);
-		}
-	}
-
-	public void disable() {
-		if (isEnabled()) {
-			setEnabledStatus(false);
-		}
-	}
-	
+	@Override
 	public void delete() {
-		Set<OntIndividual> scopesToRemoveRuleFrom = new HashSet<>();
-		// remove from scope information of involved elements				
-		var iter = ruleEvalObj.listProperties(schemaProvider.getHavingScopePartProperty().asProperty());		
-		while(iter.hasNext()) {
-			var scope = iter.next().getResource().as(OntIndividual.class);
-			scopesToRemoveRuleFrom.add(scope);			
-		}
-		// remove context instance scope
-		iter = ruleEvalObj.listProperties(schemaProvider.getContextElementScopeProperty().asProperty());
-		while(iter.hasNext()) { // should only be one, but to be on the save side
-			var scope = iter.next().getResource().as(OntIndividual.class);
-			scopesToRemoveRuleFrom.add(scope);
-		}
-		scopesToRemoveRuleFrom.forEach(scope -> scope.remove(schemaProvider.getUsedInRuleProperty().asProperty(), ruleEvalObj));
-		
-		//then remove self
-		this.ruleEvalObj.removeProperties();
+		super.delete();
 		delegate.delete();		
-		
 	}
-
-	public String toString() {
-		return "RuleEvaluation [ruleDefinition="+delegate.getRuleDefinition().getName() +" contextInstance=" + contextInstance.getURI()
-				+ ", isConsistent()=" + isConsistent() + ", getEvaluationError()=" + getEvaluationError()
-				+ ", isEnabled()=" + isEnabled() + "]";
-	}
-
-	public RepairNode getRepairTree() {
+	
+	public RepairNodeDTO getRepairTree() {
+		// we need to check if the cached repair tree dto is still valid, or if we have to regenerate it,
+		// by checking the delegate repair nodes repair tree, bit ugly
 		if (this.isEnabled() && this.delegate != null && this.delegate.getError() == null) {
 			if (this.delegate.getEvaluationTree() == null) {
-				this.evaluate();
+				this.evaluate(); //then there definitely has not been a repair tree generated
+				return transformAndStoreRepairs(delegate.getRepairTree(), null, -1);
 			}
-			return delegate.getRepairTree();
+			else if (this.getDelegate().getEvaluationTree().repairTree == null) { // repair tree not yet generated
+				return transformAndStoreRepairs(delegate.getRepairTree(), null, -1);
+			} else { // repair tree was there, we assume, caused by an earlier call from here, and thus return cached dto form
+				return super.getRepairRootNode();
+			}
 		}
 		return null;
 	}
 
+//	protected RepairNode getRawRepairTree() {
+//		if (this.isEnabled() && this.delegate != null && this.delegate.getError() == null) {
+//			if (this.delegate.getEvaluationTree() == null) {
+//				this.evaluate();
+//			}
+//			return delegate.getRepairTree();
+//		}
+//		return null;
+//	}
 
-
+	private RepairNodeDTO transformAndStoreRepairs(RepairNode rawRootNode, RepairNodeDTO parentNode, int posInParent) {
+		if (rawRootNode == null) return null;
+		if (rawRootNode instanceof AbstractRepairAction repairAction) {
+			var subject = (OntIndividual)repairAction.getElement();
+			var predicateName = repairAction.getProperty();
+			var predicate = resolvePredicate(predicateName, subject);
+			var value = repairAction.getValue();
+			OntObject objValue = null;
+			Object litValue = null;
+			String restriction = null;
+			if (value == UnknownRepairValue.UNKNOWN) {
+				// we will have a restriction (once Anmol's stuff is integrated 
+				litValue = value;
+				var restr= repairAction.getRepairValueOption().getRestriction();
+				if (restr != null) {
+					restriction = restr.getRootNode().printNodeTree(false, 40);
+				}
+			} else {
+				if (value instanceof OntObject ontObj) { // 
+					objValue = ontObj;
+				} else {
+					litValue = value;
+				}
+			}
+			return new RepairNodeDTO( 
+						repairAction.getOperator().name(), 
+						subject,
+						predicate,
+						litValue,
+						objValue,
+						restriction, 
+						parentNode,
+						posInParent,
+						this,
+						super.schemaProvider
+						);
+		} else if (rawRootNode instanceof AbstractRepairNode repairNode){
+			var node = new RepairNodeDTO(repairNode.getNodeType().toString(), parentNode, posInParent, this, super.schemaProvider);
+			for (int i=0; i < repairNode.getChildren().size(); i++) {
+				transformAndStoreRepairs(repairNode.getChildren().get(i), node, i);
+			}
+			return node;
+		} else {
+			log.error("Unknown RepairNode type encountered: "+rawRootNode.toString());
+			return null;
+		}
+	}
 	
+	private OntProperty resolvePredicate(@NonNull String predicate, @NonNull OntIndividual subject) {
+		var modelAccess = super.schemaProvider.getModelAccess();
+		var propOpt = modelAccess.getTypeOfInstance(subject).findAny().map(type -> modelAccess.resolveToProperty(type, predicate));
+		return propOpt.get();
+	}
 	
 }

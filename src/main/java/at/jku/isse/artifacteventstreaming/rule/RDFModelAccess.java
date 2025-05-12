@@ -53,7 +53,7 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     	singleFactory = propertyCardinalities.getSingleType();        
     }
     
-    private OntProperty resolveToProperty(OntClass ontClass, String propertyName) {
+    public OntProperty resolveToProperty(OntClass ontClass, String propertyName) {
     	return ontClass.declaredProperties()
     	.filter(prop -> prop.getLocalName().equals(propertyName)) 
     	.findAny().orElse(null);
@@ -106,7 +106,7 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
         			.collect(Collectors.toSet());        
     }
     
-    private Stream<OntClass> getTypeOfInstance(Resource element) {
+    public Stream<OntClass> getTypeOfInstance(Resource element) {
     	 if (element instanceof OntIndividual || element.canAs(OntIndividual.class)) {
     		var indiv = element.as(OntIndividual.class);
          	return indiv.classes(true) // direct types only

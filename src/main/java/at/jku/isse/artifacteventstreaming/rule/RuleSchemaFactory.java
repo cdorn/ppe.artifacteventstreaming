@@ -45,13 +45,28 @@ public class RuleSchemaFactory {
 
 	private OntClass definitionType;	
 	private OntClass resultBaseType;
-
+	private OntClass repairTreeNodeType;
+	
 	// subclass of Bag
 	private OntClass ruleScopeCollection;
 
 	// used by rule to point to scopeUsageEntry
 	private OntObjectProperty havingScopePartProperty;
-
+	
+	// flat repair tree serialization
+	public static final String repairTreeNodeURI = uri+"RepairTreeNode";
+	public static final String repairNodeTypeURI = uri+"repairNodeType";
+	public static final String repairSubjectURI = uri+"repairSubject";
+	public static final String repairPredicateURI = uri+"repairPredicate";
+	public static final String repairLiteralValueURI = uri+"repairLiteralValue";
+	public static final String repairObjectValueURI = uri+"repairObjectValue";
+	public static final String repairRestrictionURI = uri+"repairRestriction";
+	public static final String repairOperationURI = uri+"repairOperation";
+	public static final String repairNodeParentURI = uri+"repairNodeParent";
+	public static final String repairNodeChildOrderURI = uri+"repairNodeChildOrder";
+	// to link from eval base type to set of repair nodes
+	public static final String hasRepairNodesURI = uri+"hasRepairNodes";
+	
 	private final OntModel model;
 	private final Dataset ontology;
 	private final SingleResourceType singleType;	
@@ -72,7 +87,8 @@ public class RuleSchemaFactory {
 		initDefinitionTypeProperties();
 		initResultBaseTypeProperties();
 		initScopePartTypeProperties();
-		initRuleContextReferenceProperty();				
+		initRuleContextReferenceProperty();		
+		initRepairNodeTypeProperties();
 	}
 
 	private void initOntClasses() {
@@ -90,6 +106,11 @@ public class RuleSchemaFactory {
 		ruleScopeCollection = model.getOntClass(ruleScopePartURI);
 		if (ruleScopeCollection == null)
 			ruleScopeCollection = model.createOntClass(ruleScopePartURI);
+		
+		repairTreeNodeType = model.getOntClass(repairTreeNodeURI);
+		if (repairTreeNodeType == null) {
+			repairTreeNodeType = model.createOntClass(repairTreeNodeURI);
+		}
 	}
 
 	private void initDefinitionTypeProperties() {
@@ -141,7 +162,7 @@ public class RuleSchemaFactory {
 			havingScopePartProperty.addRange(ruleScopeCollection);
 		}
 
-		var isEnabledProperty = model.getDataProperty(ruleIsEnabledURI);	
+		var isEnabledProperty = model.getDataProperty(ruleIsEnabledURI);
 		if (isEnabledProperty == null) {
 			singleType.createSingleDataPropertyType(ruleIsEnabledURI, List.of(definitionType, resultBaseType), model.getDatatype(XSD.xboolean));																	
 		}
@@ -177,4 +198,58 @@ public class RuleSchemaFactory {
 		// usingElementProperty.addInverseProperty(hasRuleScope); //we dont want this as inverse, as if we remove instance, then this backlink would be gone as well.
 	}
 
+	private void initRepairNodeTypeProperties() {
+		var repairNodeTypeProp = model.getDataProperty(repairNodeTypeURI);
+		if (repairNodeTypeProp == null) {
+			singleType.createSingleDataPropertyType(repairNodeTypeURI, repairTreeNodeType, model.getDatatype(XSD.xstring));
+		}
+		
+		var repairSubjectProperty = model.getObjectProperty(repairSubjectURI);
+		if (repairSubjectProperty == null) {
+			singleType.createSingleObjectPropertyType(repairSubjectURI, repairTreeNodeType, model.createOntClass(OWL2.NamedIndividual.getURI()));
+		}
+		
+		var repairPredicateProperty = model.getObjectProperty(repairPredicateURI);
+		if (repairPredicateProperty == null) {
+			singleType.createSingleObjectPropertyType(repairPredicateURI, repairTreeNodeType, model.createOntClass(RDF.Property.getURI()));
+		}
+		
+		var repairLiteralValueProperty = model.getDataProperty(repairLiteralValueURI);
+		if (repairLiteralValueProperty == null) {
+			singleType.createSingleDataPropertyType(repairLiteralValueURI, repairTreeNodeType, model.getDatatype(XSD.anyURI));
+		}
+		var repairObjectValueProperty = model.getObjectProperty(repairObjectValueURI);
+		if (repairObjectValueProperty == null) {
+			singleType.createSingleObjectPropertyType(repairObjectValueURI, repairTreeNodeType, model.createOntClass(OWL2.NamedIndividual.getURI()));
+		}
+		
+		var repairRestrictionProp = model.getDataProperty(repairRestrictionURI);
+		if (repairRestrictionProp == null) {
+			singleType.createSingleDataPropertyType(repairRestrictionURI, repairTreeNodeType, model.getDatatype(XSD.xstring));
+		}
+		
+		var repairOperationProp = model.getDataProperty(repairOperationURI);
+		if (repairOperationProp == null) {
+			singleType.createSingleDataPropertyType(repairOperationURI, repairTreeNodeType, model.getDatatype(XSD.xstring));
+		}
+		
+		var parentNodeProperty = model.getObjectProperty(repairNodeParentURI);
+		if (parentNodeProperty == null) {
+			singleType.createSingleObjectPropertyType(repairNodeParentURI, repairTreeNodeType, repairTreeNodeType);
+		}
+		
+		var repairNodeChildOrderProperty = model.getDataProperty(repairNodeChildOrderURI);
+		if (repairNodeChildOrderProperty == null) {
+			singleType.createSingleDataPropertyType(repairNodeChildOrderURI, repairTreeNodeType, model.getDatatype(XSD.xint));
+		}
+
+		// to link from eval base type to set of repair nodes
+		var hasRepairNodesProperty = model.getObjectProperty(hasRepairNodesURI);
+		if (hasRepairNodesProperty == null) {
+			hasRepairNodesProperty = model.createObjectProperty(hasRepairNodesURI);
+			hasRepairNodesProperty.addDomain(resultBaseType);
+			hasRepairNodesProperty.addRange(repairTreeNodeType);
+		}
+	}
+	
 }
