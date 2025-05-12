@@ -7,7 +7,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 
 import org.apache.jena.ontapi.OntModelFactory;
@@ -21,10 +20,6 @@ import org.junit.jupiter.api.Test;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
-import at.jku.isse.passiveprocessengine.core.BuildInType;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType.PPEPropertyType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import at.jku.isse.passiveprocessengine.rdfwrapper.PrimitiveTypesFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
@@ -53,7 +48,7 @@ class TestRDFInstanceType {
 		var metaModel = WrapperMetaModelOntology.buildInMemoryOntology(); 
 		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
 		var cardUtil = new WrapperMetaModelSchemaTypes(m, metaModel); // this adds list , mapentry and metaclass type
-		resolver = new NodeToDomainResolver(branch, null, cardUtil);
+		resolver = new NodeToDomainResolver(branch, cardUtil);
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
 		typeBase = resolver.createNewInstanceType(NS+"artifact");
@@ -109,7 +104,7 @@ class TestRDFInstanceType {
 			http://at.jku.isse.test#issue
 			http://at.jku.isse.test#artifact					
 		 * */
-		assertEquals(4, types.size());
+		assertEquals(6, types.size());
 	}
 	
 	@Test
@@ -117,7 +112,7 @@ class TestRDFInstanceType {
 		assertEquals(typeBase, resolver.findAllInstanceTypesByFQN(typeBase.getId()).iterator().next());
 		typeBase.delete();
 		assertTrue(resolver.findAllInstanceTypesByFQN(typeBase.getId()).isEmpty());
-		assertEquals(2, resolver.getAllNonDeletedInstanceTypes().size());
+		assertEquals(4, resolver.getAllNonDeletedInstanceTypes().size());
 	}
 	
 	@Test

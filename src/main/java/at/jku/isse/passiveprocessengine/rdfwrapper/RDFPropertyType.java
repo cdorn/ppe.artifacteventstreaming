@@ -2,6 +2,7 @@ package at.jku.isse.passiveprocessengine.rdfwrapper;
 
 import java.util.AbstractMap;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.jena.datatypes.RDFDatatype;
@@ -200,6 +201,27 @@ public class RDFPropertyType  {
 
 	@Slf4j
 	public static class PrimitiveOrClassType {
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(classType, primitiveType);
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			PrimitiveOrClassType other = (PrimitiveOrClassType) obj;
+			if (this.isClassType()) {
+				return Objects.equals(classType.getURI(), other.classType.getURI()) && other.getPrimitiveType() == null;
+			} else {
+				return  Objects.equals(primitiveType.getURI(), other.primitiveType.getURI()) && other.getClassType() == null;
+			}
+		}
 
 		@Getter private final OntDataRange.Named primitiveType;
 		@Getter private final OntClass classType;
