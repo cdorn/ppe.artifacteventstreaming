@@ -136,13 +136,9 @@ public class RuleSchemaFactory {
 
 		havingScopePartProperty = model.getObjectProperty(havingScopeURI);
 		if (havingScopePartProperty == null) {
-<<<<<<< HEAD
 			havingScopePartProperty = model.createObjectProperty(havingScopeURI);
 			havingScopePartProperty.addDomain(resultBaseType);
 			havingScopePartProperty.addRange(ruleScopeCollection);
-=======
-			havingScopePartProperty = singleType.createSingleObjectPropertyType(havingScopeURI, resultBaseType, ruleScopeCollection); //FIXME: this should be a SET property, not Single!!!!
->>>>>>> b91c58406582eaa7283a094d466f14e34da43ec4
 		}
 
 		var isEnabledProperty = model.getDataProperty(ruleIsEnabledURI);	
