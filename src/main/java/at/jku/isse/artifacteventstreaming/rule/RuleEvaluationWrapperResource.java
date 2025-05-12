@@ -225,39 +225,7 @@ public class RuleEvaluationWrapperResource extends RuleEvaluationDTO {
 	private RepairNodeDTO transformAndStoreRepairs(RepairNode rawRootNode, RepairNodeDTO parentNode, int posInParent) {
 		if (rawRootNode == null) return null;
 		if (rawRootNode instanceof AbstractRepairAction repairAction) {
-			var subject = (OntIndividual)repairAction.getElement();
-			var predicateName = repairAction.getProperty();
-			var predicate = resolvePredicate(predicateName, subject);
-			var value = repairAction.getValue();
-			OntObject objValue = null;
-			Object litValue = null;
-			String restriction = null;
-			if (value == UnknownRepairValue.UNKNOWN) {
-				// we will have a restriction (once Anmol's stuff is integrated 
-				litValue = value;
-				var restr= repairAction.getRepairValueOption().getRestriction();
-				if (restr != null) {
-					restriction = restr.getRootNode().printNodeTree(false, 40);
-				}
-			} else {
-				if (value instanceof OntObject ontObj) { // 
-					objValue = ontObj;
-				} else {
-					litValue = value;
-				}
-			}
-			return new RepairNodeDTO( 
-						repairAction.getOperator().name(), 
-						subject,
-						predicate,
-						litValue,
-						objValue,
-						restriction, 
-						parentNode,
-						posInParent,
-						this,
-						super.schemaProvider
-						);
+			return transform(repairAction, parentNode, posInParent);
 		} else if (rawRootNode instanceof AbstractRepairNode repairNode){
 			var node = new RepairNodeDTO(repairNode.getNodeType().toString(), parentNode, posInParent, this, super.schemaProvider);
 			for (int i=0; i < repairNode.getChildren().size(); i++) {
@@ -268,6 +236,42 @@ public class RuleEvaluationWrapperResource extends RuleEvaluationDTO {
 			log.error("Unknown RepairNode type encountered: "+rawRootNode.toString());
 			return null;
 		}
+	}
+	
+	private RepairNodeDTO transform(AbstractRepairAction repairAction, RepairNodeDTO parentNode, int posInParent) {
+		var subject = (OntIndividual)repairAction.getElement();
+		var predicateName = repairAction.getProperty();
+		var predicate = resolvePredicate(predicateName, subject);
+		var value = repairAction.getValue();
+		OntObject objValue = null;
+		Object litValue = null;
+		String restriction = null;
+		if (value == UnknownRepairValue.UNKNOWN) {
+			// we will have a restriction (once Anmol's stuff is integrated 
+			litValue = value;
+			var restr= repairAction.getRepairValueOption().getRestriction();
+			if (restr != null) {
+				restriction = restr.getRootNode().printNodeTree(false, 40);
+			}
+		} else {
+			if (value instanceof OntObject ontObj) { // 
+				objValue = ontObj;
+			} else {
+				litValue = value;
+			}
+		}
+		return new RepairNodeDTO( 
+					repairAction.getOperator().name(), 
+					subject,
+					predicate,
+					litValue,
+					objValue,
+					restriction, 
+					parentNode,
+					posInParent,
+					this,
+					super.schemaProvider
+					);
 	}
 	
 	private OntProperty resolvePredicate(@NonNull String predicate, @NonNull OntIndividual subject) {
