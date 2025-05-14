@@ -137,6 +137,11 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 		} else if (isAboutRuleEvaluationType(stmt)) { // 
 			repo.removeRulesAffectedByDeletedRuleEvaluation(subject.getURI()); // this is a side effect of a remote rule evaluation removal or rule type removal
 			removedResourceURIs.add(subject);			
+			//TODO: handle this different depending whether this is source or projection trigger: for primary, we create our own eval 
+			// (i.e., we should actually filter out incoming evaluation data!!) and this should not happen
+			// as projection, we should then remove the evaluation wrapper DTO in the rule repo
+			//TODO in either case we can ignore repair nodes as they are accessed via the evaluation DTO
+			
 		} else if (isAboutOWLPropertySchemaChange(stmt)) { // a property has been removed, 
 			repo.removeRuleDefinitionsAffectedByPredicateRemoval(stmt.getSubject());
 		} else { //we assume just any other resource			
@@ -227,6 +232,11 @@ public class RuleTriggerObserver extends AbstractHandlerBase implements Incremen
 			} 
 		} else if (isAboutRuleEvaluationType(stmt)) {// if a rule evaluation object created, ignore that 
 			createdResourceURIs.add(subject);		
+			//TODO: handle this different depending whether this is source or projection trigger: for primary, we create our own eval 
+			// (i.e., we should actually filter out incoming evaluation data!!) and this should not happen
+			// as projection, we should then add the evaluation wrapper DTO in the rule repo
+			//TODO in either case we can ignore repair nodes as they are accessed via the evaluation DTO
+			
 		} else { 
 			// regular individual  created
 			if (subject.canAs(OntIndividual.class)) {
