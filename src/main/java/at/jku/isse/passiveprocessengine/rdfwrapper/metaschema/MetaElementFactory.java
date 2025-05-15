@@ -28,7 +28,7 @@ public class MetaElementFactory {
 	public static final String propertyMetadataPredicate_URI = META_NS+"propertyMetadata";
 
 	private static final String constructorIndexType_URI = META_NS+"ConstructorIndex";
-	private static final String constructorIndex_URI = META_NS+"ConstructorIndex1";
+	private static final String constructorIndex_URI = META_NS+"DefaultConstructorIndex";
 	private static final String propertyConstructorForClass_URI = META_NS+"useConstructorForClass";
 	
 	private final MapResourceType mapType;
