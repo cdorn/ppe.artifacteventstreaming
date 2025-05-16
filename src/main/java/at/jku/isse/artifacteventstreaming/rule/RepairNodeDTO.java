@@ -143,9 +143,9 @@ public class RepairNodeDTO implements Comparable<RepairNodeDTO>{
 		node.addLiteral(schema.getRepairNodeChildOrderProperty(), posInParent);
 	}
 	
-	private RepairNodeDTO(@NonNull OntIndividual rdfRepairNode, RuleSchemaProvider schema) {
+	protected RepairNodeDTO(@NonNull OntIndividual rdfRepairNode, RuleSchemaProvider schema) {
 		this.node = rdfRepairNode;
-		this.type = node.getProperty(schema.getRepairNodeTypeProperty()).getString();
+		this.type = node.getRequiredProperty(schema.getRepairNodeTypeProperty()).getString();
 		
 		var opStmt = node.getProperty(schema.getRepairOperationProperty());
 		this.operator = opStmt != null ? opStmt.getString() : null;
@@ -194,9 +194,11 @@ public class RepairNodeDTO implements Comparable<RepairNodeDTO>{
 			var value = this.getLiteralValue() != null ?
 					this.getLiteralValue().toString() 
 					: this.getObjectValue().toString();
-			return String.format("%s %s %s %s" , this.getSubject().getURI(), this.getPredicate().getLocalName(), this.getOperator(), value);
+			var restr = this.getRestriction() != null ?
+					this.getRestriction() : "";
+			return String.format("%s %s %s %s %s %s" , this.posInParent, this.getSubject().getURI(), this.getPredicate().getLocalName(), this.getOperator(), value, restr);
 		} else {
-			return this.type;
+			return String.format("%s %s" , this.posInParent, this.type);
 		}
 	}
 }

@@ -83,7 +83,12 @@ public class MapResourceType  {
 		if (singleType.existsPrimaryProperty(propertyURI)) {
 			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty		
 		}
-		OntClass mapType = model.createOntClass(generateMapEntryTypeURI(propertyURI));
+		var uri = generateMapEntryTypeURI(propertyURI);
+		var mapType = model.getOntClass(uri);
+		if (mapType != null) { 
+			return null; // such a class already exists, do not need to create properties for it
+		}
+		mapType = model.createOntClass(uri);
 		mapType.addSuperClass(mapEntryClass);
 		subclassesCache.add(mapType);
 
@@ -104,7 +109,12 @@ public class MapResourceType  {
 		if (singleType.existsPrimaryProperty(propertyURI)) {
 			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty		
 		}
-		OntClass mapType = model.createOntClass(generateMapEntryTypeURI(propertyURI));
+		var uri = generateMapEntryTypeURI(propertyURI);
+		var mapType = model.getOntClass(uri);
+		if (mapType != null) { 
+			return null; // such a class already exists, do not need to create properties for it
+		}
+		mapType = model.createOntClass(uri);
 		mapType.addSuperClass(mapEntryClass);
 		subclassesCache.add(mapType);
 

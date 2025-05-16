@@ -14,105 +14,101 @@ import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
-import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
+import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
+import at.jku.isse.artifacteventstreaming.branch.persistence.FilebasedDatasetLoader;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryEventStore;
+import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.passiveprocessengine.rdfwrapper.CoreTypeFactory;
+import at.jku.isse.passiveprocessengine.rdfwrapper.LazyLoadingLoopControllerService;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.CommitChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes.WrapperMetaModelOntology;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEnabledResolver;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@Getter
-public class FrontendEventStreamingWrapperFactory extends AbstractEventStreamingSetup{
 
-	public FrontendEventStreamingWrapperFactory(RuleEnabledResolver resolver,
-			ChangeEventTransformer changeEventTransformer, CoreTypeFactory coreTypeFactory,
-			RuleSchemaProvider ruleSchemaProvider, Branch branch, BranchStateUpdater stateKeeper) {
+public class InMemoryEventStreamingSetupFactory extends AbstractEventStreamingSetup {
+
+	
+	public InMemoryEventStreamingSetupFactory(RuleEnabledResolver resolver, ChangeEventTransformer changeEventTransformer,
+			CoreTypeFactory coreTypeFactory, RuleSchemaProvider ruleSchemaProvider, Branch branch,
+			BranchStateUpdater stateKeeper) {
 		super(resolver, changeEventTransformer, coreTypeFactory, ruleSchemaProvider, branch, stateKeeper);
 	}
 
+	@Override
 	public void signalExternalSetupComplete() throws PersistenceException, BranchConfigurationException {
-		// nothing to load statewise as inmemory and clean copy from backend		
+		//no state to load as nonpersisted
 		branch.startCommitHandlers(null); 		 
 	}
 	
-	
 	@Slf4j
-	@RequiredArgsConstructor
 	public static class FactoryBuilder {
-						
-		public static final String defaultFrontendBranchName = "frontend";
-				
-		private final AbstractEventStreamingSetup backendFactory;
-		private String branchLocalName = defaultFrontendBranchName;	
-						
-		public FactoryBuilder withFrontendBranchName(@NonNull String branchName) {
+	
+		private URI repoURI;
+
+		private String branchLocalName = AbstractEventStreamingSetup.defaultBranchName;	
+		
+		public FactoryBuilder withRepoURI(@NonNull URI repoURI) {
+			this.repoURI = repoURI;
+			return this;
+		}
+		
+		public FactoryBuilder withBranchName(@NonNull String branchName) {
 			this.branchLocalName = branchName;
 			return this;
 		}
-						
-		public FrontendEventStreamingWrapperFactory build() {
-			try {											
+		
+		public InMemoryEventStreamingSetupFactory build() {
+			try {
 				//create inmemory model for branch and repo						
 				Dataset repoDataset = DatasetFactory.createTxnMem(); // we are not persisting the repository itself (not the same inmemory repo as backend wrapper!)
 				OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);				
-				Dataset modelDataset = DatasetFactory.create();
 						
 				// no persistence, all inmemory				
-				var branchURI = BranchBuilder.generateBranchURI(new URI(AbstractEventStreamingSetup.defaultBranchBaseURI), branchLocalName);
+				if (repoURI == null) repoURI = new URI(AbstractEventStreamingSetup.defaultRepoURI);
+				var branchURI = BranchBuilder.generateBranchURI(repoURI, branchLocalName);
 				var stateKeeper = new StateKeeperImpl(branchURI,  new InMemoryBranchStateCache(), new InMemoryEventStore());				
-				var branch = new BranchBuilder(new URI(backendFactory.getBranch().getRepositoryURI()), repoDataset, repoModel)
+				var branch = new BranchBuilder(repoURI, repoDataset, repoModel)
 						.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF)		
-						.setDataset(modelDataset)
 						.setStateKeeper(stateKeeper)
 						.setBranchURI(branchURI)
 						.build();		
-				var frontendModel = branch.getModel();	
-				var merger = new CompleteCommitMerger(branch);
-				branch.appendIncomingCommitMerger(merger);
-				
-				//copy state/model from backend branch				
-				var sourceBranch = backendFactory.getBranch();
-				var backendDataset = sourceBranch.getDataset();
-				var backendModel = sourceBranch.getModel();
-				backendDataset.begin(ReadWrite.READ);
-				frontendModel.add(backendModel);				
-				backendDataset.end();
-				sourceBranch.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(sourceBranch, branch, new InMemoryBranchStateCache()));				
-								
-				var cardUtil = new WrapperMetaModelSchemaTypes(frontendModel);									
+				var backendModel = branch.getModel();	
+					
+				var metaModel = WrapperMetaModelOntology.buildInMemoryOntology(); 
+				new RuleSchemaFactory(metaModel); // add rule schema to meta model
+				var cardUtil = new WrapperMetaModelSchemaTypes(backendModel, metaModel);
 				// setting up branch commit handlers				 														
-				// we need to update rule repo without executing rules
 				var observerFactory = new RuleTriggerObserverFactory(cardUtil);
-				var observer = observerFactory.buildPassiveInstance("PassiveRuleTriggeringObserver", frontendModel, repoModel);					
-				//repo has exactly same content as backend branch but does not reevaluate rules
+				var observer = observerFactory.buildActiveInstance("ActiveRuleTriggeringObserver", backendModel, repoModel);					
+				var repairService = new RepairService(backendModel, observer.getRepo()); 
+				var resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);								
+				var changeTransformer = new CommitChangeEventTransformer("BackendCommitToWrapperEventsTransformer", repoModel, resolver, observer.getFactory());				
 				branch.appendBranchInternalCommitService(observer);
-				
-				var repairService = new RepairService(frontendModel, observer.getRepo()); 
-				RuleEnabledResolver resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);								
-				var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, observer.getFactory());				
-				//	this enables refreshing of abstraction layer cache upon any changes
 				branch.appendBranchInternalCommitService(changeTransformer);
-				//AND no need for loop controller as there is no lazy loading here, that happened already in backend,
-				var coreTypeFactory = new CoreTypeFactory(resolver);			
+				branch.appendBranchInternalCommitService(new LazyLoadingLoopControllerService("BackendLazyLoadingLoopController", repoModel, backendModel));								
 				
-				return new FrontendEventStreamingWrapperFactory(resolver, changeTransformer
+				// set up additional wrapper components
+				var coreTypeFactory = new CoreTypeFactory(resolver);
+				return new InMemoryEventStreamingSetupFactory(resolver, changeTransformer
 						, coreTypeFactory, observer.getFactory(), branch, stateKeeper);																			
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
 		}
 	}
-	
 	
 }

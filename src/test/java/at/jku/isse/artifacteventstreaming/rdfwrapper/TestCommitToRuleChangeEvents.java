@@ -28,7 +28,7 @@ import at.jku.isse.artifacteventstreaming.rule.RuleEvaluationListener;
 import at.jku.isse.artifacteventstreaming.rule.RuleException;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
-import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserver;
+import at.jku.isse.artifacteventstreaming.rule.ActiveRuleTriggerObserver;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
@@ -60,7 +60,7 @@ class TestCommitToRuleChangeEvents {
 	PPEChangeListener listener;
 	CommitChangeEventTransformer transformer;
 	BranchImpl branch;
-	RuleTriggerObserver observer;
+	ActiveRuleTriggerObserver observer;
 	RuleRepositoryInspector inspector;
 	PrimitiveTypesFactory typeFactory;
 	
@@ -78,7 +78,7 @@ class TestCommitToRuleChangeEvents {
 		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
 		var cardUtil = new WrapperMetaModelSchemaTypes(m, metaModel);
 		var observerFactory = new RuleTriggerObserverFactory(cardUtil);
-		observer = observerFactory.buildInstance("RuleTriggeringObserver", m, repoModel);
+		observer = observerFactory.buildActiveInstance("RuleTriggeringObserver", m, repoModel);
 		observer.registerListener(new TestRuleEvaluationListener());
 		var repairService = new RepairService(m, observer.getRepo());
 		resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);

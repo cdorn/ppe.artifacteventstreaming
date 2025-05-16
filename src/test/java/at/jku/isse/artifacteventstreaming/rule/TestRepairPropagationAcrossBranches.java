@@ -3,150 +3,289 @@ package at.jku.isse.artifacteventstreaming.rule;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.net.URI;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import org.apache.jena.ontapi.OntModelFactory;
-import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.query.Dataset;
-import org.apache.jena.query.DatasetFactory;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Statement;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
-import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
-import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
-import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
-import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
+import at.jku.isse.artifacteventstreaming.testutils.ModelDiff;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
+import at.jku.isse.passiveprocessengine.rdfwrapper.config.FrontendEventStreamingWrapperFactory;
+import at.jku.isse.passiveprocessengine.rdfwrapper.config.InMemoryEventStreamingSetupFactory;
+import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEnabledResolver;
 
 class TestRepairPropagationAcrossBranches {
 	
-	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/repoWithRule2");
+	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/repoWithRepair");
 	
 	
 	CountDownLatch latch;
 	SyncForTestingService serviceOut;
-	OntModel model1;
+	OntModel sourceModel;
+	OntModel destModel;
 	Branch branchSource;	
 	Branch branchDestination;
-	RuleTriggerObserver observerSource;
-	RuleTriggerObserver observerDest;
+	RuleEnabledResolver resolverSource;
+	RuleEnabledResolver resolverDest;
 	MockSchema schema;
 		
 	@BeforeEach
 	void setup() throws Exception {
-		Dataset repoDataset = DatasetFactory.createTxnMem();
-		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		var backend = new InMemoryEventStreamingSetupFactory.FactoryBuilder().withBranchName("backend").withRepoURI(repoURI).build();
+		var frontend = new FrontendEventStreamingWrapperFactory.FactoryBuilder(backend).withFrontendBranchName("frontend").build();
+		sourceModel = backend.getBranch().getModel();
+		destModel = frontend.getBranch().getModel();
+		resolverDest = frontend.getResolver();
+		resolverSource = backend.getResolver();
+		branchSource = backend.getBranch();
+		branchDestination = frontend.getBranch();	
 		
-		// setup test interceptor service
-		latch = new CountDownLatch(2);
-		serviceOut = new SyncForTestingService("OutDestination", latch, repoModel);
+		backend.getBranch().getDataset().begin(ReadWrite.READ);
+		var sizeSource = sourceModel.size();
+		var sizeDest = destModel.size();
+		if (sizeSource != sizeDest) {
+			ModelDiff.printDiff(sourceModel, destModel, true);
+		}
+		assertEquals(sizeSource, sizeDest);
+		backend.getBranch().getDataset().end();
 		
-		branchDestination = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
-				.setModelReasoner(OntSpecification.OWL2_DL_MEM_RDFS_INF)	
-				.setBranchLocalName("destination")
-				.addOutgoingCommitDistributer(serviceOut)
-				.build();		
-		//incoming merger
-		var merger = new CompleteCommitMerger(branchDestination);
-		branchDestination.appendIncomingCommitMerger(merger);
-		//setup rules for destination branch
-		var destModel = branchDestination.getModel();
-		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
-		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
-		var cardUtil = new MetaModelSchemaTypes(destModel, metaModel);
-		RuleTriggerObserverFactory observerFactory = new RuleTriggerObserverFactory(cardUtil);
+		frontend.signalExternalSetupComplete();
+		backend.signalExternalSetupComplete();
 		
-		observerDest = observerFactory.buildInstance("RuleTriggerObserverDestination", destModel, repoModel);
-		branchDestination.appendBranchInternalCommitService(observerDest);		// register rule service with destination branch
 		
-		branchSource = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
-				.setModelReasoner(OntSpecification.OWL2_DL_MEM_RDFS_INF)		
-				.setBranchLocalName("source")
-				.build();		
-		
-		model1 = branchSource.getModel();
-		schema = new MockSchema(model1, cardUtil); // create types for testing
-		// setup rule service for source branch
-		RuleTriggerObserverFactory observerFactorySource = new RuleTriggerObserverFactory(new MetaModelSchemaTypes(model1, metaModel));
-		observerSource = observerFactorySource.buildInstance("RuleTriggerObserverSource", model1, repoModel);
-		branchSource.appendBranchInternalCommitService(observerSource); // register rule service with branch
-		// connect branches
-		branchSource.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(branchSource, branchDestination, new InMemoryBranchStateCache()));
-				
-		branchSource.startCommitHandlers(null);
-		branchDestination.startCommitHandlers(null);
-		branchSource.getDataset().begin();
 	}
 	
 	
 	
 	@Test
-	void testRulePropagationToOtherBranch() throws Exception {				
+	void testRepairPropagationToOtherBranch() throws Exception {		
+		// setup test interceptor service
+		latch = new CountDownLatch(3);
+		serviceOut = new SyncForTestingService("OutDestination", latch, branchDestination.getBranchResource().getModel());
+		branchDestination.appendOutgoingCommitDistributer(serviceOut);	
+		
+		branchSource.getDataset().begin(ReadWrite.WRITE);
+		schema = new MockSchema(sourceModel, resolverSource.getMetaschemata()); // create types for testing
+		branchSource.commitChanges("TestSchemaAdded");
+		
+		var inspectorSource = new RuleRepositoryInspector(resolverSource.getRuleSchema());
+		var inspectorDest = new RuleRepositoryInspector(resolverDest.getRuleSchema());
+		
 		// get and activate a rule
-		var def = schema.getRegisteredRuleRequirementsSizeGT1(1, observerSource.getRepo());
+		branchSource.getDataset().begin(ReadWrite.WRITE);	
+		schema.getRegisteredRuleRequirementsSizeEq2(1, resolverSource.getRuleRepo());
 		branchSource.commitChanges("Init commit");
 		
 		// create instances
 		branchSource.getDataset().begin();	
 		var issue1 = schema.createIssue("issue1");
-		var issue2 = schema.createIssue("issue2");
+		var issue2 = schema.createIssue("issue2", issue1);
 		var issue3 = schema.createIssue("issue3", issue1, issue2);
 		
-		branchSource.commitChanges("Creation commit");
+		branchSource.commitChanges("Creation");
 		boolean success = latch.await(5000, TimeUnit.SECONDS);
 		assert(success);
 		
-		System.out.println("SCOPES IN SOURCE:");
-		var inspectorSource = new RuleRepositoryInspector(observerSource.getFactory());
+		System.out.println("SCOPES AND REPAIRS IN SOURCE:");
+		branchSource.getDataset().begin(ReadWrite.READ);	
 		inspectorSource.getAllScopes().forEach(scope -> inspectorSource.printScope(scope));
+		var evalWrappers1 = resolverSource.getRuleRepo().getEvaluations().getEvaluations();
+		evalWrappers1.stream()
+			.filter(eval -> !eval.isConsistent())
+			.map(eval -> { System.out.println("ROOT "+eval.getRepairTree()); return eval;})
+			.flatMap(eval -> inspectorSource.getFlatRepairTree(eval).stream())
+			.forEach(dto -> System.out.println(" NODES:" +dto.toString()));
+		assertEquals(3, evalWrappers1.size());
+		branchSource.getDataset().end();	
 		
 		System.out.println("SCOPES IN DEST:");
-		var inspector = new RuleRepositoryInspector(observerDest.getFactory());
-		inspector.getAllScopes().forEach(scope -> inspector.printScope(scope));
+		inspectorDest.getAllScopes().forEach(scope -> inspectorDest.printScope(scope));
 		
-		assertEquals(2,	serviceOut.getReceivedCommits().size());
-		var outCommit = serviceOut.getReceivedCommits().get(1);
+		assertEquals(3,	serviceOut.getReceivedCommits().size());
+		var outCommits = serviceOut.getReceivedCommits();
+		var outCommit = outCommits.get(outCommits.size()-1);
 		List<Statement> ruleResultStmts = outCommit.getAddedStatements().stream()
-				.filter(stmt -> stmt.getPredicate().equals(observerDest.getFactory().getEvaluationHasConsistentResultProperty()))
+				.filter(stmt -> stmt.getPredicate().equals(resolverDest.getRuleSchema().getEvaluationHasConsistentResultProperty()))
 				.map(Statement.class::cast).toList();
 		assertEquals(3, ruleResultStmts.size());
 		
-		// currently model sizes are not equal, find out why:
-		Set<Statement> sourceStmts = new HashSet<>();
-		var iterSource = branchSource.getModel().listStatements();
-		while(iterSource.hasNext()) {
-			sourceStmts.add(iterSource.next());
-		}
-		Set<Statement> destStmts = new HashSet<>();
-		var iterDest = branchDestination.getModel().listStatements();
-		while(iterDest.hasNext()) {
-			destStmts.add(iterDest.next());
-		}
-		Set<Statement> missingInSource = destStmts.stream().filter(stmt -> !sourceStmts.contains(stmt)).collect(Collectors.toSet());
-		Set<Statement> missingInDest = sourceStmts.stream().filter(stmt -> !destStmts.contains(stmt)).collect(Collectors.toSet());
+		var evalWrappers = resolverDest.getRuleRepo().getEvaluations().getEvaluations();
 		
-		System.out.println("MISSING IN SOURCE: "+missingInSource.size());	
-		//missingInSource.stream().forEach(stmt -> System.out.println(stmt));
-		System.out.println("MISSING IN DESTINATION: "+missingInDest.size());
-		//missingInDest.stream().forEach(stmt -> System.out.println(stmt));
 		
-		// var diffModel = branchDestination.getModel().difference(branchSource.getModel());
-		// RDFDataMgr.write(System.out, diffModel, Lang.TURTLE) ;
-		// restrictions are generated in each branch with different anonIDs hence we have more in destination and duplicated restriction classes
-		// fixed now
+		evalWrappers.stream()
+			.filter(eval -> !eval.isConsistent())
+			.map(eval -> { System.out.println(eval.getContextInstance().getLocalName()); return eval;})
+			.flatMap(eval -> inspectorDest.getFlatRepairTree(eval).stream())
+			.forEach(dto -> System.out.println(dto.toString()));
+		assertEquals(3, evalWrappers.size());
+		
+		
+		var sizeSource = sourceModel.size();
+		var sizeDest = destModel.size();
+		if (sizeSource != sizeDest) {
+			ModelDiff.printDiff(sourceModel, destModel, true);
+		}
+		assertEquals(sizeSource, sizeDest);
+	}
+
+	@Test
+	void testRepairUpdateToOtherBranch() throws Exception {		
+		// setup test interceptor service
+		latch = new CountDownLatch(4);
+		serviceOut = new SyncForTestingService("OutDestination", latch, branchDestination.getBranchResource().getModel());
+		branchDestination.appendOutgoingCommitDistributer(serviceOut);	
+		
+		branchSource.getDataset().begin(ReadWrite.WRITE);
+		schema = new MockSchema(sourceModel, resolverSource.getMetaschemata()); // create types for testing
+		branchSource.commitChanges("TestSchemaAdded");
+		
+		var inspectorSource = new RuleRepositoryInspector(resolverSource.getRuleSchema());
+		var inspectorDest = new RuleRepositoryInspector(resolverDest.getRuleSchema());
+		
+		// get and activate a rule
+		branchSource.getDataset().begin();	
+		schema.getRegisteredRuleRequirementsSizeEq2(1, resolverSource.getRuleRepo());
+		branchSource.commitChanges("Init commit");
+		
+		// create instances
+		branchSource.getDataset().begin();	
+		var issue1 = schema.createIssue("issue1");
+		var issue2 = schema.createIssue("issue2", issue1);
+		var issue3 = schema.createIssue("issue3", issue1, issue2);
+		branchSource.commitChanges("Creation");
+		
+		// create instances
+		branchSource.getDataset().begin();	
+		schema.addRequirement(issue1, issue2);
+		schema.addRequirement(issue1, issue3);
+		schema.addRequirement(issue2, issue3);
+		branchSource.commitChanges("RepairingUpdate");
+				
+		
+		boolean success = latch.await(5000, TimeUnit.SECONDS);
+		assert(success);
+		
+		System.out.println("SCOPES AND REPAIRS IN SOURCE:");
+		branchSource.getDataset().begin(ReadWrite.READ);	
+		inspectorSource.getAllScopes().forEach(scope -> inspectorSource.printScope(scope));
+		var evalWrappers1 = resolverSource.getRuleRepo().getEvaluations().getEvaluations();
+		evalWrappers1.stream()
+			.filter(eval -> !eval.isConsistent())
+			.map(eval -> { System.out.println("ROOT "+eval.getRepairTree()); return eval;})
+			.flatMap(eval -> inspectorSource.getFlatRepairTree(eval).stream())
+			.forEach(dto -> System.out.println(" NODES:" +dto.toString()));
+		assertEquals(3, evalWrappers1.size());
+		branchSource.getDataset().end();	
+		
+		System.out.println("SCOPES IN DEST:");
+		inspectorDest.getAllScopes().forEach(scope -> inspectorDest.printScope(scope));
+		
+		assertEquals(4,	serviceOut.getReceivedCommits().size());
+		
+		var outCommits = serviceOut.getReceivedCommits();
+		var outCommit = outCommits.get(outCommits.size()-1);
+		List<Statement> ruleResultStmts = outCommit.getAddedStatements().stream()
+				.filter(stmt -> stmt.getPredicate().equals(resolverDest.getRuleSchema().getEvaluationHasConsistentResultProperty()))
+				.map(Statement.class::cast).toList();
+		assertEquals(2, ruleResultStmts.size());
+		
+		var evalWrappers = resolverDest.getRuleRepo().getEvaluations().getEvaluations();
+		evalWrappers.stream()
+			.filter(eval -> !eval.isConsistent())
+			.map(eval -> { System.out.println(eval.getContextInstance().getLocalName()); return eval;})
+			.flatMap(eval -> inspectorDest.getFlatRepairTree(eval).stream())
+			.forEach(dto -> System.out.println(dto.toString()));
+		assertEquals(3, evalWrappers.size());
+		assertEquals(0, evalWrappers.stream()
+		.filter(eval -> !eval.isConsistent()).count());
+		
+		var sizeSource = sourceModel.size();
+		var sizeDest = destModel.size();
+		if (sizeSource != sizeDest) {
+			ModelDiff.printDiff(sourceModel, destModel, true);
+		}
+		assertEquals(sizeSource, sizeDest);
 	}
 	
-	
-
+	@Test
+	void testRepairTreeOnlyUpdateToOtherBranch() throws Exception {		
+		// setup test interceptor service
+		latch = new CountDownLatch(4);
+		serviceOut = new SyncForTestingService("OutDestination", latch, branchDestination.getBranchResource().getModel());
+		branchDestination.appendOutgoingCommitDistributer(serviceOut);	
+		
+		branchSource.getDataset().begin(ReadWrite.WRITE);
+		schema = new MockSchema(sourceModel, resolverSource.getMetaschemata()); // create types for testing
+		branchSource.commitChanges("TestSchemaAdded");
+		
+		var inspectorSource = new RuleRepositoryInspector(resolverSource.getRuleSchema());
+		var inspectorDest = new RuleRepositoryInspector(resolverDest.getRuleSchema());
+		
+		// get and activate a rule
+		branchSource.getDataset().begin();	
+		schema.getRegisteredRuleRequirementsSizeEq2(1, resolverSource.getRuleRepo());
+		branchSource.commitChanges("Init commit");
+		
+		// create instances
+		branchSource.getDataset().begin();	
+		var issue1 = schema.createIssue("issue1");
+		var issue2 = schema.createIssue("issue2", issue1);
+		var issue3 = schema.createIssue("issue3", issue1, issue2);
+		branchSource.commitChanges("Creation");
+		
+		// create instances
+		branchSource.getDataset().begin();	
+		schema.addRequirement(issue1, issue2);
+		branchSource.commitChanges("NonRepairingUpdate");
+				
+		
+		boolean success = latch.await(5000, TimeUnit.SECONDS);
+		assert(success);
+		
+		System.out.println("SCOPES AND REPAIRS IN SOURCE:");
+		branchSource.getDataset().begin(ReadWrite.READ);	
+		inspectorSource.getAllScopes().forEach(scope -> inspectorSource.printScope(scope));
+		var evalWrappers1 = resolverSource.getRuleRepo().getEvaluations().getEvaluations();
+		evalWrappers1.stream()
+			.filter(eval -> !eval.isConsistent())
+			.map(eval -> { System.out.println("ROOT "+eval.getRepairTree()); return eval;})
+			.flatMap(eval -> inspectorSource.getFlatRepairTree(eval).stream())
+			.forEach(dto -> System.out.println(" NODES:" +dto.toString()));
+		assertEquals(3, evalWrappers1.size());
+		branchSource.getDataset().end();	
+		
+		System.out.println("SCOPES IN DEST:");
+		inspectorDest.getAllScopes().forEach(scope -> inspectorDest.printScope(scope));
+		
+		assertEquals(4,	serviceOut.getReceivedCommits().size());
+		
+		var outCommits = serviceOut.getReceivedCommits();
+		var outCommit = outCommits.get(outCommits.size()-1);
+		List<Statement> ruleResultStmts = outCommit.getAddedStatements().stream()
+				.filter(stmt -> stmt.getPredicate().equals(resolverDest.getRuleSchema().getEvaluationHasConsistentResultProperty()))
+				.map(Statement.class::cast).toList();
+		assertEquals(0, ruleResultStmts.size());
+		
+		var evalWrappers = resolverDest.getRuleRepo().getEvaluations().getEvaluations();
+		evalWrappers.stream()
+			.filter(eval -> !eval.isConsistent())
+			.map(eval -> { System.out.println(eval.getContextInstance().getLocalName()); return eval;})
+			.flatMap(eval -> inspectorDest.getFlatRepairTree(eval).stream())
+			.forEach(dto -> System.out.println(dto.toString()));
+		assertEquals(3, evalWrappers.size());
+		assertEquals(2, evalWrappers.stream()
+		.filter(eval -> !eval.isConsistent()).count());
+		
+		var sizeSource = sourceModel.size();
+		var sizeDest = destModel.size();
+		if (sizeSource != sizeDest) {
+			ModelDiff.printDiff(sourceModel, destModel, true);
+		}
+		assertEquals(sizeSource, sizeDest);
+	}
 }

@@ -32,6 +32,8 @@ public class MetaModelSchemaTypes {
 	private final ListResourceType listType;
 	@Getter
 	private final SingleResourceType singleType;	
+	@Getter
+	private final SetResourceType setType = new SetResourceType();
 	
 	public MetaModelSchemaTypes(OntModel model, MetaModelOntology meta) {			
 		// we init this model with the model fron the meta ontology

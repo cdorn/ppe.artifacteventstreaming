@@ -72,7 +72,7 @@ class TestCommitToChangeEvents {
 		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
 		var cardUtil = new WrapperMetaModelSchemaTypes(m, metaModel);
 		var observerFactory = new RuleTriggerObserverFactory(cardUtil);
-		var observer = observerFactory.buildInstance("RuleTriggeringObserver", m, repoModel);
+		var observer = observerFactory.buildActiveInstance("RuleTriggeringObserver", m, repoModel);
 		var repairService = new RepairService(m, observer.getRepo());
 		resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
 		aggr = new StatementAggregator();

@@ -48,16 +48,20 @@ public class RuleRepository {
 	 */
 	private void loadFromModel() {		
 		factory.getDefinitionType().individuals(true).toList().stream().forEach(this::storeRuleDefinition); // FIXME: for some reason ruleEvalResources are also included here, need filtering out to avoid log warn messages
-		factory.getResultBaseType().individuals().toList().stream().map(eval -> { // we need to have a list first as otherwise inference has concurrent modification exception
-				try {
-					return RuleEvaluationWrapperResource.loadFromModel(eval, factory, this);
-				} catch (EvaluationException e) {
-					log.warn("Error loading evaluation results from model, ignoring: "+e);
-					return null;
-				}
-			})
-			.filter(Objects::nonNull)
-			.forEach(evalWrapper -> evaluations.put(evalWrapper.getRuleEvalObj().getURI(), evalWrapper));
+		factory.getResultBaseType().individuals().toList().stream().forEach(eval ->  // we need to have a list first as otherwise inference has concurrent modification exception
+				loadAndStoreEvaluationWrapperFromModel(eval)
+			);
+	}
+	
+	protected RuleEvaluationWrapperResource loadAndStoreEvaluationWrapperFromModel(OntIndividual eval) {
+		try {
+			var evalWrapper = RuleEvaluationWrapperResource.loadFromModel(eval, factory, this);
+			evaluations.put(evalWrapper.getRuleEvalObj().getURI(), evalWrapper);
+			return evalWrapper;
+		} catch (EvaluationException e) {
+			log.warn("Error loading evaluation results from model, ignoring: "+e);
+			return null;
+		}
 	}
 	
 	public Collection<RDFRuleDefinition> getRuleDefinitions() {
@@ -163,6 +167,13 @@ public class RuleRepository {
 		}				
 	}
 	
+	/**
+	 * @param definitionURI to remove the corresponding rule definition, without considering rule evaluations or repairs, would need to be done separately
+	 * used to clean up upon external deletion of underlying rdf statements.
+	 */
+	protected void removeRuleDefinitionWrapper(@NonNull String definitionURI) {
+		definitions.remove(definitionURI);
+	}
 	
 	/**
 	 * @param predicate the property definition that was removed, hence any rules (and their evaluations) that use this property are to be removed
@@ -451,6 +462,10 @@ public class RuleRepository {
 		private String makeKeyFrom(OntObject contextInstance, RDFRuleDefinition def) {
 			var ctxId = contextInstance.isAnon() ? contextInstance.getId().toString() : contextInstance.getURI();
 			return ctxId+def.getRuleDefinition().getURI();
+		}
+		
+		public Set<RuleEvaluationWrapperResource> getEvaluations() {
+			return new HashSet<>(evaluationsByURI.values());
 		}
 	}
 

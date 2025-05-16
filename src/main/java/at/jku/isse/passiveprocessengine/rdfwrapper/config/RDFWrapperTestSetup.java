@@ -22,14 +22,12 @@ import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.passiveprocessengine.rdfwrapper.CoreTypeFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.LazyLoadingLoopControllerService;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.CommitChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
 import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes.WrapperMetaModelOntology;
-import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RDFRepairTreeProvider;
 import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEnabledResolver;
 import lombok.Getter;
 
@@ -41,7 +39,7 @@ public class RDFWrapperTestSetup {
 	public static final URI branchURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/rdfwrapper/testbranch");
 	
 	private RuleEnabledResolver resolver;
-	private RDFRepairTreeProvider repairTreeProvider;
+
 	private ChangeEventTransformer changeEventTransformer;
 	private CoreTypeFactory coreTypeFactory;
 	private RuleSchemaProvider ruleSchemaProvider;
@@ -65,7 +63,7 @@ public class RDFWrapperTestSetup {
 			new RuleSchemaFactory(metaModel); // add rule schema to meta model
 			var cardUtil = new WrapperMetaModelSchemaTypes(model1, metaModel);				
 			observerFactory = new RuleTriggerObserverFactory(cardUtil);
-			var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);
+			var observer = observerFactory.buildActiveInstance("RuleTriggeringObserver", model1, repoModel);
 			var repairService = new RepairService(model1, observer.getRepo());
 			resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
 			var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, observer.getFactory());
@@ -75,8 +73,7 @@ public class RDFWrapperTestSetup {
 			
 			branch.startCommitHandlers(null);
 			branch.getDataset().begin();
-						
-			repairTreeProvider = new RDFRepairTreeProvider(repairService, observer.getRepo()); 			
+								
 			changeEventTransformer = changeTransformer;
 			coreTypeFactory = new CoreTypeFactory(resolver);
 			ruleSchemaProvider = observer.getFactory();
@@ -116,7 +113,7 @@ public class RDFWrapperTestSetup {
 			var cardUtil = new WrapperMetaModelSchemaTypes(model1, metaModel);				
 			observerFactory = new RuleTriggerObserverFactory(cardUtil);												
 			System.out.println("Size after observer factory build: "+model1.size());
-			var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);
+			var observer = observerFactory.buildActiveInstance("RuleTriggeringObserver", model1, repoModel);
 			System.out.println("Size after observer build: "+model1.size());
 			var repairService = new RepairService(model1, observer.getRepo());
 			resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
@@ -130,7 +127,6 @@ public class RDFWrapperTestSetup {
 			//var unfinishedCommit = stateKeeper.loadState();
 			// branch.startCommitHandlers(unfinishedCommit); // first complete other stuff on top
 			
-			repairTreeProvider = new RDFRepairTreeProvider(repairService, observer.getRepo());
 			System.out.println("Size after repair tree build: "+model1.size());
 	
 			changeEventTransformer = changeTransformer;

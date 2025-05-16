@@ -20,8 +20,6 @@ import lombok.Data;
 public class RuleEvaluationIterationMetadata {
 
 	final RuleEvaluationWrapperResource rule;
-	@SuppressWarnings("rawtypes")
-	RuleEvaluation eval;
 	Boolean hasEvaluationOutcomeChanged;
 	Set<Statement> evaluationTriggers = new HashSet<>();
 	
@@ -33,10 +31,7 @@ public class RuleEvaluationIterationMetadata {
 		evaluationTriggers.addAll(ops);
 	}
 	
-	public void update(Entry<RuleEvaluation, Boolean> evalOutcome) {
-		if (evalOutcome != null) {
-			this.eval = evalOutcome.getKey();
-			this.hasEvaluationOutcomeChanged = evalOutcome.getValue();
-		}
+	public void update(boolean evalOutcomeHasChanged) {
+		this.hasEvaluationOutcomeChanged = evalOutcomeHasChanged;
 	}
 }

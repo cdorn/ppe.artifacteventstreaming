@@ -19,15 +19,20 @@ public class RuleTriggerObserverFactory implements ServiceFactory {
 			throws Exception {
 		String labelProp = serviceConfigEntryPoint.getLabel();
 		if (labelProp == null) {
-			labelProp = "Anonymous"+RuleTriggerObserver.class.getSimpleName()+branch.getBranchName();
+			labelProp = "Anonymous"+ActiveRuleTriggerObserver.class.getSimpleName()+branch.getBranchName();
 		}
-		return buildInstance(labelProp, branch.getModel(), serviceConfigEntryPoint.getModel());
+		return buildActiveInstance(labelProp, branch.getModel(), serviceConfigEntryPoint.getModel());
 	}
 	
-	public RuleTriggerObserver buildInstance(String serviceName, OntModel branchModel, OntModel repoModel) {		
+	public ActiveRuleTriggerObserver buildActiveInstance(String serviceName, OntModel branchModel, OntModel repoModel) {		
 		var factory = new RuleSchemaProvider(branchModel, schemaProvider);
 		var ruleRepo = new RuleRepository(factory);
-		return new RuleTriggerObserver(serviceName, repoModel, factory, ruleRepo);
+		return new ActiveRuleTriggerObserver(serviceName, repoModel, factory, ruleRepo);
 	}
 
+	public PassiveRuleTriggerObserver buildPassiveInstance(String serviceName, OntModel branchModel, OntModel repoModel) {		
+		var factory = new RuleSchemaProvider(branchModel, schemaProvider);
+		var ruleRepo = new RuleRepository(factory);
+		return new PassiveRuleTriggerObserver(serviceName, repoModel, factory, ruleRepo);
+	}
 }

@@ -103,7 +103,7 @@ public class RuleEvaluationWrapperResource extends RuleEvaluationDTO {
 	 * If evaluation has error, returns null
 	 * result itself is not persisted, just whether rule is consistent or not 
 	 */
-	public Entry<RuleEvaluation, Boolean> evaluate() {
+	public Entry<RuleEvaluationDTO, Boolean> evaluate() {
 		if (!isEnabled()) return null;
 		
 		var priorConsistency = isConsistent();
@@ -117,12 +117,22 @@ public class RuleEvaluationWrapperResource extends RuleEvaluationDTO {
 		} else {
 			ruleEvalObj.removeAll(schemaProvider.getEvaluationErrorProperty());
 			ruleEvalObj.removeAll(schemaProvider.getEvaluationHasConsistentResultProperty());
+			Boolean newConsistent = false;
 			if (result instanceof Boolean boolResult) {
 				ruleEvalObj.addLiteral(schemaProvider.getEvaluationHasConsistentResultProperty(), boolResult); 	
+				newConsistent = boolResult;
 			}
 			updateRuleScope();
+			super.setRootRepairNode(null); // remove old tree
+			if (Boolean.FALSE.equals(newConsistent)) {
+				// pessemistic recreation of repair tree.
+				var root = transformAndStoreRepairs(delegate.getRepairTree(), null, -1);
+				super.setRootRepairNode(root);
+			} 
 		}				
-		return new AbstractMap.SimpleEntry<>(delegate, !Objects.equals(priorConsistency, isConsistent())); // returns if the outcome has changed;
+		
+		
+		return new AbstractMap.SimpleEntry<>(this, !Objects.equals(priorConsistency, isConsistent())); // returns if the outcome has changed;
 	}
 	
 	private void addPropertyToScope(Entry<Resource, Property> typed, OntIndividual ruleEval) {
@@ -196,6 +206,11 @@ public class RuleEvaluationWrapperResource extends RuleEvaluationDTO {
 	}
 	
 	public RepairNodeDTO getRepairTree() {
+		if (this.isConsistent()) // no repair tree for consistent rule
+			return null;
+		var root = super.getRepairRootNode();
+		if (root != null) // if there is a serialized repair tree form, return that.
+			return root;
 		// we need to check if the cached repair tree dto is still valid, or if we have to regenerate it,
 		// by checking the delegate repair nodes repair tree, bit ugly
 		if (this.isEnabled() && this.delegate != null && this.delegate.getError() == null) {
@@ -211,16 +226,6 @@ public class RuleEvaluationWrapperResource extends RuleEvaluationDTO {
 		}
 		return null;
 	}
-
-//	protected RepairNode getRawRepairTree() {
-//		if (this.isEnabled() && this.delegate != null && this.delegate.getError() == null) {
-//			if (this.delegate.getEvaluationTree() == null) {
-//				this.evaluate();
-//			}
-//			return delegate.getRepairTree();
-//		}
-//		return null;
-//	}
 
 	private RepairNodeDTO transformAndStoreRepairs(RepairNode rawRootNode, RepairNodeDTO parentNode, int posInParent) {
 		if (rawRootNode == null) return null;

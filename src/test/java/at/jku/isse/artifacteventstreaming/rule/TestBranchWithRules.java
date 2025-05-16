@@ -32,7 +32,7 @@ class TestBranchWithRules {
 	OntModel model;
 	Branch branch;	
 	
-	RuleTriggerObserver observer;	
+	ActiveRuleTriggerObserver observer;	
 	MockSchema schema;
 		
 	@BeforeEach
@@ -56,7 +56,7 @@ class TestBranchWithRules {
 		schema = new MockSchema(model, cardUtil); // create types for testing
 								
 		// setup rule service				
-		observer = observerFactory.buildInstance("RuleTriggerObserver1", model, repoModel);
+		observer = observerFactory.buildActiveInstance("RuleTriggerObserver1", model, repoModel);
 		// register rule service with branch
 		branch.appendBranchInternalCommitService(observer);
 		
