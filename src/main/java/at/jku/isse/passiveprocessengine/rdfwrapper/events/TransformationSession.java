@@ -1,4 +1,4 @@
-package at.jku.isse.passiveprocessengine.rdfwrapper;
+package at.jku.isse.passiveprocessengine.rdfwrapper.events;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -20,9 +20,10 @@ import at.jku.isse.artifacteventstreaming.replay.StatementAugmentationSession;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
-import at.jku.isse.passiveprocessengine.core.PPEInstance;
-import at.jku.isse.passiveprocessengine.core.PropertyChange;
-import at.jku.isse.passiveprocessengine.core.PropertyChange.Update;
+import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFElement;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
+import at.jku.isse.passiveprocessengine.rdfwrapper.events.PropertyChange.Update;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,7 +43,7 @@ public class TransformationSession extends StatementAugmentationSession {
 
 	public TransformationSession(List<ContainedStatement> addedStatements, List<ContainedStatement> removedStatements,
 			NodeToDomainResolver resolver, RuleSchemaProvider ruleSchema) {
-		super(addedStatements, removedStatements, resolver.getCardinalityUtil());
+		super(addedStatements, removedStatements, resolver.getMetaschemata());
 		this.resolver = resolver;
 		this.inspector = new RuleRepositoryInspector(ruleSchema);
 	}
@@ -95,8 +96,8 @@ public class TransformationSession extends StatementAugmentationSession {
 	private boolean isMapValueProperty(Property property) {
 		if (property.canAs(OntProperty.class)) { 
 			var prop = property.as(OntProperty.class);
-			return resolver.getCardinalityUtil().getMapType().getLiteralValueProperty().hasSubProperty(prop, true) 
-					|| resolver.getCardinalityUtil().getMapType().getObjectValueProperty().hasSubProperty(prop, true);
+			return resolver.getMetaschemata().getMapType().getLiteralValueProperty().hasSubProperty(prop, true) 
+					|| resolver.getMetaschemata().getMapType().getObjectValueProperty().hasSubProperty(prop, true);
 		}
 		else return false;
 	}
@@ -104,11 +105,11 @@ public class TransformationSession extends StatementAugmentationSession {
 	@Override
 	protected void handleMapEntryChange(List<StatementWrapper> stmts, Property prop, Resource owner) {
 		super.handleMapEntryChange(stmts, prop, owner);
-		PPEInstance changeSubject = (PPEInstance) resolver.resolveToRDFElement(owner);
+		var changeSubject = resolver.resolveToRDFElement(owner);
 		
-		var keyOpt = findFirstStatementAboutProperty(stmts, resolver.getCardinalityUtil().getMapType().getKeyProperty().asProperty());
-		var litValueOpt = findFirstStatementAboutProperty(stmts, resolver.getCardinalityUtil().getMapType().getLiteralValueProperty().asProperty());
-		var objValueOpt = findFirstStatementAboutProperty(stmts, resolver.getCardinalityUtil().getMapType().getObjectValueProperty().asProperty());
+		var keyOpt = findFirstStatementAboutProperty(stmts, resolver.getMetaschemata().getMapType().getKeyProperty().asProperty());
+		var litValueOpt = findFirstStatementAboutProperty(stmts, resolver.getMetaschemata().getMapType().getLiteralValueProperty().asProperty());
+		var objValueOpt = findFirstStatementAboutProperty(stmts, resolver.getMetaschemata().getMapType().getObjectValueProperty().asProperty());
 		// we are not interested in back reference
 		if (keyOpt.isEmpty() || (litValueOpt.isEmpty() && objValueOpt.isEmpty())) {
 			log.error("MapEntry change has inconsistent statements, cannot generate change event");
@@ -194,7 +195,7 @@ public class TransformationSession extends StatementAugmentationSession {
 					var element = inspector.getElementFromScope(scope); // from scope object to owner instance of that scope
 					if (element != null) {
 						var subject = resolver.convertFromRDF(element);
-						if (subject instanceof PPEInstance instSubject) {
+						if (subject instanceof RDFElement instSubject) {
 							if (wrapper.getOp().equals(AES.OPTYPE.ADD)) {
 								return new PropertyChange.Add(propName, instSubject, wrapper.getStmt().getResource().getLocalName());
 							} else {
@@ -212,7 +213,7 @@ public class TransformationSession extends StatementAugmentationSession {
 		if (obj.isLiteral()) return false;
 		if (obj.canAs(OntIndividual.class)) { // perhaps a mapEntry or list
 			var ind = obj.as(OntIndividual.class);
-			return resolver.getCardinalityUtil().getMapType().isMapEntry(ind) || resolver.getCardinalityUtil().getListType().isListCollection(ind);
+			return resolver.getMetaschemata().getMapType().isMapEntry(ind) || resolver.getMetaschemata().getListType().isListCollection(ind);
 		} // Seq is an OntInd
 		return false;
 	}

@@ -4,7 +4,6 @@ import static at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType.M
 import static org.junit.Assert.assertEquals;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -29,19 +28,21 @@ import at.jku.isse.artifacteventstreaming.rule.RuleEvaluationListener;
 import at.jku.isse.artifacteventstreaming.rule.RuleException;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
-import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserver;
+import at.jku.isse.artifacteventstreaming.rule.ActiveRuleTriggerObserver;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
-import at.jku.isse.passiveprocessengine.core.BuildInType;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType.PPEPropertyType;
-import at.jku.isse.passiveprocessengine.core.ProcessInstanceChangeListener;
-import at.jku.isse.passiveprocessengine.core.PropertyChange.Update;
-import at.jku.isse.passiveprocessengine.rdfwrapper.CommitChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.PrimitiveTypesFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
-import at.jku.isse.passiveprocessengine.rdfwrapper.RuleEnabledResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.events.ChangeListener;
+import at.jku.isse.passiveprocessengine.rdfwrapper.events.CommitChangeEventTransformer;
+import at.jku.isse.passiveprocessengine.rdfwrapper.events.PropertyChange.Update;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes.WrapperMetaModelOntology;
+import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEnabledResolver;
 import lombok.Getter;
 
 class TestCommitToRuleChangeEvents {
@@ -51,19 +52,20 @@ class TestCommitToRuleChangeEvents {
 	static NodeToDomainResolver resolver;
 	RDFInstanceType typeBase;
 	RDFInstanceType typeChild;
-	PPEPropertyType mapOfArt;
-	PPEPropertyType listOfString;
-	PPEPropertyType setOfBaseArt;
-	PPEPropertyType parent;
+	RDFPropertyType mapOfArt;
+	RDFPropertyType listOfString;
+	RDFPropertyType setOfBaseArt;
+	RDFPropertyType parent;
 	StatementAggregator aggr;
 	PPEChangeListener listener;
 	CommitChangeEventTransformer transformer;
 	BranchImpl branch;
-	RuleTriggerObserver observer;
+	ActiveRuleTriggerObserver observer;
 	RuleRepositoryInspector inspector;
+	PrimitiveTypesFactory typeFactory;
 	
 	@BeforeEach
-	void setup() throws URISyntaxException, Exception {		
+	void setup() throws Exception {		
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);			
 		branch = (BranchImpl) new BranchBuilder(new URI(NS+"repo"), repoDataset, repoModel )	
@@ -71,11 +73,12 @@ class TestCommitToRuleChangeEvents {
 				.setModelReasoner(OntSpecification.OWL2_DL_MEM_RDFS_INF)
 				.build();		
 		m = branch.getModel();		
-		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+		typeFactory = new PrimitiveTypesFactory(m);
+		var metaModel = WrapperMetaModelOntology.buildInMemoryOntology(); 
 		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
-		var cardUtil = new MetaModelSchemaTypes(m, metaModel);
+		var cardUtil = new WrapperMetaModelSchemaTypes(m, metaModel);
 		var observerFactory = new RuleTriggerObserverFactory(cardUtil);
-		observer = observerFactory.buildInstance("RuleTriggeringObserver", m, repoModel);
+		observer = observerFactory.buildActiveInstance("RuleTriggeringObserver", m, repoModel);
 		observer.registerListener(new TestRuleEvaluationListener());
 		var repairService = new RepairService(m, observer.getRepo());
 		resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
@@ -83,7 +86,7 @@ class TestCommitToRuleChangeEvents {
 		//aggr = new StatementAggregator();
 		listener = new PPEChangeListener();
 		transformer = new CommitChangeEventTransformer("Transformer", repoModel, resolver, observer.getFactory());
-		transformer.registerWithWorkspace(listener);		
+		transformer.registerWithBranch(listener);		
 		m.setNsPrefix("isse", NS);
 		m.setNsPrefix("map", MAP_NS);
 		branch.appendBranchInternalCommitService(observer);
@@ -94,12 +97,12 @@ class TestCommitToRuleChangeEvents {
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
 		typeBase = resolver.createNewInstanceType(NS+"artifact");
-		parent = typeBase.createSinglePropertyType("parent", typeBase);
+		parent = typeBase.createSinglePropertyType("parent", typeBase.getAsPropertyType());
 		
 		typeChild = resolver.createNewInstanceType(NS+"issue", typeBase);
-		mapOfArt = typeChild.createMapPropertyType("mapOfArt", BuildInType.STRING, typeBase);		
-		listOfString = typeChild.createListPropertyType("listOfString", BuildInType.STRING);
-		setOfBaseArt = typeChild.createSetPropertyType("setOfBaseArt", typeBase);
+		mapOfArt = typeChild.createMapPropertyType("mapOfArt", typeBase.getAsPropertyType());		
+		listOfString = typeChild.createListPropertyType("listOfString", typeFactory.getStringType());
+		setOfBaseArt = typeChild.createSetPropertyType("setOfBaseArt", typeBase.getAsPropertyType());
 				
 		branch.commitChanges("InitialCommit");
 	}
@@ -255,7 +258,7 @@ class TestCommitToRuleChangeEvents {
 		
 	}
 	
-	static class PPEChangeListener implements ProcessInstanceChangeListener {
+	static class PPEChangeListener implements ChangeListener {
 
 		@Getter
 		List<Update> latestUpdates = new ArrayList<>();

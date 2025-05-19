@@ -117,7 +117,7 @@ class TestRuleEvaluation extends TestRuleDefinitions {
 		assertEquals(1, evals.size());
 		
 		
-		var ruleScopes = getScopesForRule(((RuleEvaluationWrapperResourceImpl) evalWrapper).getRuleEvalObj());
+		var ruleScopes = getScopesForRule(((RuleEvaluationWrapperResource) evalWrapper).getRuleEvalObj());
 		System.out.println("Rule 1 Scopes after addition:");
 		ruleScopes.forEach(scope -> inspector.printScope(scope));
 		assertEquals(2, ruleScopes.size()); // 2 not 3 because rule does not point to Scope that is used to represent the context usage
@@ -145,7 +145,7 @@ class TestRuleEvaluation extends TestRuleDefinitions {
 		
 		var evalsOf2 = inspector.getEvalWrappersFromScopes(inst2, labelProp.getURI());
 		assertEquals(0, evalsOf2.size());		
-		var ruleScopes = getScopesForRule(((RuleEvaluationWrapperResourceImpl) evalWrapper).getRuleEvalObj());
+		var ruleScopes = getScopesForRule(((RuleEvaluationWrapperResource) evalWrapper).getRuleEvalObj());
 		System.out.println("Rule 1 Scopes after addition:");
 		ruleScopes.forEach(scope -> inspector.printScope(scope));
 		assertEquals(1, ruleScopes.size()); // 1 not 2 because rule does not point to Scope that is used to represent the context usage

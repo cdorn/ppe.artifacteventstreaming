@@ -14,7 +14,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
-import at.jku.isse.passiveprocessengine.rdfwrapper.SetWrapper;
+import at.jku.isse.passiveprocessengine.rdfwrapper.collections.SetWrapper;
 
 @TestInstance(Lifecycle.PER_CLASS)
 class TestRDFSetWrapper extends TestRDFInstance {

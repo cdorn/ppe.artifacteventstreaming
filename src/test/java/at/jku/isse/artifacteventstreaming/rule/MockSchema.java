@@ -37,12 +37,12 @@ public class MockSchema {
 		stateProperty = schemaUtils.getSingleType().createSingleDataPropertyType(TEST_SCHEMA_URI+"state", issueType, model.getDatatype(XSD.xstring));
 		priorityProperty = schemaUtils.getSingleType().createSingleDataPropertyType(TEST_SCHEMA_URI+"priority", issueType, model.getDatatype(XSD.xint));
 		
-		requirementsProperty = schemaUtils.getSingleType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"requirements", issueType, issueType);  
+		requirementsProperty =  schemaUtils.getSetType().createObjectPropertyType( TEST_SCHEMA_URI+"requirements", issueType, issueType);  
 		bugsProperty = schemaUtils.getSingleType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"bugs", issueType, issueType);
 		upstreamProperty = schemaUtils.getSingleType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"upstream", issueType, issueType);
 		downstreamProperty = schemaUtils.getSingleType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"downstream", issueType, issueType);
 		
-		parentProperty = schemaUtils.getSingleType().createSingleObjectPropertyType(TEST_SCHEMA_URI+"downstream", issueType, issueType);
+		parentProperty = schemaUtils.getSingleType().createSingleObjectPropertyType(TEST_SCHEMA_URI+"parent", issueType, issueType);
 		labelProperty = schemaUtils.getListType().addLiteralListProperty(issueType, TEST_SCHEMA_URI+"label", model.getDatatype(XSD.xstring));
 		keyValueProperty = schemaUtils.getMapType().addLiteralMapProperty(issueType, TEST_SCHEMA_URI+"keyValue", model.getDatatype(XSD.xint));
 	}
@@ -58,6 +58,9 @@ public class MockSchema {
 		return issue;
 	}	
 	
+	public void addRequirement(OntIndividual issue, OntIndividual req) {
+		issue.addProperty(requirementsProperty.asProperty(), req);
+	}
 	
 	public RDFRuleDefinition getRegisteredRuleRequirementsSizeGT1(int counter, RuleRepository repo) throws RuleException {
 		return repo.getRuleBuilder()
@@ -65,6 +68,15 @@ public class MockSchema {
 				.withDescription("TestRuleDescription-"+counter)
 				.withRuleTitle("RequirementsSizeGT1-"+counter)
 				.withRuleExpression("self.requirements.size() > 1")
+				.build();
+	}
+	
+	public RDFRuleDefinition getRegisteredRuleRequirementsSizeEq2(int counter, RuleRepository repo) throws RuleException {
+		return repo.getRuleBuilder()
+				.withContextType(issueType)
+				.withDescription("TestRuleDescription-"+counter)
+				.withRuleTitle("RequirementsSizeGT1-"+counter)
+				.withRuleExpression("self.requirements.size() = 2")
 				.build();
 	}
 	

@@ -1,4 +1,4 @@
-package at.jku.isse.passiveprocessengine.rdfwrapper;
+package at.jku.isse.passiveprocessengine.rdfwrapper.collections;
 
 public class ResourceMismatchException extends Exception {
 

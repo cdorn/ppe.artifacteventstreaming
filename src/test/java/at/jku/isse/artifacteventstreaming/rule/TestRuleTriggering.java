@@ -19,7 +19,7 @@ import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 class TestRuleTriggering extends TestRuleEvaluation {
 
 	StatementAggregator aggr;
-	RuleTriggerObserver observer;
+	AbstractRuleTriggerObserver observer;
 	
 	@Override
 	@BeforeEach
@@ -27,7 +27,7 @@ class TestRuleTriggering extends TestRuleEvaluation {
 		super.setup();
 		aggr = new StatementAggregator();
 			 
-		observer = new RuleTriggerObserver("RuleTriggerObserver1", m, factory, repo); // we reuse the main model here as there is no branch involved anyway
+		observer = new ActiveRuleTriggerObserver("RuleTriggerObserver1", m, factory, repo); // we reuse the main model here as there is no branch involved anyway
 		aggr.registerWithModel(m);
 		}
 	

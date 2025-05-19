@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.jena.ontapi.model.OntClass;
-import org.apache.jena.ontapi.model.OntClass.DataAllValuesFrom;
-import org.apache.jena.ontapi.model.OntClass.ObjectAllValuesFrom;
 import org.apache.jena.ontapi.model.OntDataRange;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
@@ -16,7 +14,6 @@ import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntProperty;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.AnonId;
-import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;

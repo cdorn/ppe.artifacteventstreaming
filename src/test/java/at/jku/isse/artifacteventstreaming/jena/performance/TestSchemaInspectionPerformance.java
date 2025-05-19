@@ -14,7 +14,6 @@ import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.Test;
 
-import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 

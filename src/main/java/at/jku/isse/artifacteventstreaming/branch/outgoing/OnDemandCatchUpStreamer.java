@@ -1,6 +1,5 @@
 package at.jku.isse.artifacteventstreaming.branch.outgoing;
 
-import at.jku.isse.artifacteventstreaming.api.Branch;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 

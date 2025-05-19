@@ -1,16 +1,16 @@
-package at.jku.isse.passiveprocessengine.rdfwrapper;
+package at.jku.isse.passiveprocessengine.rdfwrapper.rule;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.jena.ontapi.model.OntClass;
-import org.apache.jena.vocabulary.OWL2;
-import org.apache.jena.vocabulary.RDF;
-import org.apache.jena.vocabulary.RDFS;
+import org.apache.jena.ontapi.model.OntClass.Named;
+import org.apache.jena.rdf.model.Resource;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
@@ -18,7 +18,6 @@ import at.jku.isse.artifacteventstreaming.rule.RuleException;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.designspace.rule.arl.evaluator.EvaluationNode;
 import at.jku.isse.designspace.rule.arl.evaluator.RuleDefinitionImpl;
 import at.jku.isse.designspace.rule.arl.evaluator.RuleEvaluation;
@@ -27,21 +26,24 @@ import at.jku.isse.designspace.rule.arl.parser.ArlType;
 import at.jku.isse.designspace.rule.arl.repair.AlternativeRepairNode;
 import at.jku.isse.designspace.rule.arl.repair.RepairNode;
 import at.jku.isse.designspace.rule.arl.repair.RepairSingleValueOption;
-import at.jku.isse.passiveprocessengine.core.PPEInstance;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
-import at.jku.isse.passiveprocessengine.core.RuleDefinition;
-import at.jku.isse.passiveprocessengine.core.RuleEvaluationService;
+import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFElement;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
 import lombok.Getter;
 
 public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEvaluationService {
 
-	final RepairService repairService;
-	@Getter final RuleSchemaProvider ruleSchema;	
-	final RuleRepositoryInspector inspector;
+	private final RepairService repairService;
+	@Getter private final RuleSchemaProvider ruleSchema;
+	@Getter protected final RuleRepository ruleRepo;
+	private final RuleRepositoryInspector inspector;
 	
-	public RuleEnabledResolver(Branch branch, RepairService repairService, RuleSchemaProvider ruleSchema, RuleRepository repo, MetaModelSchemaTypes cardinalityTypes) {
-		super(branch, repo, cardinalityTypes);
+	public RuleEnabledResolver(Branch branch, RepairService repairService, RuleSchemaProvider ruleSchema, RuleRepository repo, WrapperMetaModelSchemaTypes metaschema) {
+		super(branch, metaschema);
 		this.repairService = repairService;
+		this.ruleRepo = repo;
 		this.ruleSchema = ruleSchema;		
 		this.inspector = new RuleRepositoryInspector(ruleSchema);
 		initOverride();
@@ -61,14 +63,14 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 			var type = new RDFInstanceType(ontClass, this);
 			typeIndex.put(ontClass, type);
 			type.cacheSuperProperties();
-			if (!ontClass.equals(metaClass)) {
+			if (!ontClass.equals(getMetaschemata().getMetaElements().getMetaClass())) {
 				var individuals = ontClass.individuals(true).toList();
 				individuals.forEach(indiv -> instanceIndex.putIfAbsent(indiv.getURI(), new RDFInstance(indiv, type, this)));
 			}
 		} );
 		
 		ruleRepo.getRuleDefinitions().forEach(ruleDef -> {
-			var wrapper = new RDFPPERuleDefinitionWrapper(ruleDef, this);			
+			var wrapper = new RDFRuleDefinitionWrapper(ruleDef, this);			
 			typeIndex.put(ruleDef.getRuleDefinition(), wrapper);	
 		});
 		
@@ -78,15 +80,15 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 //			.forEach(indiv -> instanceIndex.put(indiv, new RDFInstance(indiv, this)));
 	}
 	
-	protected void removeRuleDefinition(RDFPPERuleDefinitionWrapper ruleDef) {
+	protected void removeRuleDefinition(RDFRuleDefinitionWrapper ruleDef) {
 		// remove from type index, then remove from repo below
 		typeIndex.remove(ruleDef.getType());
 		ruleRepo.removeRuleDefinition(ruleDef.getId());
 	}
 	
-	@Override
-	public RuleDefinition createInstance(PPEInstanceType type, String ruleName, String ruleExpression) {
-		OntClass ctxType = (OntClass) resolveTypeToClassOrDatarange(type);
+
+	public RDFRuleDefinitionWrapper createInstance(RDFInstanceType type, String ruleName, String ruleExpression) {
+		OntClass ctxType = resolveTypeToClass(type);
 		try {
 			var ruleDef = ruleRepo.getRuleBuilder()
 				.withRuleURI(NodeToDomainResolver.BASE_NS+ruleName)
@@ -94,52 +96,88 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 				.withRuleExpression(ruleExpression)
 				.withRuleTitle(ruleName)
 				.build();
-			var wrapper = new RDFPPERuleDefinitionWrapper(ruleDef, this);			
+			var wrapper = new RDFRuleDefinitionWrapper(ruleDef, this);			
 			typeIndex.put(ruleDef.getRuleDefinition(), wrapper);
 			return wrapper;
 		} catch (RuleException e) {
 			throw new RuntimeException("Unable to create rule: "+e.getMessage());
 		}
 	}
+	
+	public RDFRuleDefinitionWrapper getRuleByNameAndContext(String arg0, RDFInstanceType arg1) {
+		// we ignore type and just use the name as a URI
+		if (!isValidURL(arg0)) {
+			arg0 = BASE_NS+arg0;
+		}	
+		var def = ruleRepo.findRuleDefinitionForURI(arg0);
+		if (def != null) {
+			return (RDFRuleDefinitionWrapper) typeIndex.computeIfAbsent(def.getRuleDefinition(), k-> new RDFRuleDefinitionWrapper(def, (RuleEnabledResolver) this));
+		} else {
+			return null;
+		}
+	}
 
 	@Override
-	public void setPropertyRepairable(PPEInstanceType type, String property, boolean isRepairable) {
-		if (type instanceof RDFInstanceType rdfType) {
-			rdfType.resolveToPropertyType(property).ifPresent(prop ->
-				repairService.setPropertyRepairable(rdfType.getType(), prop.getProperty().asProperty(), isRepairable));			
+	public Optional<RDFInstanceType> findNonDeletedInstanceTypeByFQN(String arg0) {		
+		if (!isValidURL(arg0)) {
+			arg0 = BASE_NS+arg0;
+		}	
+		Named ontClass = model.getOntClass(arg0);
+		if (ontClass == null) return Optional.empty();
+		var type = typeIndex.get(ontClass);
+		if (type != null) {
+			return Optional.ofNullable(type);
 		} else {
-			throw new RuntimeException("Expected RDFInstanceType but received "+type.getClass());
+			var ruleDef = ruleRepo.findRuleDefinitionForResource(ontClass);
+			if (ruleDef == null) return Optional.empty();
+			var defWrapper = typeIndex.computeIfAbsent(ruleDef.getRuleDefinition(), k-> new RDFRuleDefinitionWrapper(ruleDef, this));
+			return Optional.ofNullable(defWrapper);
 		}
 	}
 	
 	@Override
-	public boolean isPropertyRepairable(PPEInstanceType type, String property) {
-		if (type instanceof RDFInstanceType rdfType) {
-			var optProp = rdfType.resolveToPropertyType(property);
-			if (optProp.isPresent()) {			
-				return repairService.isPropertyRepairable(rdfType.getType(), optProp.get().getProperty().asProperty());
-			} else return false;
-		} else {
-			throw new RuntimeException("Expected RDFInstanceType but received "+type.getClass());
+	protected RDFElement findIndividual(Resource node) {
+		var localInst = super.findIndividual(node);
+		if (localInst != null)
+			return localInst;
+		else { 
+			var evalWrapper = ruleRepo.getEvaluations().get(node.getURI());
+			if (evalWrapper != null)
+				return new RDFRuleResultWrapper(evalWrapper, this); //FIXME: we are created new wrappers every time, but if we cache, we wont know when they need to be deleted					
+			return null;
 		}
 	}
+	
 
-	@Override
-	public RuleDefinition findByInternalId(String id) {
+	public void setPropertyRepairable(RDFInstanceType type, String property, boolean isRepairable) {
+		type.resolveToPropertyType(property).ifPresent(prop ->
+				repairService.setPropertyRepairable(type.getType(), prop.getProperty().asProperty(), isRepairable));			
+	}
+	
+
+	public boolean isPropertyRepairable(RDFInstanceType type, String property) {
+		var optProp = type.resolveToPropertyType(property);
+		if (optProp.isPresent()) {			
+			return repairService.isPropertyRepairable(type.getType(), optProp.get().getProperty().asProperty());
+		} else return false;
+	}
+
+
+	public RDFRuleDefinitionWrapper findByInternalId(String id) {
 		var indiv = model.getOntClass(id);
 		if (indiv != null) {			
 			var ruleDef = super.typeIndex.get(indiv);
-			if (ruleDef instanceof RDFPPERuleDefinitionWrapper wrapper) {
+			if (ruleDef instanceof RDFRuleDefinitionWrapper wrapper) {
 				return wrapper;
 			}
 		}
 		return null;
 	}
 
-	@Override
-	public Set<ResultEntry> evaluateTransientRule(PPEInstanceType type, String constraint) throws Exception {
+
+	public Set<ResultEntry> evaluateTransientRule(RDFInstanceType type, String constraint) throws Exception {
 		RuleDefinitionImpl ruleDefImpl = tryCreateRule(type, constraint); // rethrow automatically error
-		var contextType = (OntClass)resolveTypeToClassOrDatarange(type);
+		var contextType = resolveTypeToClass(type);
 		// for each instance
 		return contextType.individuals()
 				.map(instance -> { 			
@@ -150,7 +188,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 					Boolean result = ruleEval.getError() == null ? (boolean) ruleEval.getResult() : null;			
 					EvaluationNode rootEvalNode = ruleEval.getEvaluationTree(); 
 					RepairNode rootRepairNode = null;
-					if (!result) {
+					if (Boolean.FALSE.equals(result)) {
 						RepairNode repairTree = new AlternativeRepairNode(null);				
 						rootEvalNode.expression.generateRepairTree(repairTree,RepairSingleValueOption.TRUE, rootEvalNode);
 						repairTree.flattenRepairTree();
@@ -162,15 +200,15 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 				.collect(Collectors.toSet());	
 	}
 
-	@Override
-	public boolean isRuleCorrect(PPEInstanceType type, String constraint) throws Exception {
+
+	public boolean isRuleCorrect(RDFInstanceType type, String constraint) throws Exception {
 		return tryCreateRule(type, constraint)!=null;
 	}
 	
-	private RuleDefinitionImpl tryCreateRule(PPEInstanceType type, String constraint) throws Exception {
-		var contextType = (OntClass)resolveTypeToClassOrDatarange(type);
+	private RuleDefinitionImpl tryCreateRule(RDFInstanceType type, String constraint) throws Exception {
+		var contextType = resolveTypeToClass(type);
 		if (contextType == null)
-			throw new Exception("PPEInstanceType not found:" +type);
+			throw new Exception("RDFInstanceType not found:" +type);
 		ArlType arlType =  ArlType.get(ArlType.TypeKind.INSTANCE, ArlType.CollectionKind.SINGLE, contextType, ruleSchema.getModelAccess());		
 		RuleDefinitionImpl ruleDefImpl = new RuleDefinitionImpl("", constraint, arlType, ruleSchema.getModelAccess());
 		if (ruleDefImpl.getRuleError() != null) {
@@ -179,12 +217,10 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 		return ruleDefImpl;
 	}
 
-	@Override
-	public Set<ResultEntry> getEvaluationResults(RuleDefinition rule) throws Exception {
-		if (rule instanceof RDFPPERuleDefinitionWrapper wrapper) {
-			var def = wrapper.getRuleDef().getRuleDefinition();
-			var evals =  ruleRepo.getEvaluations();
-			return def.individuals()
+	public Set<ResultEntry> getEvaluationResults(RDFRuleDefinitionWrapper rule) {
+		var def = rule.getRuleDef().getRuleDefinition();
+		var evals =  ruleRepo.getEvaluations();
+		return def.individuals()
 				.map(eval -> evals.get(eval.getURI()))
 				.filter(Objects::nonNull)
 				.map(evalWrapper -> {
@@ -197,39 +233,26 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 					return new ResultEntry(ctxWrapper, result, error, evalRoot, repairRoot);
 				})
 				.collect(Collectors.toSet());
-		} else 
-			throw new RuntimeException("Expected RDFPPERuleDefinitionWrapperImpl but received "+rule.getClass());
 	}
 
-	@Override
-	public Map<RuleDefinition, Set<ResultEntry>> getEvaluationResultsWithInstanceInScope(PPEInstance instance)
-			throws Exception {
-		if (instance instanceof RDFInstance rdfEl) {
-			Map<RuleDefinition, Set<ResultEntry>> resultMap = new HashMap<>();
-			var indiv = rdfEl.getInstance();
-			var evals =  ruleRepo.getEvaluations();
-			inspector.getEvalWrappersFromScopes(indiv).stream()
-				.map(evalObj -> evals.get(evalObj.getURI()))
-				.forEach(evalWrapper -> {
-					var result = evalWrapper.isConsistent();
-					var error = evalWrapper.getEvaluationError();
-					var ctx = evalWrapper.getContextInstance();
-					var ctxWrapper = instanceIndex.computeIfAbsent(ctx.getURI(), k -> new RDFInstance(ctx, null, this));
-					var evalRoot = evalWrapper.getDelegate().getEvaluationTree();
-					var repairRoot = evalWrapper.getDelegate().getRepairTree();
-					var entry = new ResultEntry(ctxWrapper, result, error, evalRoot, repairRoot);
-					var ruleDef = evalWrapper.getDefinition();
-					var defWrapper = typeIndex.computeIfAbsent(ruleDef.getRuleDefinition(), k-> new RDFPPERuleDefinitionWrapper(ruleDef, this));
-					resultMap.computeIfAbsent((RuleDefinition) defWrapper, k -> new HashSet<ResultEntry>()).add(entry);
-				});
-			return resultMap;
-		} else {
-			throw new RuntimeException("Expected RDFElement but received "+instance.getClass());
-		}
-	}
-
-
-
-	
-	
+	public Map<RDFRuleDefinitionWrapper, Set<ResultEntry>> getEvaluationResultsWithInstanceInScope(RDFInstance instance) {
+		Map<RDFRuleDefinitionWrapper, Set<ResultEntry>> resultMap = new HashMap<>();
+		var indiv = instance.getInstance();
+		var evals =  ruleRepo.getEvaluations();
+		inspector.getEvalWrappersFromScopes(indiv).stream()
+		.map(evalObj -> evals.get(evalObj.getURI()))
+		.forEach(evalWrapper -> {
+			var result = evalWrapper.isConsistent();
+			var error = evalWrapper.getEvaluationError();
+			var ctx = evalWrapper.getContextInstance();
+			var ctxWrapper = instanceIndex.computeIfAbsent(ctx.getURI(), k -> new RDFInstance(ctx, null, this));
+			var evalRoot = evalWrapper.getDelegate().getEvaluationTree();
+			var repairRoot = evalWrapper.getDelegate().getRepairTree();
+			var entry = new ResultEntry(ctxWrapper, result, error, evalRoot, repairRoot);
+			var ruleDef = evalWrapper.getDefinition();
+			RDFRuleDefinitionWrapper defWrapper = (RDFRuleDefinitionWrapper)typeIndex.computeIfAbsent(ruleDef.getRuleDefinition(), k-> new RDFRuleDefinitionWrapper(ruleDef, this));
+			resultMap.computeIfAbsent(defWrapper, k -> new HashSet<ResultEntry>()).add(entry);
+		});
+		return resultMap;
+	}	
 }

@@ -17,17 +17,17 @@ import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDFS;
 
-import at.jku.isse.passiveprocessengine.core.BuildInType;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType.PrimitiveOrClassType;
 import lombok.Getter;
 
-public class RDFInstanceType extends RDFElement implements PPEInstanceType {
+public class RDFInstanceType extends RDFElement {
 
 	@Getter
 	protected final OntClass type;
 	protected final Map<String, RDFPropertyType> propWrappers = new HashMap<>();
 	@Getter
 	protected final Set<OntClass> allSuperClasses = new HashSet<>();
+	public static final String propertyIsFullyFetchedPredicate = NodeToDomainResolver.BASE_NS+"isFullyFetched";
 	
 	public RDFInstanceType(OntClass element,  NodeToDomainResolver resolver) {
 		super(element, resolver);
@@ -70,48 +70,40 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 			predicates.add(iter.next());
 		}
 		return predicates;
+	}	
+
+	public RDFInstanceType getInstanceType() {
+		return resolver.resolveToType(resolver.getMetaschemata().getMetaElements().getMetaClass());
 	}
-	
-	
-	@Override
-	public PPEInstanceType getInstanceType() {
-		return resolver.resolveToType(resolver.metaClass);
-	}
-	
-	@Override
-	public void setInstanceType(PPEInstanceType arg0) {
+
+	public void setInstanceType(RDFInstanceType arg0) {
 		// noop, cannot override instancetype of an InstanceType (i.e., meta type cannot be overridden)
 	}
-	
-//	@Override
-//	public PPEInstanceType getInstanceType() {
-//		//return BuildInType.METATYPE;
-//	}
 
 	@Override
-	public void markAsDeleted() {
+	public void delete() {
 		// first we remove any collection property values on this class, i.e., any properties at the type level
 		super.removeCollectionProperties();
 		//then we remove the hierarchy below, then itself (instances need to be removed via resolver, not our concern here)
 		var subclasses = resolver.removeInstancesAndTypeInclSubclassesFromIndex(this); // this removes also instances
 		subclasses.forEach(subClass -> 			
-			resolver.getCardinalityUtil().deleteOntClassInclOwnedProperties(subClass)
+			resolver.getMetaschemata().deleteOntClassInclOwnedProperties(subClass)
 		);
-		resolver.getCardinalityUtil().deleteOntClassInclOwnedProperties(type);
+		resolver.getMetaschemata().deleteOntClassInclOwnedProperties(type);
 		this.isDeleted = true;
 	}
 	
-	@Override
-	public PPEPropertyType createListPropertyType(String arg0, PPEInstanceType arg1) {
-		if (BuildInType.isAtomicType(arg1)) {
-			var prop = resolver.getCardinalityUtil().getListType().addLiteralListProperty(this.type, makePropertyURI(arg0), resolver.resolveAtomicInstanceType(arg1));
+
+	public RDFPropertyType createListPropertyType(String name, PrimitiveOrClassType type) {
+		if (type.isPrimitiveType()) {
+			var prop = resolver.getMetaschemata().getListType().addLiteralListProperty(this.type, makePropertyURI(name), type.getPrimitiveType());
 			if (prop == null) { 
 				return null;
 			} else {
 				return insertAndReturn(prop);
 			}
 		} else {
-			var prop = resolver.getCardinalityUtil().getListType().addObjectListProperty(this.type, makePropertyURI(arg0), ((RDFInstanceType) arg1).getType());
+			var prop = resolver.getMetaschemata().getListType().addObjectListProperty(this.type, makePropertyURI(name), type.getClassType());
 			if (prop == null) { 
 				return null;
 			} else {
@@ -120,17 +112,17 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 		}
 	}
 
-	@Override
-	public PPEPropertyType createMapPropertyType(String arg0, PPEInstanceType ignored, PPEInstanceType valueType) {
-		if (BuildInType.isAtomicType(valueType)) {
-			var prop = resolver.getCardinalityUtil().getMapType().addLiteralMapProperty(this.type, makePropertyURI(arg0), resolver.resolveAtomicInstanceType(valueType));
+
+	public RDFPropertyType createMapPropertyType(String name, PrimitiveOrClassType valueType) {
+		if (valueType.isPrimitiveType()) {
+			var prop = resolver.getMetaschemata().getMapType().addLiteralMapProperty(this.type, makePropertyURI(name), valueType.getPrimitiveType());
 			if (prop == null) { 
 				return null;
 			} else {
 				return insertAndReturn(prop);
 			}
 		} else {
-			var prop = resolver.getCardinalityUtil().getMapType().addObjectMapProperty(this.type, makePropertyURI(arg0), (OntClass) resolver.resolveTypeToClassOrDatarange(valueType));
+			var prop = resolver.getMetaschemata().getMapType().addObjectMapProperty(this.type, makePropertyURI(name), valueType.getClassType());
 			if (prop == null) { 
 				return null;
 			} else {
@@ -139,25 +131,25 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 		}
 	}
 
-	@Override
-	public PPEPropertyType createSetPropertyType(String arg0, PPEInstanceType arg1) {
-		OntRelationalProperty prop =  createBasePropertyType(arg0, arg1);
+
+	public RDFPropertyType createSetPropertyType(String name, PrimitiveOrClassType type) {
+		OntRelationalProperty prop =  createBasePropertyType(name, type);
 		if (prop != null) {
 			return insertAndReturn(prop);
 		} else
 			return null;
 	}
 	
-	private OntRelationalProperty createBasePropertyType(String arg0, PPEInstanceType arg1) {
-		var propUri = makePropertyURI(arg0);
-		if (BuildInType.isAtomicType(arg1)) {
-			return resolver.getCardinalityUtil().getSingleType().createBaseDataPropertyType(propUri, this.type, resolver.resolveAtomicInstanceType(arg1));
+	private OntRelationalProperty createBasePropertyType(String name, PrimitiveOrClassType type) {
+		var propUri = makePropertyURI(name);
+		if (type.isPrimitiveType()) {
+			return resolver.getMetaschemata().getSingleType().createBaseDataPropertyType(propUri, this.type, type.getPrimitiveType());
 		} else {
-			return resolver.getCardinalityUtil().getSingleType().createBaseObjectPropertyType(propUri, this.type, (OntClass)resolver.resolveTypeToClassOrDatarange(arg1));
+			return resolver.getMetaschemata().getSingleType().createBaseObjectPropertyType(propUri, this.type, type.getClassType());
 		}
 	}
 	
-	private PPEPropertyType insertAndReturn(OntRelationalProperty prop) {
+	private RDFPropertyType insertAndReturn(OntRelationalProperty prop) {
 		RDFPropertyType propType = new RDFPropertyType(prop, resolver);
 		if (propType.isValid()) {
 			propWrappers.put(prop.getURI(), propType);
@@ -167,29 +159,29 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 		}
 	}
 
-	@Override
-	public PPEPropertyType createSinglePropertyType(String arg0, PPEInstanceType arg1) {
-		var propUri = makePropertyURI(arg0);
+
+	public RDFPropertyType createSinglePropertyType(String name, PrimitiveOrClassType type) {
+		var propUri = makePropertyURI(name);
 		if (propWrappers.containsKey(propUri)) return propWrappers.get(propUri);
-		var prop = BuildInType.isAtomicType(arg1) ? 
-				resolver.getCardinalityUtil().getSingleType().createSingleDataPropertyType(propUri, this.type, resolver.resolveAtomicInstanceType(arg1))
+		var prop = type.isPrimitiveType() ? 
+				resolver.getMetaschemata().getSingleType().createSingleDataPropertyType(propUri, this.type, type.getPrimitiveType())
 				: 
-				resolver.getCardinalityUtil().getSingleType().createSingleObjectPropertyType(propUri, this.type, (OntClass)resolver.resolveTypeToClassOrDatarange(arg1));
+				resolver.getMetaschemata().getSingleType().createSingleObjectPropertyType(propUri, this.type, type.getClassType());
 		if (prop != null)
 			return insertAndReturn(prop);
 		else 
 			return null;
 	}
 
-	@Override
-	public Set<PPEInstanceType> getAllSubtypesRecursively() {
+
+	public Set<RDFInstanceType> getAllSubtypesRecursively() {
 		return type.subClasses()
 			.map(resolver::resolveToType)
 			.collect(Collectors.toSet());
 	}
 
-	@Override
-	public PPEInstanceType getParentType() {
+
+	public RDFInstanceType getParentType() {
 		Optional<OntClass> parent = type.asNamed().superClasses(true)
 				.filter(superClass -> !(superClass instanceof CardinalityRestriction))
 				.filter(superClass -> !(superClass instanceof ValueRestriction))
@@ -197,7 +189,7 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 		return parent.map(resolver::resolveToType).orElse(null);
 	}
 
-	@Override
+
 	public List<String> getPropertyNamesIncludingSuperClasses() {
 		return propWrappers.values().stream().map(propW -> propW.getProperty().getLocalName()).toList(); 
 //			getExplicitlyDeclaredProperties(type).stream() // We use cached properties instead
@@ -205,8 +197,8 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 //			.toList();
 	}
 
-	@Override
-	public PPEPropertyType getPropertyType(String uri) {
+
+	public RDFPropertyType getPropertyType(String uri) {
 		var pType = findExistingType(uri);
 		//if (pType != null) return pType;
 		return pType; // as we cached the properties upon creation, 
@@ -224,43 +216,21 @@ public class RDFInstanceType extends RDFElement implements PPEInstanceType {
 			    propWrappers.values().stream().filter(propType -> propType.getProperty().getLocalName().equals(uri)).findAny().orElse(null);
 	}
 	
-//	private Optional<OntRelationalProperty> findByLocalName(String localName) {
-//		return //type.asNamed().declaredProperties()
-//				getExplicitlyDeclaredProperties(type, false).stream()
-//				.filter(prop -> prop.getLocalName().equals(localName)) 
-//				.filter(OntRelationalProperty.class::isInstance)
-//				.map(OntRelationalProperty.class::cast)
-//				.findFirst();
-//	}
-//	
-//	private Optional<OntRelationalProperty> findByURI(String uri) {
-//		return //type.asNamed().declaredProperties()
-//				getExplicitlyDeclaredProperties(type, false).stream()
-//				.filter(prop -> prop.getURI().equals(uri)) 
-//				.filter(OntRelationalProperty.class::isInstance)
-//				.map(OntRelationalProperty.class::cast)
-//				.findFirst();	
-//	}
-	
-	
-	@Override
-	public boolean hasPropertyType(String arg0) {
-		return getPropertyType(arg0) != null;
+	public boolean hasPropertyType(String name) {
+		return getPropertyType(name) != null;
 	}
 
-	@Override
-	public boolean isOfTypeOrAnySubtype(PPEInstanceType instanceToCompareType) {
-		if (instanceToCompareType instanceof RDFInstanceType rdfType) {
-			if (this.getId().equals(rdfType.getId())) {
-					return true;
-			} else {
-				return type.asNamed().hasSuperClass(rdfType.getType(), false);
-			}
+	public boolean isOfTypeOrAnySubtype(RDFInstanceType instanceToCompareType) {
+		if (this.getId().equals(instanceToCompareType.getId())) {
+			return true;
 		} else {
-			return false;
+			return type.asNamed().hasSuperClass(instanceToCompareType.getType(), false);
 		}
 	}
-
+	
+	public PrimitiveOrClassType getAsPropertyType() {
+		return new PrimitiveOrClassType(this.type);
+	}
 
 	@Override
 	public String toString() {

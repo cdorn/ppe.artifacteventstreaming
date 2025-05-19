@@ -1,4 +1,4 @@
-package at.jku.isse.passiveprocessengine.rdfwrapper;
+package at.jku.isse.passiveprocessengine.rdfwrapper.collections;
 
 import org.apache.jena.datatypes.RDFDatatype;
 import org.apache.jena.ontapi.model.OntClass;
@@ -6,6 +6,8 @@ import org.apache.jena.ontapi.model.OntDataRange;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.rdf.model.RDFNode;
+
+import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 
 public abstract class TypedCollectionResource {
 	protected final NodeToDomainResolver resolver;
@@ -38,7 +40,7 @@ public abstract class TypedCollectionResource {
 			if (!node.asResource().canAs(OntIndividual.class)) {// not a typed resource
 				return false;
 			}
-			if (objectType.equals(resolver.metaClass)) {
+			if (objectType.equals(resolver.getMetaschemata().getMetaElements().getMetaClass())) {
 				// we accept any ont classes here incl metaclass itself
 				return node.canAs(OntClass.class);
 			} 			

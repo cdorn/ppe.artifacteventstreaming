@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
-import org.apache.jena.ontapi.model.OntObjectProperty.Named;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
@@ -22,7 +21,7 @@ import org.apache.jena.rdf.model.impl.ModelCom;
 import org.apache.jena.rdf.model.impl.StatementImpl;
 import org.apache.jena.vocabulary.RDF;
 
-import at.jku.isse.passiveprocessengine.rdfwrapper.ResourceMismatchException;
+import at.jku.isse.passiveprocessengine.rdfwrapper.collections.ResourceMismatchException;
 
 public class MapResource implements Map<String, RDFNode> {	
 
@@ -32,7 +31,7 @@ public class MapResource implements Map<String, RDFNode> {
 	
 	private final MapResourceType mapType;
 	
-	private MapResource(OntObject mapOwner, Named mapEntryProperty, MapResourceType mapType) {		
+	private MapResource(OntObject mapOwner, OntObjectProperty.Named mapEntryProperty, MapResourceType mapType) {		
 		this.mapType = mapType;
 		this.mapOwner = mapOwner;
 		this.mapEntryProperty = mapEntryProperty;		

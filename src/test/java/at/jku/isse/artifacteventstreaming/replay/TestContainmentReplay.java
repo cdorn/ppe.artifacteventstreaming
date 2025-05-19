@@ -32,7 +32,7 @@ import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
-import at.jku.isse.passiveprocessengine.rdfwrapper.ResourceMismatchException;
+import at.jku.isse.passiveprocessengine.rdfwrapper.collections.ResourceMismatchException;
 
 @ExtendWith(MockitoExtension.class) 
 class TestContainmentReplay {

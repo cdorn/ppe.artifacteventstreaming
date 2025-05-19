@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
-import at.jku.isse.passiveprocessengine.rdfwrapper.ListWrapper;
+import at.jku.isse.passiveprocessengine.rdfwrapper.collections.ListWrapper;
 
 @TestInstance(Lifecycle.PER_CLASS)
 class TestRDFListWrapper extends TestRDFInstance {

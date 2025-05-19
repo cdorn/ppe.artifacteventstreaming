@@ -27,6 +27,7 @@ import org.apache.jena.rdf.model.Seq;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.XSD;
 
+import at.jku.isse.artifacteventstreaming.schemasupport.Cardinalities;
 import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
@@ -36,7 +37,6 @@ import at.jku.isse.designspace.rule.arl.evaluator.ModelAccess;
 import at.jku.isse.designspace.rule.arl.exception.EvaluationException;
 import at.jku.isse.designspace.rule.arl.exception.ParsingException;
 import at.jku.isse.designspace.rule.arl.parser.ArlType;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType.CARDINALITIES;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType;
 
 public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
@@ -53,7 +53,7 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     	singleFactory = propertyCardinalities.getSingleType();        
     }
     
-    private OntProperty resolveToProperty(OntClass ontClass, String propertyName) {
+    public OntProperty resolveToProperty(OntClass ontClass, String propertyName) {
     	return ontClass.declaredProperties()
     	.filter(prop -> prop.getLocalName().equals(propertyName)) 
     	.findAny().orElse(null);
@@ -106,7 +106,7 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
         			.collect(Collectors.toSet());        
     }
     
-    private Stream<OntClass> getTypeOfInstance(Resource element) {
+    public Stream<OntClass> getTypeOfInstance(Resource element) {
     	 if (element instanceof OntIndividual || element.canAs(OntIndividual.class)) {
     		var indiv = element.as(OntIndividual.class);
          	return indiv.classes(true) // direct types only
@@ -315,11 +315,11 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
         return ArlType.TypeKind.INSTANCE;
     }
 
-    public ArlType.CollectionKind collectionKind(CARDINALITIES cardinality) {
-        if (cardinality == CARDINALITIES.SINGLE) return ArlType.CollectionKind.SINGLE;
-        if (cardinality == CARDINALITIES.SET) return ArlType.CollectionKind.SET;
-        if (cardinality == CARDINALITIES.LIST) return ArlType.CollectionKind.LIST;
-        if (cardinality == CARDINALITIES.MAP) return ArlType.CollectionKind.MAP;
+    public ArlType.CollectionKind collectionKind(Cardinalities cardinality) {
+        if (cardinality == Cardinalities.SINGLE) return ArlType.CollectionKind.SINGLE;
+        if (cardinality == Cardinalities.SET) return ArlType.CollectionKind.SET;
+        if (cardinality == Cardinalities.LIST) return ArlType.CollectionKind.LIST;
+        if (cardinality == Cardinalities.MAP) return ArlType.CollectionKind.MAP;
         throw new ParsingException("property cardinality '%s' not supported", cardinality);
     }
 

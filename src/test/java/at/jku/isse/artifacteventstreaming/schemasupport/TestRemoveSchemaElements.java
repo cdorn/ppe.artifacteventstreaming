@@ -1,13 +1,13 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.tdb2.TDB2Factory;

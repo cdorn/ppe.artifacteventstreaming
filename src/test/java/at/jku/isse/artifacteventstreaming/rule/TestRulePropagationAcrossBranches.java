@@ -27,6 +27,7 @@ import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCom
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
+import at.jku.isse.artifacteventstreaming.testutils.ModelDiff;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
 
 class TestRulePropagationAcrossBranches {
@@ -36,15 +37,19 @@ class TestRulePropagationAcrossBranches {
 	
 	CountDownLatch latch;
 	SyncForTestingService serviceOut;
-	OntModel model1;
+	OntModel sourceModel;
+	OntModel destModel;
 	Branch branchSource;	
 	Branch branchDestination;
-	RuleTriggerObserver observerSource;
-	RuleTriggerObserver observerDest;
+	ActiveRuleTriggerObserver observerSource;
+	PassiveRuleTriggerObserver observerDest;
 	MockSchema schema;
 		
 	@BeforeEach
 	void setup() throws Exception {
+		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+		new RuleSchemaFactory(metaModel); // add rule schema to meta model	
+		
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		
@@ -61,32 +66,37 @@ class TestRulePropagationAcrossBranches {
 		var merger = new CompleteCommitMerger(branchDestination);
 		branchDestination.appendIncomingCommitMerger(merger);
 		//setup rules for destination branch
-		var destModel = branchDestination.getModel();
-		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
-		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
-		var cardUtil = new MetaModelSchemaTypes(destModel, metaModel);
-		RuleTriggerObserverFactory observerFactory = new RuleTriggerObserverFactory(cardUtil);
-		
-		observerDest = observerFactory.buildInstance("RuleTriggerObserverDestination", destModel, repoModel);
+		destModel = branchDestination.getModel();
+		var cardUtilDest = new MetaModelSchemaTypes(destModel, metaModel);
+		RuleTriggerObserverFactory observerFactory = new RuleTriggerObserverFactory(cardUtilDest);
+		observerDest = observerFactory.buildPassiveInstance("RuleTriggerObserverDestination", destModel, repoModel);
 		branchDestination.appendBranchInternalCommitService(observerDest);		// register rule service with destination branch
+		var schemaDest = new MockSchema(destModel, cardUtilDest); // create types for testing
 		
 		branchSource = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
 				.setModelReasoner(OntSpecification.OWL2_DL_MEM_RDFS_INF)		
 				.setBranchLocalName("source")
-				.build();		
-		
-		model1 = branchSource.getModel();
-		schema = new MockSchema(model1, cardUtil); // create types for testing
+				.build();				
+		sourceModel = branchSource.getModel();
+		var cardUtilSource = new MetaModelSchemaTypes(sourceModel, metaModel);
+		schema = new MockSchema(sourceModel, cardUtilSource); // create types for testing
 		// setup rule service for source branch
-		RuleTriggerObserverFactory observerFactorySource = new RuleTriggerObserverFactory(new MetaModelSchemaTypes(model1, metaModel));
-		observerSource = observerFactorySource.buildInstance("RuleTriggerObserverSource", model1, repoModel);
+		RuleTriggerObserverFactory observerFactorySource = new RuleTriggerObserverFactory(cardUtilSource);
+		observerSource = observerFactorySource.buildActiveInstance("RuleTriggerObserverSource", sourceModel, repoModel);
 		branchSource.appendBranchInternalCommitService(observerSource); // register rule service with branch
 		// connect branches
 		branchSource.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(branchSource, branchDestination, new InMemoryBranchStateCache()));
-				
-		branchSource.startCommitHandlers(null);
+		
 		branchDestination.startCommitHandlers(null);
+		branchSource.startCommitHandlers(null);
 		branchSource.getDataset().begin();
+		
+		var sizeSource = sourceModel.size();
+		var sizeDest = destModel.size();
+		if (sizeSource != sizeDest) {
+			ModelDiff.printDiff(sourceModel, destModel, true);
+		}
+		//assertEquals(sizeSource, sizeDest);
 	}
 	
 	
@@ -103,7 +113,7 @@ class TestRulePropagationAcrossBranches {
 		var issue2 = schema.createIssue("issue2");
 		var issue3 = schema.createIssue("issue3", issue1, issue2);
 		
-		branchSource.commitChanges("Creation commit");
+		branchSource.commitChanges("Creation");
 		boolean success = latch.await(5000, TimeUnit.SECONDS);
 		assert(success);
 		
@@ -122,29 +132,12 @@ class TestRulePropagationAcrossBranches {
 				.map(Statement.class::cast).toList();
 		assertEquals(3, ruleResultStmts.size());
 		
-		// currently model sizes are not equal, find out why:
-		Set<Statement> sourceStmts = new HashSet<>();
-		var iterSource = branchSource.getModel().listStatements();
-		while(iterSource.hasNext()) {
-			sourceStmts.add(iterSource.next());
+		var sizeSource = sourceModel.size();
+		var sizeDest = destModel.size();
+		if (sizeSource != sizeDest) {
+			ModelDiff.printDiff(sourceModel, destModel, true);
 		}
-		Set<Statement> destStmts = new HashSet<>();
-		var iterDest = branchDestination.getModel().listStatements();
-		while(iterDest.hasNext()) {
-			destStmts.add(iterDest.next());
-		}
-		Set<Statement> missingInSource = destStmts.stream().filter(stmt -> !sourceStmts.contains(stmt)).collect(Collectors.toSet());
-		Set<Statement> missingInDest = sourceStmts.stream().filter(stmt -> !destStmts.contains(stmt)).collect(Collectors.toSet());
-		
-		System.out.println("MISSING IN SOURCE: "+missingInSource.size());	
-		//missingInSource.stream().forEach(stmt -> System.out.println(stmt));
-		System.out.println("MISSING IN DESTINATION: "+missingInDest.size());
-		//missingInDest.stream().forEach(stmt -> System.out.println(stmt));
-		
-		// var diffModel = branchDestination.getModel().difference(branchSource.getModel());
-		// RDFDataMgr.write(System.out, diffModel, Lang.TURTLE) ;
-		// restrictions are generated in each branch with different anonIDs hence we have more in destination and duplicated restriction classes
-		// fixed now
+		assertEquals(sizeSource, sizeDest);
 	}
 	
 	

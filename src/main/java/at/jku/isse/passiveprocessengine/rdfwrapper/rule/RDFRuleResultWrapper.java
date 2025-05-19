@@ -1,28 +1,27 @@
-package at.jku.isse.passiveprocessengine.rdfwrapper;
+package at.jku.isse.passiveprocessengine.rdfwrapper.rule;
 
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.vocabulary.OWL2;
 
 import at.jku.isse.artifacteventstreaming.rule.RuleEvaluationWrapperResource;
-import at.jku.isse.artifacteventstreaming.rule.RuleEvaluationWrapperResourceImpl;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
-import at.jku.isse.passiveprocessengine.core.PPEInstance;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
-import at.jku.isse.passiveprocessengine.core.RuleDefinition;
-import at.jku.isse.passiveprocessengine.core.RuleResult;
+import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class RDFRuleResultWrapper extends RDFInstance implements RuleResult {
+public class RDFRuleResultWrapper extends RDFInstance{
 
 	private final RuleRepository ruleRepo;
-	private final RuleEvaluationWrapperResource evalWrapper;
+	@Getter private final RuleEvaluationWrapperResource evalWrapper;
 	
-	public RDFRuleResultWrapper(RuleEvaluationWrapperResourceImpl evalWrapper, NodeToDomainResolver resolver, RuleRepository ruleRepo) {
+	public RDFRuleResultWrapper(RuleEvaluationWrapperResource evalWrapper, RuleEnabledResolver resolver) {
 		super(evalWrapper.getRuleEvalObj() , null, resolver);
 		this.evalWrapper = evalWrapper;
-		this.ruleRepo = ruleRepo;
+		this.ruleRepo = resolver.getRuleRepo();
 	}
 	
 	@Override
@@ -31,7 +30,7 @@ public class RDFRuleResultWrapper extends RDFInstance implements RuleResult {
 	}
 	
 	@Override
-	public PPEInstanceType getInstanceType() {
+	public RDFInstanceType getInstanceType() {
 		if (super.instanceType == null) {
 			var types = element.as(OntIndividual.class).classes(true).toList();
 			var optType = types.stream()
@@ -40,22 +39,18 @@ public class RDFRuleResultWrapper extends RDFInstance implements RuleResult {
 					.findFirst();
 			if (optType.isPresent()) {
 				var type = resolver.findNonDeletedInstanceTypeByFQN(optType.get().getURI());
-				if (type.isPresent() && type.get() instanceof RuleDefinition def)
+				if (type.isPresent() && type.get() instanceof RDFRuleDefinitionWrapper def)
 					instanceType = def;
 			}
 		}
 		return super.instanceType;
 	}
 
-
-
-	@Override
 	public Boolean isConsistent() {
 		return super.getTypedProperty(RuleSchemaFactory.ruleHasConsistentResultURI, Boolean.class, false);
 	}
 
-	@Override
-	public PPEInstance getContextInstance() {
+	public RDFInstance getContextInstance() {
 		var scope = element.getPropertyResourceValue(ruleRepo.getFactory().getContextElementScopeProperty().asProperty());
 		if (scope != null) {
 			var el = ruleRepo.getInspector().getElementFromScope(scope);
@@ -72,7 +67,7 @@ public class RDFRuleResultWrapper extends RDFInstance implements RuleResult {
 	}
 	
 	@Override
-	public void markAsDeleted() {		
+	public void delete() {		
 		evalWrapper.delete();
 	}
 

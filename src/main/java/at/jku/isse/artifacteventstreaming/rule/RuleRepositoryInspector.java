@@ -125,4 +125,12 @@ public class RuleRepositoryInspector {
 		});
 	}
 	
+	public Set<RepairNodeDTO> getFlatRepairTree(RuleEvaluationDTO ruleEvalDTO) {
+		var iter = ruleEvalDTO.getRuleEvalObj().listProperties(schemaProvider.getHasRepairNodesProperty().asProperty());
+		var nodes = new HashSet<RepairNodeDTO>();
+		while(iter.hasNext()) {
+			nodes.add(new RepairNodeDTO(iter.next().getResource().as(OntIndividual.class), schemaProvider));
+		}
+		return nodes;
+	}
 }

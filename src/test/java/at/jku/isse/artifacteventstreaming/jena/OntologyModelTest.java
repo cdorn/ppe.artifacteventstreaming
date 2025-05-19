@@ -27,12 +27,10 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.Test;
 
-import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
-import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
-import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
+import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.ChangeListener;
 
 class OntologyModelTest {

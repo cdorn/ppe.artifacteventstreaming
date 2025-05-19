@@ -52,7 +52,7 @@ public class RepairService {
 		}    	    	
 	}
 	
-	public RepairNode getRepairRootNode(@NonNull OntObject ctxInstance, @NonNull RDFRuleDefinition def) {
+	public RepairNodeDTO getRepairRootNode(@NonNull OntObject ctxInstance, @NonNull RDFRuleDefinition def) {
 		// find evaluations
 		var optEval = ruleRepo.getEvaluations().findEvaluation(ctxInstance, def);
 		if (optEval.isEmpty()) {

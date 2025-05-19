@@ -48,16 +48,20 @@ public class RuleRepository {
 	 */
 	private void loadFromModel() {		
 		factory.getDefinitionType().individuals(true).toList().stream().forEach(this::storeRuleDefinition); // FIXME: for some reason ruleEvalResources are also included here, need filtering out to avoid log warn messages
-		factory.getResultBaseType().individuals().toList().stream().map(eval -> { // we need to have a list first as otherwise inference has concurrent modification exception
-				try {
-					return RuleEvaluationWrapperResourceImpl.loadFromModel(eval, factory, this);
-				} catch (EvaluationException e) {
-					log.warn("Error loading evaluation results from model, ignoring: "+e);
-					return null;
-				}
-			})
-			.filter(Objects::nonNull)
-			.forEach(evalWrapper -> evaluations.put(evalWrapper.getRuleEvalObj().getURI(), evalWrapper));
+		factory.getResultBaseType().individuals().toList().stream().forEach(eval ->  // we need to have a list first as otherwise inference has concurrent modification exception
+				loadAndStoreEvaluationWrapperFromModel(eval)
+			);
+	}
+	
+	protected RuleEvaluationWrapperResource loadAndStoreEvaluationWrapperFromModel(OntIndividual eval) {
+		try {
+			var evalWrapper = RuleEvaluationWrapperResource.loadFromModel(eval, factory, this);
+			evaluations.put(evalWrapper.getRuleEvalObj().getURI(), evalWrapper);
+			return evalWrapper;
+		} catch (EvaluationException e) {
+			log.warn("Error loading evaluation results from model, ignoring: "+e);
+			return null;
+		}
 	}
 	
 	public Collection<RDFRuleDefinition> getRuleDefinitions() {
@@ -106,7 +110,7 @@ public class RuleRepository {
 			var individuals = def.getRDFContextType().individuals().collect(Collectors.toSet());
 			return individuals.stream()	
 				.filter(indiv -> evaluations.findEvaluation(indiv, def).isEmpty()) // ensure there is not already one eval wrapper 
-				.map(ind -> RuleEvaluationWrapperResourceImpl.create(factory, def, ind))							
+				.map(ind -> RuleEvaluationWrapperResource.create(factory, def, ind))							
 				.map(eval -> { evaluations.put(eval.getRuleEvalObj().getURI(), eval); return eval;} )
 				.map(RuleEvaluationWrapperResource.class::cast)
 				.collect(Collectors.toSet());			
@@ -163,6 +167,13 @@ public class RuleRepository {
 		}				
 	}
 	
+	/**
+	 * @param definitionURI to remove the corresponding rule definition, without considering rule evaluations or repairs, would need to be done separately
+	 * used to clean up upon external deletion of underlying rdf statements.
+	 */
+	protected void removeRuleDefinitionWrapper(@NonNull String definitionURI) {
+		definitions.remove(definitionURI);
+	}
 	
 	/**
 	 * @param predicate the property definition that was removed, hence any rules (and their evaluations) that use this property are to be removed
@@ -193,7 +204,7 @@ public class RuleRepository {
 	public Set<RuleEvaluationWrapperResource> getRulesAffectedByCreation(@NonNull OntIndividual newSubject) {
 		// check if it has any existing scope, return also those, as a pessimistic caution as we dont know what the type changes imply	
 		var reEval = getAllRuleEvaluationsThatUse(newSubject);			
-		List <RuleEvaluationWrapperResourceImpl> ctxEval = getRuleEvaluationsWhereSubjectIsContext(newSubject).stream()
+		List <RuleEvaluationWrapperResource> ctxEval = getRuleEvaluationsWhereSubjectIsContext(newSubject).stream()
 				.map(this::getOrWrapAndRegister)
 				.filter(Objects::nonNull)
 				.toList();
@@ -203,7 +214,7 @@ public class RuleRepository {
 		reEval.addAll(
 				definitions.values().stream().filter(def -> types.contains(def.getRDFContextType()))
 				.filter(def -> !isSubjectContextOfRule(def, ctxEval)) // filter out if this subject is already context of that rule, which can happen upon type changes
-				.map(def -> RuleEvaluationWrapperResourceImpl.create(factory, def, newSubject))	
+				.map(def -> RuleEvaluationWrapperResource.create(factory, def, newSubject))	
 				.map(eval -> { evaluations.put(eval.getRuleEvalObj().getURI(), eval); return eval;} )
 				.map(RuleEvaluationWrapperResource.class::cast).toList());			
 		return reEval;
@@ -239,7 +250,7 @@ public class RuleRepository {
 			} else {
 			try {
 				var ruleRes = evalResource.as(OntIndividual.class);
-				var evalObj = RuleEvaluationWrapperResourceImpl.loadFromModel(ruleRes, factory, this);
+				var evalObj = RuleEvaluationWrapperResource.loadFromModel(ruleRes, factory, this);
 				evaluations.put(evalObj.getRuleEvalObj().getURI(), evalObj);
 				evals.add(evalObj);
 			} catch (EvaluationException e) {
@@ -250,7 +261,7 @@ public class RuleRepository {
 		}
 	}
 	
-	private boolean isSubjectContextOfRule(RDFRuleDefinition def, List <RuleEvaluationWrapperResourceImpl> ctxEval) {
+	private boolean isSubjectContextOfRule(RDFRuleDefinition def, List <RuleEvaluationWrapperResource> ctxEval) {
 		return ctxEval.stream().anyMatch(eval -> eval.getDefinition().equals(def));
 	}
 	
@@ -318,7 +329,7 @@ public class RuleRepository {
 		return getAllRuleEvaluationsThatUse(subject);
 	}
 	
-	private boolean isSubjectTypeMatchingRuleContext(RuleEvaluationWrapperResourceImpl wrapper,
+	private boolean isSubjectTypeMatchingRuleContext(RuleEvaluationWrapperResource wrapper,
 			@NonNull OntIndividual subject) {
 		var ctxType = wrapper.getDefinition().getRDFContextType();
 		return subject.hasOntClass(ctxType, false);		
@@ -348,11 +359,11 @@ public class RuleRepository {
 		return evals;
 	}
 	
-	private RuleEvaluationWrapperResourceImpl getOrWrapAndRegister(OntIndividual eval) {		 
+	private RuleEvaluationWrapperResource getOrWrapAndRegister(OntIndividual eval) {		 
 			var evalWrapper = evaluations.get(eval.getURI());
 			if (evalWrapper == null) {
 				try {				
-					evalWrapper = RuleEvaluationWrapperResourceImpl.loadFromModel(eval, factory, this);
+					evalWrapper = RuleEvaluationWrapperResource.loadFromModel(eval, factory, this);
 					evaluations.put(eval.getURI(), evalWrapper);
 					return evalWrapper;
 				} catch (EvaluationException e) {
@@ -385,7 +396,7 @@ public class RuleRepository {
 					var evalObjWrapper = evaluations.remove(evalObj.getURI());
 					if (evalObjWrapper == null) {						
 						try { 
-							evalObjWrapper = RuleEvaluationWrapperResourceImpl.loadFromModel(evalObj, factory, this);
+							evalObjWrapper = RuleEvaluationWrapperResource.loadFromModel(evalObj, factory, this);
 							// now we dont add to index here, as we remove these anyway before returning
 						} catch (EvaluationException e) {
 							// ignored, check via logs how to improve scope handling issues
@@ -417,10 +428,10 @@ public class RuleRepository {
 
 	public static class EvaluationsCache{
 		
-		private final Map<String, RuleEvaluationWrapperResourceImpl> evaluationsByURI = new HashMap<>();
-		private final Map<String, RuleEvaluationWrapperResourceImpl> indexByCtxAndDef = new HashMap<>();
+		private final Map<String, RuleEvaluationWrapperResource> evaluationsByURI = new HashMap<>();
+		private final Map<String, RuleEvaluationWrapperResource> indexByCtxAndDef = new HashMap<>();
 
-		private RuleEvaluationWrapperResourceImpl remove(@NonNull String uri) {
+		private RuleEvaluationWrapperResource remove(@NonNull String uri) {
 			var eval = evaluationsByURI.remove(uri);
 			if (eval != null) { // also remove from secondary index
 				var key = makeKeyFrom(eval.getContextInstance(), eval.getDefinition());
@@ -433,11 +444,11 @@ public class RuleRepository {
 			return evaluationsByURI.containsKey(uri);
 		}
 
-		public RuleEvaluationWrapperResourceImpl get(String uri) {
+		public RuleEvaluationWrapperResource get(String uri) {
 			return evaluationsByURI.get(uri);
 		}
 
-		private void put(String uri, RuleEvaluationWrapperResourceImpl evalWrapper) {
+		private void put(String uri, RuleEvaluationWrapperResource evalWrapper) {
 			evaluationsByURI.put(uri, evalWrapper);
 			// also add to secondary index
 			var key = makeKeyFrom(evalWrapper.getContextInstance(), evalWrapper.getDefinition());
@@ -451,6 +462,10 @@ public class RuleRepository {
 		private String makeKeyFrom(OntObject contextInstance, RDFRuleDefinition def) {
 			var ctxId = contextInstance.isAnon() ? contextInstance.getId().toString() : contextInstance.getURI();
 			return ctxId+def.getRuleDefinition().getURI();
+		}
+		
+		public Set<RuleEvaluationWrapperResource> getEvaluations() {
+			return new HashSet<>(evaluationsByURI.values());
 		}
 	}
 

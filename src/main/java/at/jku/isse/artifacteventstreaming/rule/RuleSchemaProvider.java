@@ -15,6 +15,17 @@ import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.uri;
 import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.usedInRuleURI;
 import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.usingElementURI;
 import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.usingPropertyURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.repairTreeNodeURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.repairLiteralValueURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.repairNodeParentURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.repairNodeTypeURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.repairObjectValueURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.repairOperationURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.repairPredicateURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.repairRestrictionURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.repairSubjectURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.hasRepairNodesURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.repairNodeChildOrderURI;
 
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
@@ -52,6 +63,23 @@ public class RuleSchemaProvider {
 	// additional property on individual to point to scope
 	@Getter private OntObjectProperty hasRuleScope;
 	
+	// flat repair tree serialization
+	@Getter private OntClass repairTreeNodeType;
+	
+	@Getter private OntDataProperty repairNodeTypeProperty;
+	@Getter private OntObjectProperty repairSubjectProperty;
+	@Getter private OntObjectProperty repairPredicateProperty;
+	@Getter private OntDataProperty repairLiteralValueProperty;
+	@Getter private OntObjectProperty repairObjectValueProperty;
+	@Getter private OntDataProperty repairRestrictionProperty;
+	@Getter private OntDataProperty repairOperationProperty;
+	@Getter private OntObjectProperty repairNodeParentProperty;
+	@Getter private OntDataProperty repairNodeChildOrderProperty;
+	// to link from eval base type to set of repair nodes
+	@Getter private OntObjectProperty hasRepairNodesProperty;
+	
+	
+	
 	@Getter private final MetaModelSchemaTypes schemaFactory;
 	
 	private RDFModelAccess modelAccess;
@@ -71,12 +99,14 @@ public class RuleSchemaProvider {
 		initResultBaseTypeProperties();
 		initScopePartTypeProperties();
 		initRuleContextReferenceProperty();
+		initRepairNodeTypeProperties();
 	}
 	
 	private void initOntClasses() {
 		definitionType = model.getOntClass(RuleSchemaFactory.ruleDefinitionURI);
 		resultBaseType = model.getOntClass(ruleEvaluationResultBaseTypeURI);
 		ruleScopeCollection = model.getOntClass(ruleScopePartURI);
+		repairTreeNodeType = model.getOntClass(repairTreeNodeURI);
 	}
 
 	private void initDefinitionTypeProperties() {		
@@ -105,6 +135,20 @@ public class RuleSchemaProvider {
 	 * */
 	private void initRuleContextReferenceProperty() {
 		hasRuleScope = model.getObjectProperty(elementHasRuleScopeURI);		
+	}
+	
+	private void initRepairNodeTypeProperties() {
+		repairNodeTypeProperty = model.getDataProperty(repairNodeTypeURI);
+		repairSubjectProperty = model.getObjectProperty(repairSubjectURI);
+		repairPredicateProperty = model.getObjectProperty(repairPredicateURI);
+		repairLiteralValueProperty = model.getDataProperty(repairLiteralValueURI);
+		repairObjectValueProperty = model.getObjectProperty(repairObjectValueURI);
+		repairRestrictionProperty = model.getDataProperty(repairRestrictionURI);
+		repairOperationProperty = model.getDataProperty(repairOperationURI);
+		repairNodeParentProperty = model.getObjectProperty(repairNodeParentURI);
+		repairNodeChildOrderProperty = model.getDataProperty(repairNodeChildOrderURI);
+		
+		hasRepairNodesProperty = model.getObjectProperty(hasRepairNodesURI);
 	}
 	
 	public RuleDefinitionBuilder createRuleDefinitionBuilder() {

@@ -1,4 +1,4 @@
-package at.jku.isse.passiveprocessengine.rdfwrapper;
+package at.jku.isse.passiveprocessengine.rdfwrapper.collections;
 
 import java.util.AbstractMap;
 import java.util.Collection;
@@ -9,6 +9,8 @@ import java.util.stream.Collectors;
 import org.apache.jena.ontapi.model.OntObject;
 
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
+import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFElement;
 
 public class MapWrapper extends TypedCollectionResource implements Map<String, Object>{
 
@@ -57,7 +59,7 @@ public class MapWrapper extends TypedCollectionResource implements Map<String, O
 
 	public boolean containsValue(Object value) {
 		if (value instanceof RDFElement rdf) {
-			return delegate.containsValue(rdf.element);
+			return delegate.containsValue(rdf.getElement());
 		}
 		return delegate.containsValue(resolver.getModel().createTypedLiteral(value));
 	}

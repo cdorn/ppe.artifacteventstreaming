@@ -13,12 +13,9 @@ import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntProperty;
-import org.apache.jena.ontapi.model.OntRelationalProperty;
-import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.vocabulary.RDFS;
 import org.apache.jena.vocabulary.XSD;
 
 import lombok.Getter;
@@ -72,7 +69,7 @@ public class MapResourceType  {
 		return property.getLocalName().endsWith(MapResourceType.LITERAL_VALUE) || property.getLocalName().endsWith(MapResourceType.OBJECT_VALUE);
 	}
 	
-	public boolean isMapEntrySubclass(OntObjectProperty.Named mapEntryProperty) {
+	public boolean isMapEntrySubclass(OntObjectProperty mapEntryProperty) {
 		return  mapEntryProperty.ranges(true).anyMatch(rangeClass -> rangeClass.equals(mapEntryClass)
 				|| rangeClass.hasSuperClass(mapEntryClass, true));
 	}
@@ -86,7 +83,12 @@ public class MapResourceType  {
 		if (singleType.existsPrimaryProperty(propertyURI)) {
 			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty		
 		}
-		OntClass mapType = model.createOntClass(generateMapEntryTypeURI(propertyURI));
+		var uri = generateMapEntryTypeURI(propertyURI);
+		var mapType = model.getOntClass(uri);
+		if (mapType != null) { 
+			return null; // such a class already exists, do not need to create properties for it
+		}
+		mapType = model.createOntClass(uri);
 		mapType.addSuperClass(mapEntryClass);
 		subclassesCache.add(mapType);
 
@@ -107,7 +109,12 @@ public class MapResourceType  {
 		if (singleType.existsPrimaryProperty(propertyURI)) {
 			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty		
 		}
-		OntClass mapType = model.createOntClass(generateMapEntryTypeURI(propertyURI));
+		var uri = generateMapEntryTypeURI(propertyURI);
+		var mapType = model.getOntClass(uri);
+		if (mapType != null) { 
+			return null; // such a class already exists, do not need to create properties for it
+		}
+		mapType = model.createOntClass(uri);
 		mapType.addSuperClass(mapEntryClass);
 		subclassesCache.add(mapType);
 

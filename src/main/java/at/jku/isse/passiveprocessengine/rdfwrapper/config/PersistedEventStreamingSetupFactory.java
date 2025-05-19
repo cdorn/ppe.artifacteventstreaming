@@ -10,7 +10,6 @@ import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.api.BranchStateKeeper;
 import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
@@ -23,38 +22,31 @@ import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
-import at.jku.isse.designspace.artifactconnector.core.repository.CoreTypeFactory;
-import at.jku.isse.passiveprocessengine.core.ChangeEventTransformer;
-import at.jku.isse.passiveprocessengine.core.InstanceRepository;
-import at.jku.isse.passiveprocessengine.core.RepairTreeProvider;
-import at.jku.isse.passiveprocessengine.core.RuleEvaluationService;
-import at.jku.isse.passiveprocessengine.core.SchemaRegistry;
-import at.jku.isse.passiveprocessengine.rdfwrapper.CommitChangeEventTransformer;
+import at.jku.isse.passiveprocessengine.rdfwrapper.CoreTypeFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.LazyLoadingLoopControllerService;
-import at.jku.isse.passiveprocessengine.rdfwrapper.RDFRepairTreeProvider;
-import at.jku.isse.passiveprocessengine.rdfwrapper.RuleEnabledResolver;
-import lombok.AccessLevel;
+import at.jku.isse.passiveprocessengine.rdfwrapper.events.ChangeEventTransformer;
+import at.jku.isse.passiveprocessengine.rdfwrapper.events.CommitChangeEventTransformer;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes.WrapperMetaModelOntology;
+import at.jku.isse.passiveprocessengine.rdfwrapper.rule.RuleEnabledResolver;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@Getter
-@RequiredArgsConstructor
-public class EventStreamingWrapperFactory {
 
-	private final InstanceRepository instanceRepository;
-	private final SchemaRegistry schemaRegistry;
-	private final RepairTreeProvider repairTreeProvider;
-	private final RuleEvaluationService ruleEvaluationService;
-	private final ChangeEventTransformer changeEventTransformer;
-	private final CoreTypeFactory coreTypeFactory;
-	private final RuleSchemaProvider ruleSchemaProvider;
-	private final Branch branch;	
-	@Getter(value = AccessLevel.NONE) private final BranchStateUpdater stateKeeper;
+public class PersistedEventStreamingSetupFactory extends AbstractEventStreamingSetup {
+
 	
+	public PersistedEventStreamingSetupFactory(RuleEnabledResolver resolver, ChangeEventTransformer changeEventTransformer,
+			CoreTypeFactory coreTypeFactory, RuleSchemaProvider ruleSchemaProvider, Branch branch,
+			BranchStateUpdater stateKeeper) {
+		super(resolver, changeEventTransformer, coreTypeFactory, ruleSchemaProvider, branch, stateKeeper);
+	}
+
+
+	@Override
 	public void signalExternalSetupComplete() throws PersistenceException, BranchConfigurationException {
 		branch.getDataset().commit();
 		branch.getDataset().end();	
@@ -66,22 +58,17 @@ public class EventStreamingWrapperFactory {
 	@Slf4j
 	public static class FactoryBuilder {
 	
-		public static final String defaultRepoURI = "http://at.jku.isse.artifacteventstreaming/repository";
-		public static final String defaultBranchBaseURI = "http://at.jku.isse.artifacteventstreaming/repository/branch";
-		public static final String defaultBranchName = "main";
-		public static final String defaultCacheDirectoryPath = "./artifacteventstreamingcache/";
-		
 		private URI repoURI;
 
-		private String branchLocalName = defaultBranchName;	
-		private String relativeCachePath = defaultCacheDirectoryPath;
+		private String branchLocalName = AbstractEventStreamingSetup.defaultBranchName;	
+		private String relativeCachePath = AbstractEventStreamingSetup.defaultCacheDirectoryPath;
 		
 		public FactoryBuilder withRepoURI(@NonNull URI repoURI) {
 			this.repoURI = repoURI;
 			return this;
 		}
 		
-		public FactoryBuilder withRepoURI(@NonNull String branchName) {
+		public FactoryBuilder withBranchName(@NonNull String branchName) {
 			this.branchLocalName = branchName;
 			return this;
 		}
@@ -91,13 +78,13 @@ public class EventStreamingWrapperFactory {
 			return this;
 		}
 		
-		public EventStreamingWrapperFactory build() {
+		public PersistedEventStreamingSetupFactory build() {
 			try {
 				// setting up persistence
 				var cacheFactory = new RocksDBFactory(relativeCachePath);
 				var eventstoreFactory = new EventStoreFactory();											
 				var datasetLoader = new FilebasedDatasetLoader();
-				URI datasetURI = new URI(defaultBranchBaseURI+"/"+branchLocalName);
+				URI datasetURI = new URI(AbstractEventStreamingSetup.defaultBranchBaseURI+"/"+branchLocalName);
 				var modelDataset = datasetLoader.loadDataset(datasetURI);			
 				if (modelDataset.isEmpty()) 
 					throw new RuntimeException(datasetURI+" could not be loaded");			
@@ -109,8 +96,8 @@ public class EventStreamingWrapperFactory {
 				// add logic here, when history access is needed
 				
 				// setting up branch
-				if (repoURI == null) repoURI = new URI(defaultRepoURI);
-				var branchURI = BranchBuilder.generateBranchURI(new URI(defaultBranchBaseURI), branchLocalName);
+				if (repoURI == null) repoURI = new URI(AbstractEventStreamingSetup.defaultRepoURI);
+				var branchURI = BranchBuilder.generateBranchURI(new URI(AbstractEventStreamingSetup.defaultBranchBaseURI), branchLocalName);
 				var stateKeeper = new StateKeeperImpl(branchURI, cacheFactory.getCache(), eventstoreFactory.getEventStore(branchURI.toString()));				
 				var branch = new BranchBuilder(repoURI, repoDataset, repoModel)
 						.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF)		
@@ -121,11 +108,11 @@ public class EventStreamingWrapperFactory {
 				var model1 = branch.getModel();	
 				
 				// setting up branch commit handlers
-				var metaModel = MetaModelOntology.buildDBbackedOntology(); 
+				var metaModel = WrapperMetaModelOntology.buildDBbackedOntology(); 
 				new RuleSchemaFactory(metaModel); // add rule schema to meta model
-				var cardUtil = new MetaModelSchemaTypes(model1, metaModel);				
+				var cardUtil = new WrapperMetaModelSchemaTypes(model1, metaModel);				
 				var observerFactory = new RuleTriggerObserverFactory(cardUtil);
-				var observer = observerFactory.buildInstance("RuleTriggeringObserver", model1, repoModel);				
+				var observer = observerFactory.buildActiveInstance("ActiveRuleTriggeringObserver", model1, repoModel);				
 				var repairService = new RepairService(model1, observer.getRepo());
 				RuleEnabledResolver resolver = new RuleEnabledResolver(branch, repairService, observer.getFactory(), observer.getRepo(), cardUtil);
 				var changeTransformer = new CommitChangeEventTransformer("CommitToWrapperEventsTransformer", repoModel, resolver, observer.getFactory());
@@ -134,9 +121,8 @@ public class EventStreamingWrapperFactory {
 				branch.appendBranchInternalCommitService(new LazyLoadingLoopControllerService("LazyLoadingLoopController", repoModel, model1));								
 				
 				// set up additional wrapper components
-				var repairTreeProvider = new RDFRepairTreeProvider(repairService, observer.getRepo(), resolver, observer);
-				var coreTypeFactory = new CoreTypeFactory(resolver, resolver);
-				return new EventStreamingWrapperFactory(resolver, resolver, repairTreeProvider, resolver, changeTransformer
+				var coreTypeFactory = new CoreTypeFactory(resolver);
+				return new PersistedEventStreamingSetupFactory(resolver, changeTransformer
 						, coreTypeFactory, observer.getFactory(), branch, stateKeeper);																			
 			} catch (Exception e) {
 				throw new RuntimeException(e);

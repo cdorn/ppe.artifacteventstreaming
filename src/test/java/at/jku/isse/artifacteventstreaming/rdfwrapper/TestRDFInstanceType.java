@@ -7,7 +7,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 
 import org.apache.jena.ontapi.OntModelFactory;
@@ -21,12 +20,12 @@ import org.junit.jupiter.api.Test;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
-import at.jku.isse.passiveprocessengine.core.BuildInType;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType.PPEPropertyType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.PrimitiveTypesFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes.WrapperMetaModelOntology;
 
 class TestRDFInstanceType {
 
@@ -35,29 +34,31 @@ class TestRDFInstanceType {
 	static NodeToDomainResolver resolver;
 	RDFInstanceType typeBase;
 	RDFInstanceType typeChild;
+	PrimitiveTypesFactory typeFactory;
 	
 	@BeforeEach
-	void setup() throws URISyntaxException, Exception {
+	void setup() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);			
 		BranchImpl branch = (BranchImpl) new BranchBuilder(new URI(NS+"repo"), repoDataset, repoModel )	
 				.setBranchLocalName("branch1")
 				.build();		
 		m = branch.getModel();
-		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+		typeFactory = new PrimitiveTypesFactory(m);
+		var metaModel = WrapperMetaModelOntology.buildInMemoryOntology(); 
 		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
-		var cardUtil = new MetaModelSchemaTypes(m, metaModel); // this adds list , mapentry and metaclass type
-		resolver = new NodeToDomainResolver(branch, null, cardUtil);
+		var cardUtil = new WrapperMetaModelSchemaTypes(m, metaModel); // this adds list , mapentry and metaclass type
+		resolver = new NodeToDomainResolver(branch, cardUtil);
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
 		typeBase = resolver.createNewInstanceType(NS+"artifact");
-		var succ = typeBase.createSinglePropertyType("priority", BuildInType.INTEGER);
+		var succ = typeBase.createSinglePropertyType("priority", typeFactory.getIntType());
 		assertNotNull(succ);		
 		typeChild = resolver.createNewInstanceType(NS+"issue", typeBase);		
-		succ = typeChild.createListPropertyType("listOfArt", typeBase);
+		succ = typeChild.createListPropertyType("listOfArt", typeBase.getAsPropertyType());
 		assertNotNull(succ);
 		
-		var prop = typeBase.createMapPropertyType(NS+"hasMap", BuildInType.STRING, typeChild);
+		var prop = typeBase.createMapPropertyType(NS+"hasMap", typeChild.getAsPropertyType());
 		//var prop = resolver.getCardinalityUtil().getMapType().addObjectMapProperty(typeBase.getType(), NS+"hasMap", typeChild.getType());
 		assertNotEquals(null, prop);
 	}
@@ -77,18 +78,18 @@ class TestRDFInstanceType {
 		assertTrue(names.contains("priority"));
 		assertTrue(names.contains("listOfArt"));
 		
-		PPEPropertyType listProp = typeChild.getPropertyType("listOfArt");
+		RDFPropertyType listProp = typeChild.getPropertyType("listOfArt");
 		assertNotEquals(null, listProp);
-		assertEquals(typeBase, listProp.getInstanceType());
+		assertEquals(typeBase.getAsPropertyType(), listProp.getValueType());
 		assertTrue(typeChild.hasPropertyType("priority"));
-		PPEPropertyType nonExistantProp = typeChild.getPropertyType("sdfdsfdsf");
+		RDFPropertyType nonExistantProp = typeChild.getPropertyType("sdfdsfdsf");
 		assertNull(nonExistantProp);
 		
 		//assertEquals(resolver.resolveToType(null)e.METATYPE, typeChild.getInstanceType());
 		assertEquals(null, typeBase.getParentType());
 		
 		var propType = typeBase.getPropertyType(NS+"hasMap");
-		assertEquals(typeChild, propType.getInstanceType());
+		assertEquals(typeChild.getAsPropertyType(), propType.getValueType());
 	}
 	
 	@Test
@@ -103,15 +104,15 @@ class TestRDFInstanceType {
 			http://at.jku.isse.test#issue
 			http://at.jku.isse.test#artifact					
 		 * */
-		assertEquals(4, types.size());
+		assertEquals(6, types.size());
 	}
 	
 	@Test
 	void testRemoveType() {
 		assertEquals(typeBase, resolver.findAllInstanceTypesByFQN(typeBase.getId()).iterator().next());
-		typeBase.markAsDeleted();
+		typeBase.delete();
 		assertTrue(resolver.findAllInstanceTypesByFQN(typeBase.getId()).isEmpty());
-		assertEquals(2, resolver.getAllNonDeletedInstanceTypes().size());
+		assertEquals(4, resolver.getAllNonDeletedInstanceTypes().size());
 	}
 	
 	@Test

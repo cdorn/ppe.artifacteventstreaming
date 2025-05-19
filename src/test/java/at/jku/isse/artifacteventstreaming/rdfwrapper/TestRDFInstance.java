@@ -5,7 +5,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
@@ -20,11 +19,12 @@ import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
-import at.jku.isse.passiveprocessengine.core.BuildInType;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType;
-import at.jku.isse.passiveprocessengine.core.PPEInstanceType.PPEPropertyType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import at.jku.isse.passiveprocessengine.rdfwrapper.PrimitiveTypesFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.RDFPropertyType;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes.WrapperMetaModelOntology;
 
 public class TestRDFInstance {
 
@@ -36,19 +36,20 @@ public class TestRDFInstance {
 	static String NS = "http://at.jku.isse.test#";
 	static OntModel m;
 	static NodeToDomainResolver resolver;
-	PPEInstanceType typeBase;
-	PPEInstanceType typeChild;
-	PPEPropertyType parent;
-	PPEPropertyType priority;
-	PPEPropertyType mapOfArt;
-	PPEPropertyType mapOfString;
-	PPEPropertyType listOfArt;
-	PPEPropertyType listOfString;
-	PPEPropertyType setOfArt;
-	PPEPropertyType setOfString;
+	RDFInstanceType typeBase;
+	RDFInstanceType typeChild;
+	RDFPropertyType parent;
+	RDFPropertyType priority;
+	RDFPropertyType mapOfArt;
+	RDFPropertyType mapOfString;
+	RDFPropertyType listOfArt;
+	RDFPropertyType listOfString;
+	RDFPropertyType setOfArt;
+	RDFPropertyType setOfString;
+	PrimitiveTypesFactory typeFactory;
 	
 	@BeforeEach
-	void setup() throws URISyntaxException, Exception {		
+	void setup() throws Exception {		
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);			
 		BranchImpl branch = (BranchImpl) new BranchBuilder(new URI(NS+"repo"), repoDataset, repoModel )	
@@ -57,25 +58,26 @@ public class TestRDFInstance {
 				.build();		
 		m = branch.getModel();	
 		m.setNsPrefix("test", NS);
-		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
+		typeFactory = new PrimitiveTypesFactory(m);
+		var metaModel = WrapperMetaModelOntology.buildInMemoryOntology(); 
 		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
-		var cardUtil = new MetaModelSchemaTypes(m, metaModel);
-		resolver = new NodeToDomainResolver(branch, null, cardUtil);
+		var cardUtil = new WrapperMetaModelSchemaTypes(m, metaModel);
+		resolver = new NodeToDomainResolver(branch, cardUtil);
 		resolver.getMapEntryBaseType();
 		resolver.getListBaseType();
 		
 		typeBase = resolver.createNewInstanceType(NS+"artifact");		
-		priority = typeBase.createSinglePropertyType(PRIORITY, BuildInType.INTEGER);		
-		listOfString = typeBase.createListPropertyType(LIST_OF_STRING, BuildInType.STRING);		
-		setOfString = typeBase.createSetPropertyType("setOfString", BuildInType.STRING);
+		priority = typeBase.createSinglePropertyType(PRIORITY, typeFactory.getIntType());		
+		listOfString = typeBase.createListPropertyType(LIST_OF_STRING, typeFactory.getStringType());		
+		setOfString = typeBase.createSetPropertyType("setOfString", typeFactory.getStringType());
 		
 		typeChild = resolver.createNewInstanceType(NS+"issue", typeBase);
-		mapOfArt = typeChild.createMapPropertyType(MAP_OF_ART, BuildInType.STRING, typeBase);
-		mapOfString = typeChild.createMapPropertyType("mapOfString", BuildInType.STRING, BuildInType.STRING);
-		parent = typeChild.createSinglePropertyType(PARENT, typeBase);		
+		mapOfArt = typeChild.createMapPropertyType(MAP_OF_ART, typeBase.getAsPropertyType());
+		mapOfString = typeChild.createMapPropertyType("mapOfString", typeFactory.getStringType());
+		parent = typeChild.createSinglePropertyType(PARENT, typeBase.getAsPropertyType());		
 		
-		listOfArt = typeBase.createListPropertyType(LIST_OF_ART, typeChild);
-		setOfArt = typeBase.createSetPropertyType("setofArt", typeChild);
+		listOfArt = typeBase.createListPropertyType(LIST_OF_ART, typeChild.getAsPropertyType());
+		setOfArt = typeBase.createSetPropertyType("setofArt", typeChild.getAsPropertyType());
 		((RDFInstanceType)typeChild).cacheSuperProperties();
 	}
 	
