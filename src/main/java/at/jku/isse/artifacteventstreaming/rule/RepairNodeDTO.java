@@ -3,6 +3,7 @@ package at.jku.isse.artifacteventstreaming.rule;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
@@ -188,9 +189,21 @@ public class RepairNodeDTO implements Comparable<RepairNodeDTO>{
 		return Integer.compare(this.posInParent, o.posInParent);
 	}
 	
+	public int countAtomicRepairLeafNodes() {
+		if (isAtomic()) {
+			return 1;
+		} else {
+			return children.stream().collect(Collectors.summingInt(RepairNodeDTO::countAtomicRepairLeafNodes));
+		}
+	}
+	
+	private boolean isAtomic() {
+		return this.type.equals("atomic");
+	}
+	
 	@Override
 	public String toString() {
-		if (this.type.equals("atomic")) {
+		if (isAtomic()) {
 			var value = this.getLiteralValue() != null ?
 					this.getLiteralValue().toString() 
 					: this.getObjectValue().toString();
