@@ -1,10 +1,7 @@
-package at.jku.isse.artifacteventstreaming.rule;
+package at.jku.isse.artifacteventstreaming.rule.derivedproperties;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
@@ -13,7 +10,6 @@ import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
-import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.riot.Lang;
@@ -22,16 +18,21 @@ import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import at.jku.isse.artifacteventstreaming.rule.RDFModelAccess;
+import at.jku.isse.artifacteventstreaming.rule.RuleException;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
+import at.jku.isse.artifacteventstreaming.rule.definition.DerivedPropertyRuleDefinition;
 import at.jku.isse.artifacteventstreaming.rule.definition.RDFRuleDefinition;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 
-class TestRuleDefinitions {
+class TestDerivedPropertyRuleDefinitions {
 	
 	private static final String LOCALPROP_REF = "ref";
 	private static final String LOCALPROP_SUBREF = "subref";
 
-	public static URI baseURI = URI.create("http://at.jku.isse.artifacteventstreaming/test/rules#");
+	public static URI baseURI = URI.create("http://at.jku.isse.artifacteventstreaming/test/derivedpropertyrules#");
 	
 	
 	OntModel m;
@@ -40,8 +41,15 @@ class TestRuleDefinitions {
 	RuleSchemaProvider factory;
 	OntObjectProperty refProp;
 	OntObjectProperty subProp;
+	OntObjectProperty refPropDerived;
+	OntObjectProperty subPropDerived;
+	OntDataProperty numbersProp;
+	OntDataProperty numbersDerivedProp;
+	
 	OntDataProperty priorityProp;
 	OntDataProperty labelProp;
+	OntDataProperty priorityDerivedProp;
+	OntDataProperty labelDerivedProp;
 	RDFModelAccess modelAccess;
 	MetaModelSchemaTypes schemaUtils;
 	
@@ -62,13 +70,34 @@ class TestRuleDefinitions {
 		refProp.addRange(artType);
 		refProp.addDomain(artType);
 		
+		numbersProp =m.createDataProperty(baseURI+"numbers");
+		numbersProp.addRange(m.getDatatype(XSD.xint));
+		numbersProp.addDomain(artType);
+		
+		numbersDerivedProp =m.createDataProperty(baseURI+"numbersDerived");
+		numbersDerivedProp.addRange(m.getDatatype(XSD.xint));
+		numbersDerivedProp.addDomain(artType);
+		
 		subProp = m.createObjectProperty(baseURI+LOCALPROP_SUBREF);
 		subProp.addRange(artSubType);
 		subProp.addDomain(artSubType);
 		
-		labelProp = schemaUtils.getSingleType().createSingleDataPropertyType(baseURI+"label", artType, m.getDatatype(XSD.xstring));
+		refPropDerived =m.createObjectProperty(baseURI+LOCALPROP_REF+"Derived");
+		refPropDerived.addRange(artType);
+		refPropDerived.addDomain(artType);
+		
+		subPropDerived = m.createObjectProperty(baseURI+LOCALPROP_SUBREF+"Derived");
+		subPropDerived.addRange(artSubType);
+		subPropDerived.addDomain(artSubType);
+		
+		labelProp = schemaUtils.getSingleType().createSingleDataPropertyType(baseURI+"title", artType, m.getDatatype(XSD.xstring));
 		priorityProp = schemaUtils.getSingleType().createSingleDataPropertyType(baseURI+"priority", artType, m.getDatatype(XSD.xlong)); 		
-				
+			
+		labelDerivedProp = schemaUtils.getSingleType().createSingleDataPropertyType(baseURI+"titleShort", artType, m.getDatatype(XSD.xstring));
+		priorityDerivedProp = schemaUtils.getSingleType().createSingleDataPropertyType(baseURI+"priorityPercent", artType, m.getDatatype(XSD.xlong)); 		
+		
+		
+		
 		factory = new RuleSchemaProvider(m, schemaUtils);
 		modelAccess = new RDFModelAccess(m, schemaUtils);
 	}
@@ -80,105 +109,55 @@ class TestRuleDefinitions {
 				.withContextType(artType)
 				.withDescription("TestRule")
 				.withRuleTitle("TestRuleTitle")
-				.withRuleExpression("self.isDefined() = true")
+				.withRuleExpression("self.title.substring(1,2)")
+				.forDerivedProperty(labelDerivedProp)
 				.build();
 		assertFalse(ruleDef.hasExpressionError());
 		assertNotNull(ruleDef.getSyntaxTree());
-		
+		assertTrue(ruleDef instanceof DerivedPropertyRuleDefinition);
 		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
 	}
 	
-	
 	@Test
-	void testTypeRule() throws RuleException {
-		
+	void testIncompatibleDerivedRule() throws RuleException {
 		var ruleDef = factory.createRuleDefinitionBuilder()
 				.withContextType(artType)
 				.withDescription("TestRule")
 				.withRuleTitle("TestRuleTitle")
-				.withRuleExpression("self.asType(<"+ artSubType.getURI()+">).subref.size() > 0")
+				.withRuleExpression("self.title.substring(1,2)")
+				.forDerivedProperty(priorityDerivedProp)
 				.build();
-		System.out.println(ruleDef.getExpressionError());
-		assertFalse(ruleDef.hasExpressionError());
-		assertNotNull(ruleDef.getSyntaxTree());
-	}
-	
-	@Test
-	void testTypeLocalNameRule() throws RuleException {
-		
-		var ruleDef = factory.createRuleDefinitionBuilder()
-				.withContextType(artType)
-				.withDescription("TestRule")
-				.withRuleTitle("TestRuleTitle")
-				.withRuleExpression("self.asType(<"+ artSubType.getLocalName()+">).subref.size() > 0")
-				.build();
-		System.out.println(ruleDef.getExpressionError());
-		assertFalse(ruleDef.hasExpressionError());
-		assertNotNull(ruleDef.getSyntaxTree());
-	}
-	
-	@Test
-	void testMissingCastRule() throws RuleException {
-		
-		var ruleDef = getNonRegisteredBasicRuleDefinition();
-		System.out.println(ruleDef.getExpressionError());
 		assertTrue(ruleDef.hasExpressionError());
-		assertNull(ruleDef.getSyntaxTree());
-	}
-	
-	@Test
-	void testUpdateToInvalidRule() throws RuleException {
-		var ruleDef = factory.createRuleDefinitionBuilder()
-				.withContextType(artType)
-				.withDescription("TestRule")
-				.withRuleTitle("TestRuleTitle")
-				.withRuleExpression("self.isDefined() = true")
-				.build();
-		assertFalse(ruleDef.hasExpressionError());
 		assertNotNull(ruleDef.getSyntaxTree());
-		
-		ruleDef.setRuleExpression("self.sxx = x");
-		assertTrue(ruleDef.hasExpressionError());
-		assertNull(ruleDef.getSyntaxTree());
-		
-		ruleDef.setRuleExpression("self.ref.size() > 0");
+		assertTrue(ruleDef instanceof DerivedPropertyRuleDefinition);
 		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
-		assertFalse(ruleDef.hasExpressionError());
-		assertNotNull(ruleDef.getSyntaxTree());
-		
 	}
 	
 	@Test
-	void testRuleFinding() throws RuleException {
-		var repo = new RuleRepository(factory);
-		
-		var def = getNonRegisteredBasicRuleDefinition();
-		String uri = def.getRuleDefinition().getURI();
-		assertNull(repo.findRuleDefinitionForResource(def.getRuleDefinition()));
-		
-		repo.registerRuleDefinition(def);		
-		assertEquals(def, repo.findRuleDefinitionForResource(def.getRuleDefinition()));
-		
-		def.delete();
-		var affected = repo.removeRulesAffectedByDeletedRuleDefinition(uri, true);
-		assertEquals(0, affected.size());
-		
-		var def2 = getNonRegisteredBasicRuleDefinition();		
-		assertNull(repo.findRuleDefinitionForResource(def2.getRuleDefinition()));
-		
-		repo.storeRuleDefinition(def2.getRuleDefinition().as(OntIndividual.class));
-		assertNotEquals(def2, repo.findRuleDefinitionForResource(def2.getRuleDefinition())); // because we created a copy here
+	void testIncompatibleSetDerive() throws RuleException {
+			var ruleDef = factory.createRuleDefinitionBuilder()
+					.withContextType(artSubType)
+					.withDescription("Test3Rule")
+					.withRuleTitle("Test3RuleTitle")
+					.withRuleExpression("self.ref")
+					.forDerivedProperty(subPropDerived)
+					.build();
+		assertTrue(ruleDef.hasExpressionError());
+		assertNotNull(ruleDef.getSyntaxTree());
+		assertTrue(ruleDef instanceof DerivedPropertyRuleDefinition);
 	}
 	
-	
-	
-	private RDFRuleDefinition getNonRegisteredBasicRuleDefinition() throws RuleException {
-		return factory.createRuleDefinitionBuilder()
-				.withContextType(artType)
-				.withDescription("TestRule")
-				.withRuleTitle("TestRuleTitle")
-				.withRuleExpression("self.subref.size() > 0")
-				.build();
+	@Test
+	void testCompatibleSetDerive() throws RuleException {
+			var ruleDef = factory.createRuleDefinitionBuilder()
+					.withContextType(artSubType)
+					.withDescription("Test3Rule")
+					.withRuleTitle("Test3RuleTitle")
+					.withRuleExpression("self.ref")
+					.forDerivedProperty(refPropDerived)
+					.build();
+		assertFalse(ruleDef.hasExpressionError());
+		assertNotNull(ruleDef.getSyntaxTree());
+		assertTrue(ruleDef instanceof DerivedPropertyRuleDefinition);
 	}
-
 }

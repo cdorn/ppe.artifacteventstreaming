@@ -1,9 +1,14 @@
-package at.jku.isse.artifacteventstreaming.rule;
+package at.jku.isse.artifacteventstreaming.rule.definition;
 
 import java.util.UUID;
 
 import org.apache.jena.ontapi.model.OntClass;
+import org.apache.jena.ontapi.model.OntProperty;
+import org.apache.jena.ontapi.model.OntRelationalProperty;
 
+import at.jku.isse.artifacteventstreaming.rule.RuleException;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
@@ -17,6 +22,8 @@ public class RuleDefinitionBuilder {
 	private String ruleURI;
 	private String description;
 	private String title;
+	
+	private OntRelationalProperty derivedPredicate;
 	
 	public RuleDefinitionBuilder withContextType(@NonNull OntClass contextType) {
 		this.contextType = contextType;
@@ -43,6 +50,11 @@ public class RuleDefinitionBuilder {
 		return this;
 	}
 	
+	public RuleDefinitionBuilder forDerivedProperty(@NonNull OntRelationalProperty derivedPredicate) {
+		this.derivedPredicate = derivedPredicate;
+		return this;
+	}
+	
 	public RDFRuleDefinition build() throws RuleException {
 		if (contextType == null)
 			throw new RuleException("Rule context type must not remain undefined");
@@ -58,8 +70,15 @@ public class RuleDefinitionBuilder {
 		var ruleEvalType = factory.getDefinitionType().getModel().createOntClass(ruleURI);
 		ruleEvalType.addSuperClass(factory.getResultBaseType());
 		// then treat this as a instance of definition
-		var ruleDef = factory.getDefinitionType().createIndividual(ruleURI);
-		RDFRuleDefinitionImpl rule = new RDFRuleDefinitionImpl(ruleDef, factory, ruleExpression, contextType);
+		
+		RDFRuleDefinitionImpl rule = null;
+		if (derivedPredicate == null) {
+			var ruleDef = factory.getDefinitionType().createIndividual(ruleURI);
+			rule =new RDFRuleDefinitionImpl(ruleDef, factory, ruleExpression, contextType);
+		} else {
+			var ruleDef = factory.getDerivedPropertyRuleType().createIndividual(ruleURI);
+			rule = new DerivedPropertyRuleDefinition(ruleDef, factory, ruleExpression, contextType, derivedPredicate);
+		} 
 		if (description != null)
 			rule.setDescription(description);
 		if (title != null)
@@ -67,4 +86,6 @@ public class RuleDefinitionBuilder {
 		
 		return rule;
 	}
+	
+	
 }

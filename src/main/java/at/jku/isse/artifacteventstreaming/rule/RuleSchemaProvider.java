@@ -26,12 +26,14 @@ import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.repairRe
 import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.repairSubjectURI;
 import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.hasRepairNodesURI;
 import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.repairNodeChildOrderURI;
+import static at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory.derivedPredicateURI;
 
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 
+import at.jku.isse.artifacteventstreaming.rule.definition.RuleDefinitionBuilder;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import lombok.Getter;
 
@@ -78,6 +80,9 @@ public class RuleSchemaProvider {
 	// to link from eval base type to set of repair nodes
 	@Getter private OntObjectProperty hasRepairNodesProperty;
 	
+	// derived properties
+	@Getter private OntClass derivedPropertyRuleType;
+	@Getter private OntObjectProperty derivedPredicateProperty;
 	
 	
 	@Getter private final MetaModelSchemaTypes schemaFactory;
@@ -100,8 +105,11 @@ public class RuleSchemaProvider {
 		initScopePartTypeProperties();
 		initRuleContextReferenceProperty();
 		initRepairNodeTypeProperties();
+		initDerivedPredicateTypeProperties();
 	}
 	
+
+
 	private void initOntClasses() {
 		definitionType = model.getOntClass(RuleSchemaFactory.ruleDefinitionURI);
 		resultBaseType = model.getOntClass(ruleEvaluationResultBaseTypeURI);
@@ -149,6 +157,11 @@ public class RuleSchemaProvider {
 		repairNodeChildOrderProperty = model.getDataProperty(repairNodeChildOrderURI);
 		
 		hasRepairNodesProperty = model.getObjectProperty(hasRepairNodesURI);
+	}
+	
+	private void initDerivedPredicateTypeProperties() {
+		derivedPropertyRuleType = model.getOntClass(RuleSchemaFactory.derivedPropertyRuleDefinitionURI);
+		derivedPredicateProperty = model.getObjectProperty(derivedPredicateURI);
 	}
 	
 	public RuleDefinitionBuilder createRuleDefinitionBuilder() {

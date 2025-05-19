@@ -14,6 +14,9 @@ import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import at.jku.isse.artifacteventstreaming.rule.definition.RDFRuleDefinition;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.RuleEvaluationWrapperResource;
+
 
 class TestRuleEvaluation extends TestRuleDefinitions {
 

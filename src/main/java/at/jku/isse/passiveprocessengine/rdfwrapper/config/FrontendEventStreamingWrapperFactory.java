@@ -21,7 +21,7 @@ import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryEventStore;
 import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
-import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.RuleTriggerObserverFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.CoreTypeFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.CommitChangeEventTransformer;

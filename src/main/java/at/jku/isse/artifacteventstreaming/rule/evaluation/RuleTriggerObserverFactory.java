@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rule;
+package at.jku.isse.artifacteventstreaming.rule.evaluation;
 
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
@@ -6,6 +6,8 @@ import org.apache.jena.ontapi.model.OntModel;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
+import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import lombok.RequiredArgsConstructor;
 

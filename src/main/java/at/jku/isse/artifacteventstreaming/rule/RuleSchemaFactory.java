@@ -46,6 +46,7 @@ public class RuleSchemaFactory {
 	private OntClass definitionType;	
 	private OntClass resultBaseType;
 	private OntClass repairTreeNodeType;
+	private OntClass derivedPredicateRuleType;
 	
 	// subclass of Bag
 	private OntClass ruleScopeCollection;
@@ -66,6 +67,11 @@ public class RuleSchemaFactory {
 	public static final String repairNodeChildOrderURI = uri+"repairNodeChildOrder";
 	// to link from eval base type to set of repair nodes
 	public static final String hasRepairNodesURI = uri+"hasRepairNodes";
+	
+	// Derived properties
+	public static final String derivedPropertyRuleDefinitionURI = uri+"DerivedPropertyRuleDefinition";
+	public static final String derivedPredicateURI = uri+"derivedProperty";
+	
 	
 	private final OntModel model;
 	private final Dataset ontology;
@@ -89,6 +95,7 @@ public class RuleSchemaFactory {
 		initScopePartTypeProperties();
 		initRuleContextReferenceProperty();		
 		initRepairNodeTypeProperties();
+		initDerivedPredicateRuleProperties();
 	}
 
 	private void initOntClasses() {
@@ -110,6 +117,12 @@ public class RuleSchemaFactory {
 		repairTreeNodeType = model.getOntClass(repairTreeNodeURI);
 		if (repairTreeNodeType == null) {
 			repairTreeNodeType = model.createOntClass(repairTreeNodeURI);
+		}
+		
+		derivedPredicateRuleType = model.getOntClass(derivedPropertyRuleDefinitionURI);
+		if (derivedPredicateRuleType == null) {
+			derivedPredicateRuleType = model.createOntClass(derivedPropertyRuleDefinitionURI);
+			derivedPredicateRuleType.addSuperClass(definitionType);
 		}
 	}
 
@@ -136,7 +149,7 @@ public class RuleSchemaFactory {
 		if (evaluationResultProperty == null) {		
 			evaluationResultProperty = model.createObjectProperty(ruleEvaluationResultURI);
 			evaluationResultProperty.addDomain(resultBaseType);
-			// 	no range as any type of object is allowed to be in the output/result of a rule
+			// 	no range because any type of object is allowed to be in the output/result of a rule
 			//model.createObjectMaxCardinality(evaluationResultProperty, 1, null); has potentially multiple outcomes (when a set is returned)
 		}
 
@@ -250,6 +263,15 @@ public class RuleSchemaFactory {
 			hasRepairNodesProperty.addDomain(resultBaseType);
 			hasRepairNodesProperty.addRange(repairTreeNodeType);
 		}
+	}
+	
+	private void initDerivedPredicateRuleProperties() {
+		
+		var derivedPredicateProp = model.getObjectProperty(derivedPredicateURI);
+		if (derivedPredicateProp == null) {
+			singleType.createSingleObjectPropertyType(derivedPredicateURI, derivedPredicateRuleType, model.createOntClass(RDF.Property.getURI()));
+		}
+		
 	}
 	
 }

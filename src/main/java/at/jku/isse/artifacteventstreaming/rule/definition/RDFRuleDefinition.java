@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rule;
+package at.jku.isse.artifacteventstreaming.rule.definition;
 
 import org.apache.jena.ontapi.model.OntClass;
 

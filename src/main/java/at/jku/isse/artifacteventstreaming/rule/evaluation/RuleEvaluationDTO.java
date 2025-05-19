@@ -1,9 +1,14 @@
-package at.jku.isse.artifacteventstreaming.rule;
+package at.jku.isse.artifacteventstreaming.rule.evaluation;
 
 import java.util.HashSet;
 import java.util.Set;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntIndividual;
+
+import at.jku.isse.artifacteventstreaming.rule.RepairNodeDTO;
+import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
+import at.jku.isse.artifacteventstreaming.rule.definition.RDFRuleDefinition;
 import at.jku.isse.designspace.rule.arl.exception.EvaluationException;
 import lombok.Getter;
 import lombok.NonNull;
@@ -17,10 +22,6 @@ public class RuleEvaluationDTO {
 	@Getter private RDFRuleDefinition definition;
 	protected RepairNodeDTO rootRepairNode;
 
-		protected static String createEvalURI(@NonNull RDFRuleDefinition def, @NonNull OntIndividual contextInstance) {
-			return def.getRuleDefinition().getURI()+"::"+contextInstance.getLocalName()+"::"+contextInstance.getURI().hashCode(); // we assume here that context instance come from the same namespace, hence are distinguishable based on their localname, but add the hashcode of the uri to be on a safer side
-		}
-		
 		// create from underlying ont object 
 		/**
 		 * @param ruleEvalObj pre-existing, that needs wrapping

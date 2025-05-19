@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.ActiveRuleTriggerObserver;
 
 class TestRuleTriggering extends TestRuleEvaluation {
 

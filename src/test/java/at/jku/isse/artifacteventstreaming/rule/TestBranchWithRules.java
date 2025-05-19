@@ -19,6 +19,8 @@ import org.junit.jupiter.api.Test;
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.ActiveRuleTriggerObserver;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.RuleTriggerObserverFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;

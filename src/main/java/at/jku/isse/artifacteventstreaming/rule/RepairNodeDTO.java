@@ -8,6 +8,8 @@ import java.util.stream.Collectors;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntProperty;
+
+import at.jku.isse.artifacteventstreaming.rule.evaluation.RuleEvaluationDTO;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
