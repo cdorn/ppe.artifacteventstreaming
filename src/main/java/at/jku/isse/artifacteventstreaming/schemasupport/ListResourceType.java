@@ -78,12 +78,11 @@ public class ListResourceType {
 		liProp.addProperty(RDFS.subPropertyOf, LI);
 		liProp.addDomain(listType);
 		liProp.addRange(valueType);
-		//ObjectAllValuesFrom restr = model.createObjectAllValuesFrom(liProp, valueType);
 		var restr = createAllValuesFromRestriction(model, liProp, valueType);
 		// add the restriction to the list type
-		//listType.addSuperClass(restr);
 		listType.addProperty(RDFS.subClassOf, restr);
 		listReferenceSuperProperty.addSubProperty(prop);	
+		
 		subclassesCache.add(listType);
 		return prop;		
 	}
@@ -109,12 +108,11 @@ public class ListResourceType {
 		liProp.addProperty(RDFS.subPropertyOf, LI);
 		liProp.addDomain(listType);
 		liProp.addRange(valueType);
-		//DataAllValuesFrom restr = model.createDataAllValuesFrom(liProp, valueType); replace with replicable anonid restriction
 		var restr = createAllValuesFromRestriction(model, liProp, valueType);
 		// add the restriction to the list type
-		//listType.addSuperClass(restr);
 		listType.addProperty(RDFS.subClassOf, restr);
 		listReferenceSuperProperty.addSubProperty(prop);	
+		
 		subclassesCache.add(listType);
 		return prop;
 	}

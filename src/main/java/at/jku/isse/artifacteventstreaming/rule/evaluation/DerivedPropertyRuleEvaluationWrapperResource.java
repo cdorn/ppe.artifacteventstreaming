@@ -11,11 +11,14 @@ import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Seq;
 
 import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.rule.definition.DerivedPropertyRuleDefinition;
+import at.jku.isse.artifacteventstreaming.schemasupport.ListResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.designspace.rule.arl.exception.EvaluationException;
 import at.jku.isse.designspace.rule.arl.parser.ArlType;
 import lombok.NonNull;
@@ -25,7 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 public class DerivedPropertyRuleEvaluationWrapperResource extends RuleEvaluationWrapperResource {
 
 	private final DerivedPropertyRuleDefinition derivedDef;
-	
 
 
 //	// or create from underlying ont object 
@@ -87,6 +89,8 @@ public class DerivedPropertyRuleEvaluationWrapperResource extends RuleEvaluation
 				deriveSetValue((Set<?>)result);
 			} else if (derivedDef.getDerivedType().getCollection() == ArlType.CollectionKind.LIST) {
 				deriveListValue((List<?>)result);
+			} else {
+				log.warn("Cannot derive values of MAP property: "+derivedDef.getDerivedPredicate().getURI());
 			}
 		}				
 		return new AbstractMap.SimpleEntry<>(this, !Objects.equals(priorConsistency, newConsistency)); // returns if the outcome has changed;
@@ -120,20 +124,30 @@ public class DerivedPropertyRuleEvaluationWrapperResource extends RuleEvaluation
 		var indiv = getContextInstance();
 		var prop = derivedDef.getDerivedPredicate().asProperty();
 		var listContainer = getContextInstance().getPropertyResourceValue(prop);
-		var list = (listContainer != null) ? listContainer.as(Seq.class) : null;
-		if (result == null || result.isEmpty()) { // when a list  is cleared/removed
-			var size = list.size();
-			for (int i = size; i > 0 ; i--) { // if we remove from the start, all the remaining elements are moved down one step, --> very inefficient
-				list.remove(i); 
-			}
-			return; 
+		Seq list = getAsSeqOrCreate(listContainer,  indiv);
+		var size = list.size();
+		for (int i = size; i > 0 ; i--) { // if we remove from the start, all the remaining elements are moved down one step, --> very inefficient
+			list.remove(i); 
 		}
-		if (prop instanceof OntDataProperty) {
-			var model = indiv.getModel();
-			result.forEach(value -> list.add(model.createTypedLiteral(value)));
-		} else if (prop instanceof OntObjectProperty) {
-			result.forEach(list::add);
+		if (result != null && !result.isEmpty()) { // when a list  is not cleared/removed
+			// for list, prop is always an OntObjectProperty pointing to the Seq resource that hold the actual data
+			var first = result.get(0); // assuming no type mixing
+			if (first instanceof Resource) {
+				result.forEach(list::add);	
+			} else { 
+				var model = indiv.getModel();
+				result.forEach(value -> list.add(model.createTypedLiteral(value)));
+			}
 		}
 	}
 	
+	private Seq getAsSeqOrCreate(Resource listContainer, OntIndividual indiv) {
+		if (listContainer != null) {
+			return listContainer.as(Seq.class);
+		} else {
+			var list = indiv.getModel().createSeq();
+			indiv.addProperty(derivedDef.getDerivedPredicate().asProperty(), list);
+			return list;
+		}
+	}
 }

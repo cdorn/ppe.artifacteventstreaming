@@ -45,6 +45,8 @@ class TestDerivedPropertyRuleDefinitions {
 	OntObjectProperty subPropDerived;
 	OntDataProperty numbersProp;
 	OntDataProperty numbersDerivedProp;
+	OntObjectProperty numbersListProp;
+	OntObjectProperty numbersListDerivedProp;
 	
 	OntDataProperty priorityProp;
 	OntDataProperty labelProp;
@@ -73,10 +75,14 @@ class TestDerivedPropertyRuleDefinitions {
 		numbersProp =m.createDataProperty(baseURI+"numbers");
 		numbersProp.addRange(m.getDatatype(XSD.xint));
 		numbersProp.addDomain(artType);
+		numbersListProp = schemaUtils.getListType().addLiteralListProperty(artType, baseURI+"numbersList", m.getDatatype(XSD.xint));
+		
 		
 		numbersDerivedProp =m.createDataProperty(baseURI+"numbersDerived");
 		numbersDerivedProp.addRange(m.getDatatype(XSD.xint));
 		numbersDerivedProp.addDomain(artType);
+		
+		numbersListDerivedProp = schemaUtils.getListType().addLiteralListProperty(artType, baseURI+"numbersListDerived", m.getDatatype(XSD.xint));
 		
 		subProp = m.createObjectProperty(baseURI+LOCALPROP_SUBREF);
 		subProp.addRange(artSubType);
