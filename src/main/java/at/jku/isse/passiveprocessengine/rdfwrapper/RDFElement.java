@@ -232,7 +232,7 @@ public abstract class RDFElement {
 		if (prop.getValueType().isPrimitiveType() ) { // then a  literal
 			return stmt.getLiteral().getValue();
 		} else { // a resource
-			return resolver.resolveToRDFElement(stmt.getResource());
+			return resolver.resolveToRDFElement(stmt.getObject());
 		}
 	}
 

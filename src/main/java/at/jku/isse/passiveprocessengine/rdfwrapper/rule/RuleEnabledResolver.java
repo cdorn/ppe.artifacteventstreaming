@@ -55,6 +55,12 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 	}
 	
 	protected void initOverride() {
+		// register rule definition as type
+		var ruleDefType = ruleSchema.getDefinitionType();
+		super.typeIndex.put(ruleDefType, new RDFInstanceType(ruleDefType, this));
+		var ruleEvalType = ruleSchema.getResultBaseType();
+		super.typeIndex.put(ruleEvalType, new RDFInstanceType(ruleEvalType, this));
+		
 		var ruleDefinitions = ruleRepo.getRuleDefinitions().stream().map(indiv -> indiv.getRuleDefinition().getURI()).collect(Collectors.toSet());
 		model.classes()
 			.filter(ontClass -> !isBlacklistedNamespace(ontClass.getNameSpace()))									

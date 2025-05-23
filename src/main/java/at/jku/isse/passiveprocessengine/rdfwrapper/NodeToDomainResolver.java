@@ -386,12 +386,14 @@ public class NodeToDomainResolver {
 
 	public	RDFNode convertToRDF(Object e) {
 		if (e instanceof RDFElement rdfEl) {
-			return rdfEl.getElement();
+			return rdfEl.getElement();	
 //		} else if (e.equals(BuildInType.RULE)) { 
 //			 return model.getOntClass(RuleSchemaFactory.ruleDefinitionURI);
 //		} else if (e.equals(BuildInType.METATYPE)) {
 //			 return metaClass; //model.getOntClass(OWL2.Class.getURI());
-		}else { // a literal
+		} else if (e instanceof RDFNode node) {
+			return node;
+		} else { // a literal
 			return getModel().createTypedLiteral(e);
 		}
 	}
