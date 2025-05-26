@@ -60,7 +60,7 @@ class TestRDFListWrapper extends TestRDFInstance {
 		assertThrows(RuntimeException.class, () -> list3.lastIndexOf(values.get(0)));
 		assertThrows(RuntimeException.class, () -> list3.listIterator());
 		assertThrows(RuntimeException.class, () -> list3.listIterator(0));
-		assertThrows(RuntimeException.class, () -> list3.toArray());
+		assertEquals(2, list3.toArray().length);
 		list3.addAll(values);
 		list3.addAll(0, values);
 						

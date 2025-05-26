@@ -1,6 +1,7 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Optional;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -63,11 +64,13 @@ public class RepairNodeDTO implements Comparable<RepairNodeDTO>{
 	
 	public static void removeTreeFromModel(@NonNull RuleEvaluationDTO ruleEvalDTO, @NonNull RuleSchemaProvider schema) {
 		var iter = ruleEvalDTO.getRuleEvalObj().listProperties(schema.getHasRepairNodesProperty().asNamed());
+		var indivs = new LinkedList<OntIndividual>();
 		while (iter.hasNext()) {
 			var stmt = iter.next();
 			var indiv = stmt.getObject().as(OntIndividual.class);
-			indiv.removeProperties();
+			indivs.add(indiv);
 		}
+		indivs.stream().forEach(indiv -> indiv.removeProperties());
 		ruleEvalDTO.getRuleEvalObj().removeAll(schema.getHasRepairNodesProperty().asNamed());
 	}
 	

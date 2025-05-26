@@ -61,7 +61,7 @@ class TestRDFSetWrapper extends TestRDFInstance {
 		assertTrue(set3.stream().allMatch(item -> values.contains(item)));
 							
 		assertThrows(RuntimeException.class, () -> set3.spliterator());
-		assertThrows(RuntimeException.class, () -> set3.toArray());
+		assertEquals(2, set3.toArray().length);
 		assertThrows(RuntimeException.class, () -> set3.removeIf(null));
 		assertThrows(RuntimeException.class, () -> set3.forEach(null));
 		set3.addAll(values);

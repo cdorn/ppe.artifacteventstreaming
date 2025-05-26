@@ -57,7 +57,8 @@ public class NodeToDomainResolver {
 	protected Lock writeLock;
 	
 	
-	@Getter private final WrapperMetaModelSchemaTypes metaschemata;
+	@Getter
+	protected final WrapperMetaModelSchemaTypes metaschemata;
 		
 	
 	public NodeToDomainResolver(Branch branch, WrapperMetaModelSchemaTypes cardinalityUtil) {
@@ -74,15 +75,16 @@ public class NodeToDomainResolver {
 	protected void init() {
 		model.classes()
 		.filter(ontClass -> !isBlacklistedNamespace(ontClass.getNameSpace()))		
-		.forEach(ontClass -> { 
-			var constructor = metaschemata.getMetaElements().getConstructorForNamspace(ontClass.getURI());
-			var type = initOrGetType(ontClass);
-			if (!ontClass.equals(metaschemata.getMetaElements().getMetaClass())) {
-				ontClass.individuals(true).forEach(indiv -> instanceIndex.putIfAbsent(indiv.getURI(), createMostSpecificInstance(indiv, type, constructor)));
-			}
-		} );		
+		.forEach(this::loadTypeInstances );		
 	}
 	
+	protected void loadTypeInstances(OntClass ontClass) {
+		var constructor = metaschemata.getMetaElements().getConstructorForNamspace(ontClass.getURI());
+		var type = initOrGetType(ontClass);
+		if (!ontClass.equals(metaschemata.getMetaElements().getMetaClass())) {
+			ontClass.individuals(true).forEach(indiv -> instanceIndex.putIfAbsent(indiv.getURI(), createMostSpecificInstance(indiv, type, constructor)));
+		}
+	}
 	
 	protected RDFInstance createMostSpecificInstance(OntIndividual indiv, RDFInstanceType type, Constructor<? extends RDFInstance> subClassConstructor) {
 		if (subClassConstructor == null) {
@@ -354,10 +356,12 @@ public class NodeToDomainResolver {
 			return typeIndex.get(ontClass);
 		} else if (node instanceof OntIndividual indiv) {
 			return findIndividual(indiv);		 		
-		} else if (node.canAs(OntClass.class)) {
-			return typeIndex.get(node.as(OntClass.class));
 		} else if (node.canAs(OntIndividual.class)) {
-			return findIndividual(node.as(OntIndividual.class));
+			var indiv = findIndividual(node.as(OntIndividual.class));
+			if (indiv != null) return indiv;
+			// else continue checking as we sometimes dont know if the node represents an individual or a class (can be both)
+		}  if (node.canAs(OntClass.class)) {
+			return typeIndex.get(node.as(OntClass.class));
 		} else if (node instanceof Resource res) { 
 			return findIndividual(res);
 		} else {			

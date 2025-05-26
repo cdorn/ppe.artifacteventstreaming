@@ -10,6 +10,8 @@ import java.util.stream.Collectors;
 
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntClass.Named;
+import org.apache.jena.ontapi.model.OntIndividual;
+import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.Resource;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
@@ -64,17 +66,9 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 		var ruleDefinitions = ruleRepo.getRuleDefinitions().stream().map(indiv -> indiv.getRuleDefinition().getURI()).collect(Collectors.toSet());
 		model.classes()
 			.filter(ontClass -> !isBlacklistedNamespace(ontClass.getNameSpace()))									
-			.filter(ontClass -> !ruleDefinitions.contains(ontClass.getURI())) // we dont want to cache rule evaluations here but via rule repo			
-			.forEach(ontClass -> { 
-			var type = new RDFInstanceType(ontClass, this);
-			typeIndex.put(ontClass, type);
-			type.cacheSuperProperties();
-			if (!ontClass.equals(getMetaschemata().getMetaElements().getMetaClass())) {
-				var individuals = ontClass.individuals(true).toList();
-				individuals.forEach(indiv -> instanceIndex.putIfAbsent(indiv.getURI(), new RDFInstance(indiv, type, this)));
-			}
-		} );
-		
+			.filter(ontClass -> !ruleDefinitions.contains(ontClass.getURI())) // we dont want to cache rule definitions here but via rule repo, the store just wrappers here			
+			.forEach(this::loadTypeInstances);
+		// store all rule definitions as wrappers
 		ruleRepo.getRuleDefinitions().forEach(ruleDef -> {
 			var wrapper = new RDFRuleDefinitionWrapper(ruleDef, this);			
 			typeIndex.put(ruleDef.getRuleDefinition(), wrapper);	
@@ -103,8 +97,24 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 				.withRuleTitle(ruleName)
 				.build();
 			var wrapper = new RDFRuleDefinitionWrapper(ruleDef, this);			
-			typeIndex.put(ruleDef.getRuleDefinition(), wrapper);
+			typeIndex.put(ruleDef.getRuleDefinition(), wrapper);		
 			return wrapper;
+		} catch (RuleException e) {
+			throw new RuntimeException("Unable to create rule: "+e.getMessage());
+		}
+	}
+	
+	public RDFRuleDefinitionWrapper createDerivedPropertyRule(RDFInstanceType ctxType, String ruleURI, String ruleExpression, OntRelationalProperty derivedProp) {
+		try {
+			var ruleDef = ruleRepo.getRuleBuilder()
+				.withContextType(ctxType.getType())
+				.withRuleURI(ruleURI)
+				.withRuleExpression(ruleExpression) // deriving/mapping rule here
+				.forDerivedProperty(derivedProp)
+				.build();
+				var wrapper = new RDFRuleDefinitionWrapper(ruleDef, this);			
+				typeIndex.put(ruleDef.getRuleDefinition(), wrapper);
+				return wrapper;
 		} catch (RuleException e) {
 			throw new RuntimeException("Unable to create rule: "+e.getMessage());
 		}

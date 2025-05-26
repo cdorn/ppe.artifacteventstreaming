@@ -53,11 +53,12 @@ public class ListWrapper extends TypedCollectionResource implements List<Object>
 	}
 	@Override
 	public Object[] toArray() {
-		throw new RuntimeException("Not supported");
+		return this.stream().toArray();
 	}
+	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T[] toArray(T[] a) {
-		throw new RuntimeException("Not supported");
+		return (T[]) this.stream().toArray();
 	}
 	@Override
 	public boolean add(Object e) {

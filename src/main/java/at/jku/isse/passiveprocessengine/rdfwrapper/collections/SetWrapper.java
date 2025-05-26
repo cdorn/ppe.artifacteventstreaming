@@ -80,11 +80,11 @@ public class SetWrapper extends TypedCollectionResource implements Set<Object> {
 	}
 
 	public Object[] toArray() {
-		throw new RuntimeException("Not supported");
+		return this.stream().toArray();
 	}
 
 	public <T> T[] toArray(T[] a) {
-		throw new RuntimeException("Not supported");
+		return (T[]) this.stream().toArray();
 	}
 
 	public boolean add(Object e) {

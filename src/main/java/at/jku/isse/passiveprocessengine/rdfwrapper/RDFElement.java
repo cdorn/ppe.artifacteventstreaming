@@ -142,7 +142,10 @@ public abstract class RDFElement {
 
 	public String makePropertyURI(String propertyLocalName) {
 		if (!NodeToDomainResolver.isValidURL(propertyLocalName)) {		
-			return this.element.getURI()+"#"+propertyLocalName;
+			String ns= element.getNameSpace();
+			String elName = element.getLocalName();
+			
+			return ns.substring(0, ns.length()-1)+"/"+elName+"#"+propertyLocalName;
 		} else {
 			return propertyLocalName;
 		}

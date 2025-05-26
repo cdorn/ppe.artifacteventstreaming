@@ -73,22 +73,28 @@ public class MetaElementFactory {
 	}
 	
 	public void registerInstanceSpecificClass(@NonNull String uri, @NonNull Class<? extends RDFInstance> clazz) {
-		try {
-			var constructor = clazz.getConstructor(OntIndividual.class, RDFInstanceType.class, NodeToDomainResolver.class);
-			instanceConstructors.put(uri, constructor);
-			//store with branch if never stored before or different fqn
-			var fqn = clazz.getCanonicalName();
-			var currentValue = rawIndex.get(uri);
-			if (currentValue == null || !currentValue.isLiteral() || !currentValue.asLiteral().getString().equals(fqn) ) {
-				rawIndex.put(uri, model.createTypedLiteral(fqn));
-			}
-		} catch (NoSuchMethodException | SecurityException e) {
-			e.printStackTrace();
-			log.error(e.getMessage());
-		}		
+		var constructor = findConstructor(clazz);
+		if (constructor == null) {
+			log.error("Couldn't find constructor for: "+clazz.getName());
+			return;
+		} 
+		//clazz.getConstructor(OntIndividual.class, RDFInstanceType.class, NodeToDomainResolver.class);
+		instanceConstructors.put(uri, constructor);
+		//store with branch if never stored before or different fqn
+		var fqn = clazz.getCanonicalName();
+		var currentValue = rawIndex.get(uri);
+		if (currentValue == null || !currentValue.isLiteral() || !currentValue.asLiteral().getString().equals(fqn) ) {
+			rawIndex.put(uri, model.createTypedLiteral(fqn));
+		}
 	}
 	
-	
+	private Constructor findConstructor(@NonNull Class<? extends RDFInstance> clazz) {
+		for (Constructor constr : clazz.getConstructors()) {
+			if (constr.getParameterCount() == 3 && NodeToDomainResolver.class.isAssignableFrom(constr.getParameterTypes()[2]))
+				return constr;
+		} 
+		return null;
+	}
 	
 	protected static class MetaSchemaFactory {
 		

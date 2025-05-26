@@ -45,11 +45,11 @@ public class DerivedPropertyRuleDefinition extends RDFRuleDefinitionImpl {
 	@Override
 	protected boolean reloadContextAndExpressionSuccessful() {
 		if (derivedPredicate == null) {
-			log.warn("Cannot load rule definition from Rule Definition "+ontObject.getURI()+" as it does not have a rule expression");			
+			log.warn("Cannot load derived rule definition from Rule Definition "+ontObject.getURI()+" as it does not have a derived property ");			
 			return false;
 		}
 		if (!isRuleOutputCompatibleWithProperty()) {
-			log.warn("Cannot load rule definition from Rule Definition "+ontObject.getURI()+" as rule output is incompatible with derived predicate");			
+			log.warn("Cannot load derived rule definition from Rule Definition "+ontObject.getURI()+" as rule output is incompatible with derived predicate");			
 			return false;
 		}
 		return super.reloadContextAndExpressionSuccessful();
@@ -63,7 +63,7 @@ public class DerivedPropertyRuleDefinition extends RDFRuleDefinitionImpl {
 	}
 	
 	private boolean isRuleOutputCompatibleWithProperty() {
-		//implement check if the property can actually take the rule's output data type, 
+		// check if the property can actually take the rule's output data type, 
 		// e.g., String -> String, bool -> bool, Set -> Set (and set content) etc
 		var arlType = factory.getModelAccess().getArlTypeOfProperty(derivedPredicate);		
 		var ruleResultType = getSyntaxTree().getResultType();
