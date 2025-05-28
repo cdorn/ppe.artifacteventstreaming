@@ -21,7 +21,7 @@ public class RepairNodeDTO implements Comparable<RepairNodeDTO>{
 	@Getter private final OntIndividual node;
 	private final int posInParent;
 	@Getter private final String type;
-	@Getter private final OntIndividual subject;
+	@Getter private final OntObject subject;
 	@Getter private final OntProperty predicate;
 	@Getter private final OntObject objectValue;
 	@Getter private final Object literalValue;
@@ -105,7 +105,7 @@ public class RepairNodeDTO implements Comparable<RepairNodeDTO>{
 	
 	public RepairNodeDTO(
 			@NonNull String operator,
-			@NonNull OntIndividual subject,
+			@NonNull OntObject subject,
 			@NonNull OntProperty predicate,
 			Object literalValue,
 			OntObject objectValue,

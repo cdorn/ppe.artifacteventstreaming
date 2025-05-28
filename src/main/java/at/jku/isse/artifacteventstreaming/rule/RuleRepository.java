@@ -178,6 +178,7 @@ public class RuleRepository {
 	 */
 	public void removeRuleDefinitionWrapper(@NonNull String definitionURI) {
 		definitions.remove(definitionURI);
+		//FIXME: how to remove rdf wrappers upon definition removal?! we dont know about these at this level
 	}
 	
 	/**

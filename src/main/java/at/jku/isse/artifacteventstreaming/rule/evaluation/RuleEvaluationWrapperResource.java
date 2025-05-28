@@ -210,7 +210,7 @@ public class RuleEvaluationWrapperResource extends RuleEvaluationDTO {
 	}
 	
 	private RepairNodeDTO transform(AbstractRepairAction repairAction, RepairNodeDTO parentNode, int posInParent) {
-		var subject = (OntIndividual)repairAction.getElement();
+		var subject = (OntObject)repairAction.getElement();
 		var predicateName = repairAction.getProperty();
 		var predicate = resolvePredicate(predicateName, subject);
 		var value = repairAction.getValue();
@@ -245,7 +245,7 @@ public class RuleEvaluationWrapperResource extends RuleEvaluationDTO {
 					);
 	}
 	
-	private OntProperty resolvePredicate(@NonNull String predicate, @NonNull OntIndividual subject) {
+	private OntProperty resolvePredicate(@NonNull String predicate, @NonNull OntObject subject) {
 		var modelAccess = super.schemaProvider.getModelAccess();
 		var propOpt = modelAccess.getTypeOfInstance(subject).findAny().map(type -> modelAccess.resolveToProperty(type, predicate));
 		return propOpt.get();

@@ -4,7 +4,7 @@ import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
 
 public interface RuleDefinitionService {
 
-	public RDFRuleDefinitionWrapper createInstance(RDFInstanceType type, String ruleName, String ruleExpression);
+	public RDFRuleDefinitionWrapper createInstance(RDFInstanceType type, String ruleURI, String ruleExpression, String ruleTitle);
 	
 	public void setPropertyRepairable(RDFInstanceType type, String property, boolean isRepairable);
 	

@@ -68,7 +68,7 @@ public class NodeToDomainResolver {
 		this.dataset = branch.getDataset();	
 		this.metaschemata = cardinalityUtil; 	
 		var metaClass = metaschemata.getMetaElements().getMetaClass();
-		typeIndex.put(metaClass, new RDFInstanceType(metaClass, this));
+		initOrGetType(metaClass);
 		init();		
 	}
 

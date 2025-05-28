@@ -52,7 +52,8 @@ public class RuleEvaluationFactory {
 	public static RuleEvaluationWrapperResource create(@NonNull RuleSchemaProvider factory, @NonNull RDFRuleDefinition def, @NonNull OntIndividual contextInstance) {
 		var uri = createEvalURI(def, contextInstance);
 		var evalObj = def.getRuleDefinition().createIndividual(uri);	
-		evalObj.addLabel(def.getName());
+		var defName = def.getName();
+		if (defName != null ) evalObj.addLabel(defName);
 		RuleEvaluationWrapperResource.addAddRuleEvaluationToNewOrExistingScope(contextInstance, evalObj, factory); // just to make sure that the context scope is set (no effect if already so)
 		if (def instanceof DerivedPropertyRuleDefinition derivedDef) {
 			return new DerivedPropertyRuleEvaluationWrapperResource(derivedDef, evalObj, contextInstance, factory);
