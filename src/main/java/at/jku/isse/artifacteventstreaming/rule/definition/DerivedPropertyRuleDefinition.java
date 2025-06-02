@@ -48,11 +48,14 @@ public class DerivedPropertyRuleDefinition extends RDFRuleDefinitionImpl {
 			log.warn("Cannot load derived rule definition from Rule Definition "+ontObject.getURI()+" as it does not have a derived property ");			
 			return false;
 		}
+		var contextAndExprOk = super.reloadContextAndExpressionSuccessful();
+		if (!contextAndExprOk) 
+			return false;
 		if (!isRuleOutputCompatibleWithProperty()) {
 			log.warn("Cannot load derived rule definition from Rule Definition "+ontObject.getURI()+" as rule output is incompatible with derived predicate");			
 			return false;
 		}
-		return super.reloadContextAndExpressionSuccessful();
+		return true;
 	}
 
 	@Override

@@ -17,14 +17,15 @@ public class FilebasedDatasetLoader implements DatasetRepository {
 
 	@Override
 	public Optional<Dataset> loadDataset(URI uri) {
-		String directory = "repos/"+uri.getPath() ;
+		String directory = "repos"+uri.getPath() ;
 		Dataset dataset = TDB2Factory.connectDataset(directory) ;
+		
 		return Optional.ofNullable(dataset);
 	}
 
 	// primarily for testing, hence not part of the interface of DatasetRepository
 	public boolean removeDataset(URI uri) {
-		String directory = "repos/"+uri.getPath() ;
+		String directory = "./repos"+uri.getPath() ;
 		File file = new File(directory);
 		try {
 			FileUtils.deleteDirectory(file);

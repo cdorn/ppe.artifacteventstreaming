@@ -40,4 +40,9 @@ public abstract class AbstractEventStreamingSetup {
 	
 	public abstract void signalExternalSetupComplete() throws PersistenceException, BranchConfigurationException;
 
+	/** 
+	 * use with care, will delete triple store, branch cache, and event store data
+	 */
+	public abstract void resetPersistedData(); 
+	
 }

@@ -113,6 +113,12 @@ public class FrontendEventStreamingWrapperFactory extends AbstractEventStreaming
 			}
 		}
 	}
+
+
+	@Override
+	public void resetPersistedData() {
+		// no op, as all data stored in memory
+	}
 	
 	
 }

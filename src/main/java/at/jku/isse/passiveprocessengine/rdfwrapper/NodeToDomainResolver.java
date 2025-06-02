@@ -68,7 +68,7 @@ public class NodeToDomainResolver {
 		this.dataset = branch.getDataset();	
 		this.metaschemata = cardinalityUtil; 	
 		var metaClass = metaschemata.getMetaElements().getMetaClass();
-		typeIndex.put(metaClass, new RDFInstanceType(metaClass, this));
+		initOrGetType(metaClass);
 		init();		
 	}
 
@@ -76,19 +76,14 @@ public class NodeToDomainResolver {
 		model.classes()
 		.filter(ontClass -> !isBlacklistedNamespace(ontClass.getNameSpace()))		
 		.forEach(this::loadTypeInstances );		
-		initCacheOfTypes();
 	}
 	
 	protected void loadTypeInstances(OntClass ontClass) {
-		var constructor = metaschemata.getMetaElements().getConstructorForNamspace(ontClass.getURI());
+		var constructor = metaschemata.getMetaElements().getInstanceConstructorForNamespace(ontClass.getURI());
 		var type = initOrGetType(ontClass);
 		if (!ontClass.equals(metaschemata.getMetaElements().getMetaClass())) {
 			ontClass.individuals(true).forEach(indiv -> instanceIndex.putIfAbsent(indiv.getURI(), createMostSpecificInstance(indiv, type, constructor)));
 		}
-	}
-	
-	protected void initCacheOfTypes() {
-		typeIndex.values().stream().forEach(type -> type.cacheSuperProperties());
 	}
 	
 	protected RDFInstance createMostSpecificInstance(OntIndividual indiv, RDFInstanceType type, Constructor<? extends RDFInstance> subClassConstructor) {
@@ -326,7 +321,7 @@ public class NodeToDomainResolver {
 		}
 		var individual = model.createIndividual(uri, type.getType());
 		individual.addLabel(wasValidId ? individual.getLocalName() : id);
-		var constructor = metaschemata.getMetaElements().getConstructorForNamspace(type.getType().getURI());		
+		var constructor = metaschemata.getMetaElements().getInstanceConstructorForNamespace(type.getType().getURI());		
 		return instanceIndex.computeIfAbsent(individual.getURI(), k -> createMostSpecificInstance(individual, type, constructor));
 	}
 

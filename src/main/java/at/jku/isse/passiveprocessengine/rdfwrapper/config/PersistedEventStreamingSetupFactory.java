@@ -8,14 +8,21 @@ import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
+import org.rocksdb.RocksDBException;
+
+import com.eventstore.dbclient.DeleteStreamOptions;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
+import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
 import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
+import at.jku.isse.artifacteventstreaming.api.PerBranchEventStore;
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.FilebasedDatasetLoader;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryEventStore;
 import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
 import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
@@ -37,7 +44,8 @@ import lombok.extern.slf4j.Slf4j;
 
 
 public class PersistedEventStreamingSetupFactory extends AbstractEventStreamingSetup {
-
+	
+	private FactoryBuilder builder;
 	
 	public PersistedEventStreamingSetupFactory(RuleEnabledResolver resolver, ChangeEventTransformer changeEventTransformer,
 			CoreTypeFactory coreTypeFactory, RuleSchemaProvider ruleSchemaProvider, Branch branch,
@@ -54,20 +62,30 @@ public class PersistedEventStreamingSetupFactory extends AbstractEventStreamingS
 		branch.startCommitHandlers(unfinishedCommit); 		 
 	}
 	
+	@Override
+	public void resetPersistedData() {
+		branch.getDataset().close();
+		builder.resetData();
+	}
+	
 	
 	@Slf4j
 	public static class FactoryBuilder {
 	
-		private URI repoURI;
-
 		private String branchLocalName = AbstractEventStreamingSetup.defaultBranchName;	
 		private String relativeCachePath = AbstractEventStreamingSetup.defaultCacheDirectoryPath;
+		protected final FilebasedDatasetLoader datasetLoader = new FilebasedDatasetLoader();
+		private EventStoreFactory eventstoreFactory;
+		private RocksDBFactory cacheFactory;
+		private URI repoURI;
+		protected URI datasetURI;
+		protected URI branchURI;
 		
 		public FactoryBuilder withRepoURI(@NonNull URI repoURI) {
 			this.repoURI = repoURI;
 			return this;
 		}
-		
+
 		public FactoryBuilder withBranchName(@NonNull String branchName) {
 			this.branchLocalName = branchName;
 			return this;
@@ -78,13 +96,20 @@ public class PersistedEventStreamingSetupFactory extends AbstractEventStreamingS
 			return this;
 		}
 		
+		protected PerBranchEventStore getEventStore(String branchURI) {
+			eventstoreFactory = new EventStoreFactory();
+			return eventstoreFactory.getEventStore(branchURI);
+		}
+		
+		protected BranchStateCache getBranchStateCache() throws Exception {
+			cacheFactory = new RocksDBFactory(relativeCachePath);	
+			return cacheFactory.getCache();
+		}
+		
 		public PersistedEventStreamingSetupFactory build() {
 			try {
 				// setting up persistence
-				var cacheFactory = new RocksDBFactory(relativeCachePath);
-				var eventstoreFactory = new EventStoreFactory();											
-				var datasetLoader = new FilebasedDatasetLoader();
-				URI datasetURI = new URI(AbstractEventStreamingSetup.defaultBranchBaseURI+"/"+branchLocalName);
+				datasetURI = new URI(AbstractEventStreamingSetup.defaultBranchBaseURI+"/"+branchLocalName);
 				var modelDataset = datasetLoader.loadDataset(datasetURI);			
 				if (modelDataset.isEmpty()) 
 					throw new RuntimeException(datasetURI+" could not be loaded");			
@@ -97,8 +122,8 @@ public class PersistedEventStreamingSetupFactory extends AbstractEventStreamingS
 				
 				// setting up branch
 				if (repoURI == null) repoURI = new URI(AbstractEventStreamingSetup.defaultRepoURI);
-				var branchURI = BranchBuilder.generateBranchURI(new URI(AbstractEventStreamingSetup.defaultBranchBaseURI), branchLocalName);
-				var stateKeeper = new StateKeeperImpl(branchURI, cacheFactory.getCache(), eventstoreFactory.getEventStore(branchURI.toString()));				
+				branchURI = BranchBuilder.generateBranchURI(new URI(AbstractEventStreamingSetup.defaultBranchBaseURI), branchLocalName);
+				var stateKeeper = new StateKeeperImpl(branchURI, getBranchStateCache(), getEventStore(branchURI.toString()));				
 				var branch = new BranchBuilder(repoURI, repoDataset, repoModel)
 						.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF)		
 						.setDataset(modelDataset.get())
@@ -122,12 +147,49 @@ public class PersistedEventStreamingSetupFactory extends AbstractEventStreamingS
 				
 				// set up additional wrapper components
 				var coreTypeFactory = new CoreTypeFactory(resolver);
-				return new PersistedEventStreamingSetupFactory(resolver, changeTransformer
-						, coreTypeFactory, observer.getFactory(), branch, stateKeeper);																			
+				var factory = new PersistedEventStreamingSetupFactory(resolver, changeTransformer
+						, coreTypeFactory, observer.getFactory(), branch, stateKeeper);			
+				factory.builder = this;
+				return factory;
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
 		}
+		
+		protected void resetData() {
+			// remove triple store data
+			this.datasetLoader.removeDataset(datasetURI);
+			// remove event data
+			this.eventstoreFactory.removeBranchEventData(branchURI.toString());	
+			// remove all cache data
+			try {
+				cacheFactory.clearAndCloseCache();
+			} catch (RocksDBException e) {
+				log.error(e.getMessage());
+			}
+		}
 	}
+	
+	@Slf4j
+	public static class TripleStoreOnlyFactoryBuilder extends FactoryBuilder{
+		
+		@Override
+		protected PerBranchEventStore getEventStore(String branchURI) {
+			return new InMemoryEventStore();
+		}
+		
+		@Override
+		protected BranchStateCache getBranchStateCache() throws Exception {
+			return new InMemoryBranchStateCache();
+		}
+		
+		@Override
+		protected void resetData() {
+			// just triple store to reset
+			this.datasetLoader.removeDataset(datasetURI);
+		}
+	}
+
+
 	
 }

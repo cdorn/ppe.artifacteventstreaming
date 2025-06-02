@@ -170,13 +170,28 @@ public class RuleEvaluationDTO {
 				var scope = iter.next().getResource().as(OntIndividual.class);
 				scopesToRemoveRuleFrom.add(scope);
 			}
-			scopesToRemoveRuleFrom.forEach(scope -> scope.remove(schemaProvider.getUsedInRuleProperty().asProperty(), ruleEvalObj));
+			scopesToRemoveRuleFrom.forEach(scope -> { 
+				scope.remove(schemaProvider.getUsedInRuleProperty().asProperty(), ruleEvalObj); 
+				removeEmptyScopes(scope);
+			});
 			
 			// remove repair nodes
 			deleteRepairTree();
 			
 			//then remove self
 			this.ruleEvalObj.removeProperties();
+		}
+		
+		private void removeEmptyScopes(OntIndividual scope) {
+			var remainingRuleEvals = scope.getPropertyResourceValue(schemaProvider.getUsedInRuleProperty().asProperty());
+			if (remainingRuleEvals == null) { // if scope now empty, remove scope
+				// remove first from owner, then clear scope
+				var owner = scope.getPropertyResourceValue(schemaProvider.getUsingElementProperty().asProperty());
+				if (owner != null) { // perhaps already deleted in some cases
+					scope.getModel().remove(owner, schemaProvider.getHasRuleScope().asProperty(), scope);
+				}
+				scope.removeProperties();
+			}
 		}
 		
 		private void deleteRepairTree() {

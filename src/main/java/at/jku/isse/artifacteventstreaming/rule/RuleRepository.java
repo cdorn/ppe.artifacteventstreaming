@@ -52,7 +52,7 @@ public class RuleRepository {
 	 * this initialization does not cause rule reevaluation, just prepares all wrapper objects, evaluation is triggered by incoming change events
 	 */
 	private void loadFromModel() {		
-		factory.getDefinitionType().individuals(true).toList().stream().forEach(this::storeRuleDefinition); // FIXME: for some reason ruleEvalResources are also included here, need filtering out to avoid log warn messages
+		factory.getDefinitionType().individuals(false).toList().stream().forEach(this::storeRuleDefinition); // FIXME: for some reason ruleEvalResources are also included here, need filtering out to avoid log warn messages
 		factory.getResultBaseType().individuals().toList().stream().forEach(eval ->  // we need to have a list first as otherwise inference has concurrent modification exception
 				loadAndStoreEvaluationWrapperFromModel(eval)
 			);
@@ -178,6 +178,7 @@ public class RuleRepository {
 	 */
 	public void removeRuleDefinitionWrapper(@NonNull String definitionURI) {
 		definitions.remove(definitionURI);
+		//FIXME: how to remove rdf wrappers upon definition removal?! we dont know about these at this level
 	}
 	
 	/**

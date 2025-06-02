@@ -165,6 +165,9 @@ public class SetWrapper extends TypedCollectionResource implements Set<Object> {
 		@Override
 		public Object next() {			
 			RDFNode nextNode = delegate.next().getObject();
+			if (!delegate.hasNext()) {
+				delegate.close();
+			}
 			if (nextNode.isLiteral())
 				return nextNode.asLiteral().getValue();
 			else

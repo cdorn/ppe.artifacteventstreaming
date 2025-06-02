@@ -54,6 +54,11 @@ public class InMemoryEventStreamingSetupFactory extends AbstractEventStreamingSe
 		branch.startCommitHandlers(null); 		 
 	}
 	
+	@Override
+	public void resetPersistedData() {
+		// no op
+	}
+	
 	@Slf4j
 	public static class FactoryBuilder {
 	
@@ -110,5 +115,7 @@ public class InMemoryEventStreamingSetupFactory extends AbstractEventStreamingSe
 			}
 		}
 	}
+
+
 	
 }
