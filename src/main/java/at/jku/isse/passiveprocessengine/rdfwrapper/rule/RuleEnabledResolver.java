@@ -73,7 +73,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 			var wrapper = new RDFRuleDefinitionWrapper(ruleDef, this);			
 			typeIndex.put(ruleDef.getRuleDefinition(), wrapper);	
 		});
-		
+		initCacheOfTypes();
 //		var ruleEvalWrappers = ruleSchema.getResultBaseType().individuals().collect(Collectors.toSet()); // we dont want to cache the result resources
 //		model.individuals()
 //			.filter(indiv -> !ruleEvalWrappers.contains(indiv))

@@ -76,6 +76,7 @@ public class NodeToDomainResolver {
 		model.classes()
 		.filter(ontClass -> !isBlacklistedNamespace(ontClass.getNameSpace()))		
 		.forEach(this::loadTypeInstances );		
+		initCacheOfTypes();
 	}
 	
 	protected void loadTypeInstances(OntClass ontClass) {
@@ -84,6 +85,10 @@ public class NodeToDomainResolver {
 		if (!ontClass.equals(metaschemata.getMetaElements().getMetaClass())) {
 			ontClass.individuals(true).forEach(indiv -> instanceIndex.putIfAbsent(indiv.getURI(), createMostSpecificInstance(indiv, type, constructor)));
 		}
+	}
+	
+	protected void initCacheOfTypes() {
+		typeIndex.values().stream().forEach(type -> type.cacheSuperProperties());
 	}
 	
 	protected RDFInstance createMostSpecificInstance(OntIndividual indiv, RDFInstanceType type, Constructor<? extends RDFInstance> subClassConstructor) {
