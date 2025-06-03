@@ -21,6 +21,7 @@ public class MockSchema {
 	@Getter	public OntDataProperty keyProperty;
 	@Getter	public OntDataProperty stateProperty;
 	@Getter	public OntDataProperty priorityProperty;
+	@Getter	public OntDataProperty derivedLongProperty;
 	@Getter public OntObjectProperty requirementsProperty;
 	@Getter public OntObjectProperty bugsProperty;
 	@Getter public OntObjectProperty upstreamProperty;
@@ -37,6 +38,8 @@ public class MockSchema {
 		keyProperty = schemaUtils.getSingleType().createSingleDataPropertyType(TEST_SCHEMA_URI+"key", issueType, model.getDatatype(XSD.xstring));
 		stateProperty = schemaUtils.getSingleType().createSingleDataPropertyType(TEST_SCHEMA_URI+"state", issueType, model.getDatatype(XSD.xstring));
 		priorityProperty = schemaUtils.getSingleType().createSingleDataPropertyType(TEST_SCHEMA_URI+"priority", issueType, model.getDatatype(XSD.xint));
+		derivedLongProperty = schemaUtils.getSingleType().createSingleDataPropertyType(TEST_SCHEMA_URI+"derivedPriority", issueType, model.getDatatype(XSD.xlong));
+		
 		
 		requirementsProperty =  schemaUtils.getSetType().createObjectPropertyType( TEST_SCHEMA_URI+"requirements", issueType, issueType);  
 		bugsProperty = schemaUtils.getSingleType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"bugs", issueType, issueType);

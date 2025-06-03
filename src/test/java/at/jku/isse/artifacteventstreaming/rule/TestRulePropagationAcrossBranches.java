@@ -90,9 +90,6 @@ class TestRulePropagationAcrossBranches {
 		// connect branches
 		branchSource.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(branchSource, branchDestination, new InMemoryBranchStateCache()));			
 		
-		System.out.println(String.format("Source GraphdId %s DestGraphId %s", ""+System.identityHashCode(sourceModel.getGraph()), ""+System.identityHashCode(destModel.getGraph()) ));
-		
-		
 		branchDestination.startCommitHandlers(null);
 		branchSource.startCommitHandlers(null);
 		
