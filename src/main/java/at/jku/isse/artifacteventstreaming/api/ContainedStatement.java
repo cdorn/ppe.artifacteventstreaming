@@ -1,5 +1,6 @@
 package at.jku.isse.artifacteventstreaming.api;
 
+import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
@@ -23,5 +24,13 @@ public interface ContainedStatement extends Statement {
 	 * @param containingProperty the property that points to the contained resource that is the subject of the underlying statement
 	 */
 	public void augmentWithContainment(Resource container, Property containingProperty);
+	
+	
+	
+	/**
+	 * @param model to remove any reference to a prior model from which the statement emerged, lets ensure that any statement uses the new model
+	 * without adding the statement to the model or removing it from the model.
+	 */
+	public void transferToModel(OntModel model);
 	
 }

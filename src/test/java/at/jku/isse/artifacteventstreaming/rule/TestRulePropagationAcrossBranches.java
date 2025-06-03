@@ -88,24 +88,28 @@ class TestRulePropagationAcrossBranches {
 		observerSource = observerFactorySource.buildActiveInstance("RuleTriggerObserverSource", sourceModel, repoModel);
 		branchSource.appendBranchInternalCommitService(observerSource); // register rule service with branch
 		// connect branches
-		branchSource.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(branchSource, branchDestination, new InMemoryBranchStateCache()));
+		branchSource.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(branchSource, branchDestination, new InMemoryBranchStateCache()));			
+		
+		System.out.println(String.format("Source GraphdId %s DestGraphId %s", ""+System.identityHashCode(sourceModel.getGraph()), ""+System.identityHashCode(destModel.getGraph()) ));
+		
 		
 		branchDestination.startCommitHandlers(null);
 		branchSource.startCommitHandlers(null);
-		branchSource.getDataset().begin();
 		
 		var sizeSource = sourceModel.size();
 		var sizeDest = destModel.size();
 		if (sizeSource != sizeDest) {
-			ModelDiff.printDiff(sourceModel, destModel, true);
+			var diff = ModelDiff.printDiff(sourceModel, destModel, true);
+			assertEquals(0, diff.getKey());
+			assertEquals(0, diff.getValue());
 		}
-		//assertEquals(sizeSource, sizeDest);
 	}
 	
 	
 	
 	@Test
 	void testRulePropagationToOtherBranch() throws Exception {				
+		branchSource.getDataset().begin();
 		// get and activate a rule
 		var def = schema.getRegisteredRuleRequirementsSizeGT1(1, observerSource.getRepo());
 		branchSource.commitChanges("Init commit");
@@ -138,9 +142,11 @@ class TestRulePropagationAcrossBranches {
 		var sizeSource = sourceModel.size();
 		var sizeDest = destModel.size();
 		if (sizeSource != sizeDest) {
-			ModelDiff.printDiff(sourceModel, destModel, true);
+			var diff = ModelDiff.printDiff(sourceModel, destModel, true);
+			assertEquals(0, diff.getKey());
+			assertEquals(0, diff.getValue());
 		}
-		assertEquals(sizeSource, sizeDest);
+		
 	}
 	
 	

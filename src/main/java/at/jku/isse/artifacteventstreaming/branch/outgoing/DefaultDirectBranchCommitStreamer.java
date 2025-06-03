@@ -67,6 +67,7 @@ public class DefaultDirectBranchCommitStreamer extends AbstractHandlerBase {
 			log.debug(String.format("About to enqueue %s from brach %s to branch %s", commit.getCommitId(), sourceBranch.getBranchId(), destinationBranch.getBranchId()));
 			destinationBranch.enqueueIncomingCommit(commit);
 			cache.put(getCacheKey(), commit.getCommitId());
+			log.debug(String.format("Successfully enqueued %s from brach %s to branch %s", commit.getCommitId(), sourceBranch.getBranchId(), destinationBranch.getBranchId()));
 		} catch (Exception e) {
 			log.warn(String.format("Error during enqueuing commit %s  from branch %s to branch %s: %s", commit.getCommitId(), sourceBranch.getBranchId(), destinationBranch.getBranchId(), e.getMessage()));
 			//TODO: retry later necessary

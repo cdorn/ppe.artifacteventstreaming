@@ -53,9 +53,9 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     	singleFactory = propertyCardinalities.getSingleType();        
     }
     
-    public OntProperty resolveToProperty(OntClass ontClass, String propertyName) {
-    	return ontClass.declaredProperties()
-    	.filter(prop -> prop.getLocalName().equals(propertyName)) 
+    public OntProperty resolveToProperty(OntClass ontClass, String propertyName) {    	    			
+    	var allProps = ontClass.declaredProperties().toList();
+    	return allProps.stream().filter(prop -> prop.getLocalName().equals(propertyName)) 
     	.findAny().orElse(null);
     }
 
