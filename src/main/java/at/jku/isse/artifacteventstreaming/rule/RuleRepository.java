@@ -301,7 +301,7 @@ public class RuleRepository {
 	
 	private Entry<OntIndividual, Property> findListOwner(OntIndividual list) {		
 		// first obtain the owner of the list
-		var optOwner = factory.getSchemaFactory().getCurrentListOwner(list);
+		var optOwner = factory.getSchemaFactory().getListType().getCurrentListOwner(list);
 		// should only exist one such resource as we dont share lists across individuals
 		if (optOwner.isEmpty()) {			
 			return null;

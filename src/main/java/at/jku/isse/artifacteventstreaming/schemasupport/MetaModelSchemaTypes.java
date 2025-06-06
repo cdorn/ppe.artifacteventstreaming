@@ -2,24 +2,20 @@ package at.jku.isse.artifacteventstreaming.schemasupport;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntClass;
-import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntProperty;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.tdb2.TDB2Factory;
 import org.apache.jena.vocabulary.RDFS;
 
-import at.jku.isse.artifacteventstreaming.api.AES;
-import at.jku.isse.artifacteventstreaming.replay.StatementAugmentationSession.StatementWrapper;
 import lombok.Getter;
 
 public class MetaModelSchemaTypes {
@@ -33,17 +29,20 @@ public class MetaModelSchemaTypes {
 	@Getter
 	private final SingleResourceType singleType;	
 	@Getter
-	private final SetResourceType setType = new SetResourceType();
+	private final SetResourceType setType;
+	@Getter
+	private final BasePropertyType primaryPropertyType;
 	
 	public MetaModelSchemaTypes(OntModel model, MetaModelOntology meta) {			
 		// we init this model with the model fron the meta ontology
 		meta.getMetaontology().begin(ReadWrite.READ);
 		model.add(meta.getMetamodel());
 		meta.getMetaontology().end();
-				
-		singleType = new SingleResourceType(model);
-		mapType = new MapResourceType(model, singleType); 
-		listType = new ListResourceType(model, singleType); 		
+		primaryPropertyType = new BasePropertyType(model);	
+		setType =  new SetResourceType(primaryPropertyType);
+		singleType = new SingleResourceType(model, primaryPropertyType);
+		mapType = new MapResourceType(model, primaryPropertyType); 
+		listType = new ListResourceType(model, primaryPropertyType, singleType); 		
 	}
 	
 	/**
@@ -51,9 +50,11 @@ public class MetaModelSchemaTypes {
 	 * @param model  pre-filled model that already contains metamodelontology
 	 */
 	public MetaModelSchemaTypes(OntModel model) {									
-		singleType = new SingleResourceType(model);
-		mapType = new MapResourceType(model, singleType); 
-		listType = new ListResourceType(model, singleType); 		
+		primaryPropertyType = new BasePropertyType(model);	
+		setType =  new SetResourceType(primaryPropertyType);
+		singleType = new SingleResourceType(model, primaryPropertyType);
+		mapType = new MapResourceType(model, primaryPropertyType); 
+		listType = new ListResourceType(model, primaryPropertyType, singleType); 
 	}
 	
 	/**
@@ -87,7 +88,7 @@ public class MetaModelSchemaTypes {
 			if (mapType.isMapContainerReferenceProperty(prop)) {
 				mapType.removeMapContainerReferenceProperty(prop);
 			} else {
-				singleType.removeBaseProperty(prop);
+				primaryPropertyType.removeBaseProperty(prop);
 			}
 		});
 		ontClass.removeProperties();
@@ -110,16 +111,25 @@ public class MetaModelSchemaTypes {
 		//return properties.distinct().filter(prop -> prop.domains().anyMatch(domain -> domain.equals(ontClass)));
 	}
 
-	public Optional<Resource> getCurrentListOwner(OntIndividual list) {
-		return Optional.ofNullable(list.getPropertyResourceValue(getListType().getContainerProperty().asProperty()));
+	/**
+	 * @param propertyURI to be checked across single, set, list, map types to be removed from caches
+	 * no change to model, only in-memory cache data structure affected
+	 */
+	public void removeURIfromCaches(String propertyURI) {
+		this.primaryPropertyType.removePropertyURIfromCache(propertyURI);
+		this.singleType.removePropertyURIfromCache(propertyURI);
+		this.mapType.removePropertyURIfromCache(propertyURI);
+		this.listType.removePropertyURIfromCache(propertyURI);
+		this.setType.removePropertyURIfromCache(propertyURI);
 	}
-
-	public Optional<Resource> getFormerListOwner(List<StatementWrapper> stmts) {
-		return stmts.stream().filter(wrapper -> wrapper.getOp().equals(AES.OPTYPE.REMOVE))
-			.map(StatementWrapper::getStmt)
-			.filter(stmt -> stmt.getPredicate().equals(getListType().getContainerProperty().asProperty()))
-			.map(Statement::getResource)
-			.findAny();
+	
+	public void addURItoCaches(String propertyURI, Model modelAddedTo) {
+		var prop = modelAddedTo.getProperty(propertyURI);
+		if (prop != null) {
+			// we dont check set type, map type or list type as currently these dont cache properties themselves
+			singleType.addIfIsSinglePropertyBasedOnSuperProperty(prop);
+			primaryPropertyType.addToCache(propertyURI);
+		} 
 	}
 	
 	public static class MetaModelOntology {
@@ -157,5 +167,7 @@ public class MetaModelSchemaTypes {
 			return new MetaModelOntology(false);
 		}
 	}
+
+
 	
 }

@@ -42,9 +42,9 @@ public class MockSchema {
 		
 		
 		requirementsProperty =  schemaUtils.getSetType().createObjectPropertyType( TEST_SCHEMA_URI+"requirements", issueType, issueType);  
-		bugsProperty = schemaUtils.getSingleType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"bugs", issueType, issueType);
-		upstreamProperty = schemaUtils.getSingleType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"upstream", issueType, issueType);
-		downstreamProperty = schemaUtils.getSingleType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"downstream", issueType, issueType);
+		bugsProperty = schemaUtils.getPrimaryPropertyType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"bugs", issueType, issueType);
+		upstreamProperty = schemaUtils.getPrimaryPropertyType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"upstream", issueType, issueType);
+		downstreamProperty = schemaUtils.getPrimaryPropertyType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"downstream", issueType, issueType);
 		
 		parentProperty = schemaUtils.getSingleType().createSingleObjectPropertyType(TEST_SCHEMA_URI+"parent", issueType, issueType);
 		labelProperty = schemaUtils.getListType().addLiteralListProperty(issueType, TEST_SCHEMA_URI+"label", model.getDatatype(XSD.xstring));

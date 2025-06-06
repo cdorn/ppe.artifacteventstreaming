@@ -126,7 +126,7 @@ public class StatementAugmentationSession {
 		 */  
 		var id = list.isAnon() ? list.getId() : list.getURI();
 		// first obtain the owner of the list
-		var optOwner = isDelete ? schemaUtils.getFormerListOwner(stmts) : schemaUtils.getCurrentListOwner((OntIndividual) list);
+		var optOwner = isDelete ? schemaUtils.getListType().getFormerListOwner(stmts) : schemaUtils.getListType().getCurrentListOwner((OntIndividual) list);
 		// should only exist one such resource as we dont share lists across individuals
 		if (optOwner.isEmpty()) {
 			log.error("Encountered ownerless list "+id);

@@ -11,6 +11,7 @@ import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
 
+import at.jku.isse.artifacteventstreaming.schemasupport.BasePropertyType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 
@@ -76,12 +77,14 @@ public class RuleSchemaFactory {
 	private final OntModel model;
 	private final Dataset ontology;
 	private final SingleResourceType singleType;	
+	private final BasePropertyType primaryPropertyType;
 
 	public RuleSchemaFactory(MetaModelSchemaTypes.MetaModelOntology metamodel) {
 		this.ontology = metamodel.getMetaontology();
 		ontology.begin(ReadWrite.WRITE);
 		this.model = metamodel.getMetamodel();
-		this.singleType = new SingleResourceType(model); // we use this type provider only on the meta model, no actual runtime model uses this instance
+		primaryPropertyType = new BasePropertyType(model);
+		this.singleType = new SingleResourceType(model, primaryPropertyType); // we use this type provider only on the meta model, no actual runtime model uses this instance
 		initTypes();
 		model.setNsPrefix("rules", uri);
 		ontology.commit();
@@ -194,7 +197,7 @@ public class RuleSchemaFactory {
 
 		OntObjectProperty usedInRuleProperty = model.getObjectProperty(usedInRuleURI);
 		if (usedInRuleProperty == null) {
-			usedInRuleProperty = singleType.createBaseObjectPropertyType(usedInRuleURI, ruleScopeCollection, resultBaseType);		
+			usedInRuleProperty = primaryPropertyType.createBaseObjectPropertyType(usedInRuleURI, ruleScopeCollection, resultBaseType);		
 			usedInRuleProperty.addInverseProperty(havingScopePartProperty);
 		}
 	}

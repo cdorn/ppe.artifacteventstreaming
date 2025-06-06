@@ -13,6 +13,7 @@ import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.ontapi.model.OntProperty;
 import org.apache.jena.rdf.model.AnonId;
+import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.OWL2;
@@ -26,7 +27,7 @@ public class SingleResourceType {
 	public static final String SINGLE_NS = "http://at.jku.isse.single#";
 	
 	public static final String SINGLE_OBJECT_URI = SINGLE_NS+"object";
-	public static final String SINGEL_LITERAL_URI = SINGLE_NS+"literal";
+	public static final String SINGLE_LITERAL_URI = SINGLE_NS+"literal";
 	
 	@Getter
 	private final OntObjectProperty singleObjectProperty;
@@ -36,19 +37,16 @@ public class SingleResourceType {
 	private final Set<OntProperty> objectSubpropertyCache = new HashSet<>();
 	private final Set<OntProperty> dataSubpropertyCache = new HashSet<>();
 	
-	private final Set<String> propertyCache = new HashSet<>();
-	
-	public SingleResourceType(OntModel model) {			
+	public final BasePropertyType primaryPropertyType;
+
+	public SingleResourceType(OntModel model, BasePropertyType primaryPropertyType) {	
+		this.primaryPropertyType = primaryPropertyType;
 		singleObjectProperty = model.getObjectProperty(SINGLE_OBJECT_URI);
-		singleLiteralProperty = model.getDataProperty(SINGEL_LITERAL_URI);
-		fillCaches(model);		
+		singleLiteralProperty = model.getDataProperty(SINGLE_LITERAL_URI);
+		fillCaches();		
 	}
 	
-	private void fillCaches(OntModel model) {		
-		var iter = model.listResourcesWithProperty(RDF.type, RDF.Nodes.Property);
-		while (iter.hasNext()) {
-			propertyCache.add(iter.next().getURI());
-		}
+	private void fillCaches() {		
 		singleObjectProperty.subProperties().forEach(objectSubpropertyCache::add);
 		singleLiteralProperty.subProperties().forEach(dataSubpropertyCache::add);
 	}
@@ -57,38 +55,8 @@ public class SingleResourceType {
 		return dataSubpropertyCache.contains(prop) || objectSubpropertyCache.contains(prop);
 	}
 	
-	/*
-	 * checks if a property exists for that URI, if that property has been created via this object.
-	 * */
-	public boolean existsPrimaryProperty(String uri) {
-		//return model.getGraph().contains(ResourceFactory.createResource(uri).asNode(), RDF.Nodes.type, Node.ANY);
-		return propertyCache.contains(uri);
-	}
-	
 	public OntDataProperty createBaseDataPropertyType(String propUri, OntClass domain, OntDataRange range ) {
-		return createBaseDataPropertyType(domain.getModel(), propUri, List.of(domain), range);
-	}
-
-	public OntDataProperty createBaseDataPropertyType(@NonNull OntModel model, @NonNull String propUri, @NonNull List<OntClass> domains, @NonNull OntDataRange range ) {				
-		//if (model.getDataProperty(propUri) != null)
-		if (existsPrimaryProperty(propUri))
-			return null;
-		var prop = model.createDataProperty(propUri);
-		domains.forEach(prop::addDomain);		
-		prop.addRange(range);			
-		propertyCache.add(propUri);
-		return prop;	
-	}
-
-	public OntObjectProperty createBaseObjectPropertyType(@NonNull String propUri, @NonNull OntClass domain, @NonNull OntClass range ) {
-		//if (domain.getModel().getObjectProperty(propUri) != null)
-		if (existsPrimaryProperty(propUri))
-			return null;
-		var prop = domain.getModel().createObjectProperty(propUri);
-		prop.addRange(range);
-		prop.addDomain(domain);
-		propertyCache.add(propUri);
-		return prop;
+		return primaryPropertyType.createBaseDataPropertyType(domain.getModel(), propUri, List.of(domain), range);
 	}
 
 	public OntDataProperty createSingleDataPropertyType(@NonNull String propURI, @NonNull OntClass domain, @NonNull OntDataRange range) {
@@ -104,7 +72,7 @@ public class SingleResourceType {
 
 	public OntDataProperty createSingleDataPropertyType(@NonNull String propURI, @NonNull List<OntClass> domains, @NonNull OntDataRange range) {
 		var localModel = domains.get(0).getModel();
-		var prop = createBaseDataPropertyType(localModel, propURI, domains, range);
+		var prop = primaryPropertyType.createBaseDataPropertyType(localModel, propURI, domains, range);
 		if (prop != null) {
 			var maxOneProp = getMaxOneDataCardinalityRestriction(localModel, prop, range);
 			domains.forEach(domain -> domain.addProperty(RDFS.subClassOf, maxOneProp));			//domain.addSuperClass(maxOneProp)
@@ -115,7 +83,7 @@ public class SingleResourceType {
 	}
 
 	public OntObjectProperty createSingleObjectPropertyType(@NonNull String propURI, @NonNull OntClass domain, @NonNull OntClass range) {
-		var prop = createBaseObjectPropertyType(propURI, domain, range);
+		var prop = primaryPropertyType.createBaseObjectPropertyType(propURI, domain, range);
 		if (prop != null) {
 			var maxOneProp = getMaxOneObjectCardinalityRestriction(domain.getModel(), prop, range);
 			//domain.addSuperClass(maxOneProp);
@@ -161,11 +129,6 @@ public class SingleResourceType {
 		return !(OWL2.Thing.equals(rangeOrClass) || RDFS.Literal.equals(rangeOrClass));
 	}
 	
-	public void removeBaseProperty(@NonNull OntProperty ontProperty) {
-		propertyCache.remove(ontProperty.getURI());
-		ontProperty.removeProperties();
-	}
-	
 	public void removeSingleProperty(@NonNull OntClass owner, @NonNull OntProperty ontProperty) {
 		var model = ontProperty.getModel();
 		// first, remove restriction
@@ -177,7 +140,18 @@ public class SingleResourceType {
 		objectSubpropertyCache.remove(ontProperty); 
 		dataSubpropertyCache.remove(ontProperty);
 		// then remove other property predicates
-		removeBaseProperty(ontProperty);
+		primaryPropertyType.removeBaseProperty(ontProperty);
+	}
+	
+	public void removePropertyURIfromCache(String propertyURI) {
+		objectSubpropertyCache.stream()
+		.filter(prop -> prop.getURI().equals(propertyURI))
+		.findAny()
+		.ifPresent(objectSubpropertyCache::remove);
+		dataSubpropertyCache.stream()
+		.filter(prop -> prop.getURI().equals(propertyURI))
+		.findAny()
+		.ifPresent(dataSubpropertyCache::remove);
 	}
 	
 	protected static class SingleSchemaFactory {
@@ -194,11 +168,33 @@ public class SingleResourceType {
 			if (singleObjectProperty == null) {
 				model.createObjectProperty(SINGLE_OBJECT_URI);
 			}
-			var singleLiteralProperty = model.getDataProperty(SINGEL_LITERAL_URI);
+			var singleLiteralProperty = model.getDataProperty(SINGLE_LITERAL_URI);
 			if (singleLiteralProperty == null) {
-				model.createDataProperty(SINGEL_LITERAL_URI);
+				model.createDataProperty(SINGLE_LITERAL_URI);
 			}
 		}
 
 	}
+
+	public boolean addIfIsSinglePropertyBasedOnSuperProperty(Property genProp) {
+		if (genProp.canAs(OntDataProperty.class)) {
+			var ontDataProp = genProp.as(OntDataProperty.class);
+			if (ontDataProp.superProperties().anyMatch(prop -> prop.equals(singleLiteralProperty))) {
+				dataSubpropertyCache.add(ontDataProp);
+				return true;
+			} else
+				return false; // nothing added
+		}
+		if (genProp.canAs(OntObjectProperty.class)) {
+			var ontObjProp = genProp.as(OntObjectProperty.class);
+			if (ontObjProp.superProperties().anyMatch(prop -> prop.equals(singleObjectProperty))) {
+				objectSubpropertyCache.add(ontObjProp);
+				return true;
+			}
+				return false; // nothing added
+		}
+		return false;
+	}
+
+
 }

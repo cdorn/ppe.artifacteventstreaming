@@ -9,6 +9,7 @@ import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.vocabulary.XSD;
 
+import at.jku.isse.artifacteventstreaming.schemasupport.BasePropertyType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
@@ -172,8 +173,8 @@ public class MetaElementFactory {
 		}				
 
 		private void initTypes() {
-			var singleType = new SingleResourceType(model); // we use this type provider only on the meta model, no actual runtime model uses this instance
-			var mapType = new MapResourceType(model, singleType);
+			var baseType = new BasePropertyType(model);// we use this type provider only on the meta model, no actual runtime model uses this instance
+			var mapType = new MapResourceType(model, baseType);
 			
 			var metaClass = model.getOntClass(META_NS+META_CLASS_LOCALNAME);
 			if (metaClass == null) {

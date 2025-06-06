@@ -143,7 +143,7 @@ public class RDFInstanceType extends RDFElement {
 		if (type.isPrimitiveType()) {
 			return resolver.getMetaschemata().getSingleType().createBaseDataPropertyType(propUri, this.type, type.getPrimitiveType());
 		} else {
-			return resolver.getMetaschemata().getSingleType().createBaseObjectPropertyType(propUri, this.type, type.getClassType());
+			return resolver.getMetaschemata().getPrimaryPropertyType().createBaseObjectPropertyType(propUri, this.type, type.getClassType());
 		}
 	}
 	
