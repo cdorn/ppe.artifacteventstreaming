@@ -43,6 +43,7 @@ class TestRemoveSchemaElements {
 		metaModel.getMetaontology().begin(ReadWrite.READ);
 		var sizeBegin = model.size();
 		var sizeMetaBegin = metaModel.getMetamodel().size();
+		var knownURIsBegin = metaTypes.getPrimaryPropertyType().getKnownPropertyURIs();
 		// create class plus properties
 		var ontClass = model.createOntClass(NS+"Demo");
 		var sizeMiddle = model.size();
@@ -65,7 +66,8 @@ class TestRemoveSchemaElements {
 		metaModel.getMetaontology().end();
 		assertEquals(sizeMetaBegin, sizeMetaEnd);
 		assertEquals(sizeBegin, sizeEnd);
-		
+		var knownURIsEnd = metaTypes.getPrimaryPropertyType().getKnownPropertyURIs();
+		assertEquals(knownURIsBegin.size(), knownURIsEnd.size());
 	}
 	
 	@Test
@@ -75,6 +77,7 @@ class TestRemoveSchemaElements {
 		metaModel.getMetaontology().begin(ReadWrite.READ);
 		var sizeBegin = model.size();
 		var sizeMetaBegin = metaModel.getMetamodel().size();
+		var knownURIsBegin = metaTypes.getPrimaryPropertyType().getKnownPropertyURIs();
 		var modelBegin = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF );
 		modelBegin.add(model);
 		// create class plus properties
@@ -105,7 +108,8 @@ class TestRemoveSchemaElements {
 			printDiff(modelBegin, model);
 		}
 		assertEquals(sizeBegin, sizeEnd);
-		
+		var knownURIsEnd = metaTypes.getPrimaryPropertyType().getKnownPropertyURIs();
+		assertEquals(knownURIsBegin.size(), knownURIsEnd.size());
 	}
 	
 	@Test
@@ -115,6 +119,7 @@ class TestRemoveSchemaElements {
 		metaModel.getMetaontology().begin(ReadWrite.READ);
 		var sizeBegin = model.size();
 		var sizeMetaBegin = metaModel.getMetamodel().size();
+		var knownURIsBegin = metaTypes.getPrimaryPropertyType().getKnownPropertyURIs();
 		var modelBegin = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF );
 		modelBegin.add(model);
 		// create class plus properties
@@ -145,7 +150,8 @@ class TestRemoveSchemaElements {
 			printDiff(modelBegin, model);
 		}
 		assertEquals(sizeBegin, sizeEnd);
-		
+		var knownURIsEnd = metaTypes.getPrimaryPropertyType().getKnownPropertyURIs();
+		assertEquals(knownURIsBegin.size(), knownURIsEnd.size());
 	}
 
 	@Test
@@ -155,6 +161,7 @@ class TestRemoveSchemaElements {
 		metaModel.getMetaontology().begin(ReadWrite.READ);
 		var sizeBegin = model.size();
 		var sizeMetaBegin = metaModel.getMetamodel().size();
+		var knownURIsBegin = metaTypes.getPrimaryPropertyType().getKnownPropertyURIs();
 		var modelBegin = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF );
 		modelBegin.add(model);
 		// create class plus properties
@@ -188,7 +195,8 @@ class TestRemoveSchemaElements {
 		}
 		assertEquals(sizeBegin, sizeEnd);
 		assertEquals(subPropsSize, subPropsSizeEnd+1);
-		
+		var knownURIsEnd = metaTypes.getPrimaryPropertyType().getKnownPropertyURIs();
+		assertEquals(knownURIsBegin.size(), knownURIsEnd.size());
 	}
 	
 	@Test
@@ -198,6 +206,7 @@ class TestRemoveSchemaElements {
 		metaModel.getMetaontology().begin(ReadWrite.READ);
 		var sizeBegin = model.size();
 		var sizeMetaBegin = metaModel.getMetamodel().size();
+		var knownURIsBegin = metaTypes.getPrimaryPropertyType().getKnownPropertyURIs();
 		var modelBegin = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF );
 		modelBegin.add(model);
 		// create class plus properties
@@ -228,7 +237,8 @@ class TestRemoveSchemaElements {
 			printDiff(modelBegin, model);
 		}
 		assertEquals(sizeBegin, sizeEnd);
-		
+		var knownURIsEnd = metaTypes.getPrimaryPropertyType().getKnownPropertyURIs();
+		assertEquals(knownURIsBegin.size(), knownURIsEnd.size());
 	}
 	
 	@Test
@@ -238,6 +248,7 @@ class TestRemoveSchemaElements {
 		dataset.begin(ReadWrite.WRITE);
 		metaModel.getMetaontology().begin(ReadWrite.READ);
 		var sizeMetaBegin = metaModel.getMetamodel().size();
+		
 		var modelBegin = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF );
 		modelBegin.add(model);
 		// create class plus properties
@@ -248,6 +259,7 @@ class TestRemoveSchemaElements {
 		var propSingle = metaTypes.getSingleType().createSingleDataPropertyType(NS+"demoSingle", ontClass, model.getDatatype(XSD.xstring));
 		
 		var sizeBegin = model.size();
+		var knownURIsBegin = metaTypes.getPrimaryPropertyType().getKnownPropertyURIs();
 		var ontSubClass = model.createOntClass(NS+"SubDemo");
 		ontClass.addSubClass(ontSubClass);
 		var subpropList = metaTypes.getListType().addLiteralListProperty(ontSubClass, "demoListSub", model.getDatatype(XSD.xstring));
@@ -280,6 +292,8 @@ class TestRemoveSchemaElements {
 			printDiff(modelBegin, model);
 		}
 		assertEquals(sizeBegin, sizeEnd);
+		var knownURIsEnd = metaTypes.getPrimaryPropertyType().getKnownPropertyURIs();
+		assertEquals(knownURIsBegin.size(), knownURIsEnd.size());
 	}
 	
 	@Test
@@ -289,6 +303,7 @@ class TestRemoveSchemaElements {
 		metaModel.getMetaontology().begin(ReadWrite.READ);
 		var sizeBegin = model.size();
 		var sizeMetaBegin = metaModel.getMetamodel().size();
+		var knownURIsBegin = metaTypes.getPrimaryPropertyType().getKnownPropertyURIs();
 		var modelBegin = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF );
 		modelBegin.add(model);
 		// create class plus properties
@@ -331,6 +346,8 @@ class TestRemoveSchemaElements {
 			printDiff(modelBegin, model);
 		}
 		assertEquals(sizeBegin, sizeEnd);	
+		var knownURIsEnd = metaTypes.getPrimaryPropertyType().getKnownPropertyURIs();
+		assertEquals(knownURIsBegin.size(), knownURIsEnd.size());
 	}
 	
 	private void printDiff(OntModel modelBegin, OntModel model) {

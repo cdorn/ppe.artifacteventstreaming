@@ -1,5 +1,6 @@
 package at.jku.isse.passiveprocessengine.rdfwrapper.events;
 
+import java.net.URI;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -67,9 +68,9 @@ public class TransformationSession extends StatementAugmentationSession {
 				.forEach(wrapper -> {
 			var value = resolver.convertFromRDF(wrapper.getStmt().getObject());
 			if (wrapper.getOp().equals(AES.OPTYPE.ADD)) {
-				updates.add(new PropertyChange.Add(listProp.getLocalName(), changeSubject, value));
+				updates.add(new PropertyChange.Add(URI.create(listProp.getURI()), changeSubject, value));
 			} else {
-				updates.add(new PropertyChange.Remove(listProp.getLocalName(), changeSubject, value));
+				updates.add(new PropertyChange.Remove(URI.create(listProp.getURI()), changeSubject, value));
 			}										
 		});
 	}	
@@ -84,9 +85,9 @@ public class TransformationSession extends StatementAugmentationSession {
 				.map(wrapper -> {
 						var value = resolver.convertFromRDF(wrapper.getStmt().getObject());
 						if (wrapper.getOp().equals(AES.OPTYPE.ADD)) {
-							return new PropertyChange.Add(prop.getLocalName(), changeSubject, value);
+							return new PropertyChange.Add(URI.create(prop.getURI()), changeSubject, value);
 						} else {
-							return new PropertyChange.Remove(prop.getLocalName(), changeSubject, value);
+							return new PropertyChange.Remove(URI.create(prop.getURI()), changeSubject, value);
 						}
 				})
 				.toList());
@@ -122,9 +123,9 @@ public class TransformationSession extends StatementAugmentationSession {
 			value = resolver.convertFromRDF(objValueOpt.get().getObject());
 		}
 		if (stmts.get(0).getOp().equals(AES.OPTYPE.ADD)) { // all statements have to have the same OP, otherwise inconsistent
-			updates.add(new PropertyChange.Add(prop.getLocalName(), changeSubject, value));
+			updates.add(new PropertyChange.Add(URI.create(prop.getURI()), changeSubject, value));
 		} else {
-			updates.add(new PropertyChange.Remove(prop.getLocalName(), changeSubject, value));
+			updates.add(new PropertyChange.Remove(URI.create(prop.getURI()), changeSubject, value));
 		}
 	}
 	
@@ -157,20 +158,20 @@ public class TransformationSession extends StatementAugmentationSession {
 			var prop = wrapper.getStmt().getPredicate();
 			if (isSingleProperty(wrapper.getStmt())) {
 				if (wrapper.getOp().equals(AES.OPTYPE.ADD)) {
-					return new PropertyChange.Set(prop.getLocalName(), changeSubject, value);
+					return new PropertyChange.Set(URI.create(prop.getURI()), changeSubject, value);
 				} else {
 					// only if there is no new value added at the same time (null values are not allowed by Jena)
 					var optAdd = shallowCopy.stream().filter(copy -> copy.getStmt().getPredicate().equals(prop) && copy.getOp().equals(OPTYPE.ADD)).findAny();
 					if (optAdd.isEmpty()) {
-						return new PropertyChange.Set(prop.getLocalName(), changeSubject, value);
+						return new PropertyChange.Set(URI.create(prop.getURI()), changeSubject, value);
 					} else
 						return null;
 				}
 			} else {
 				if (wrapper.getOp().equals(AES.OPTYPE.ADD)) {
-					return (Update)new PropertyChange.Add(prop.getLocalName(), changeSubject, value);
+					return (Update)new PropertyChange.Add(URI.create(prop.getURI()), changeSubject, value);
 				} else {
-					return (Update)new PropertyChange.Remove(prop.getLocalName(), changeSubject, value);
+					return (Update)new PropertyChange.Remove(URI.create(prop.getURI()), changeSubject, value);
 				}
 			}
 		}).filter(Objects::nonNull)
@@ -190,16 +191,16 @@ public class TransformationSession extends StatementAugmentationSession {
 		updates.addAll(stmts.stream()
 				.filter(wrapper -> wrapper.getStmt().getPredicate().getURI().equals(RuleSchemaFactory.usingPropertyURI)) // we do this only for the usingProperty predicate of a scope, nothing else, its a hack!
 				.map(wrapper -> {
-					var propName = wrapper.getStmt().getPredicate().getLocalName();
+					var propName = wrapper.getStmt().getPredicate().getURI();
 					var scope = wrapper.getStmt().getSubject();
 					var element = inspector.getElementFromScope(scope); // from scope object to owner instance of that scope
 					if (element != null) {
 						var subject = resolver.convertFromRDF(element);
 						if (subject instanceof RDFElement instSubject) {
 							if (wrapper.getOp().equals(AES.OPTYPE.ADD)) {
-								return new PropertyChange.Add(propName, instSubject, wrapper.getStmt().getResource().getLocalName());
+								return new PropertyChange.Add(URI.create(propName), instSubject, wrapper.getStmt().getResource().getURI());
 							} else {
-								return new PropertyChange.Remove(propName, instSubject, wrapper.getStmt().getResource().getLocalName());
+								return new PropertyChange.Remove(URI.create(propName), instSubject, wrapper.getStmt().getResource().getURI());
 							}
 						}
 					}
@@ -231,7 +232,7 @@ public class TransformationSession extends StatementAugmentationSession {
 //		}
 //		});
 		stmts.stream().forEach(wrapper -> {
-			var localName = wrapper.getStmt().getPredicate().getLocalName();
+			var localName = wrapper.getStmt().getPredicate().getURI();
 			localName.length();
 		});
 		return; //TODO: for now we ignore untyped changes

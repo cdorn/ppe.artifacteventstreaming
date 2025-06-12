@@ -194,10 +194,13 @@ public class BranchImpl  implements Branch, Runnable {
     
 	@Override
 	public void enqueueIncomingCommit(Commit commit) throws BranchConfigurationException, PersistenceException {
-		// if we have processed this commit before, then wont do it again to avoid loops
-		if (!stateKeeper.hasSeenCommit(commit) && !inQueue.contains(commit)) {
+		// if we have processed this commit before, then wont do it again to avoid loops		
+		if (!stateKeeper.hasSeenCommit(commit) && !inQueue.contains(commit)) {									
 			//persist which commits we have received but not merged yet, 
 			stateKeeper.beforeMerge(commit);
+			// we also ensure that they dont map to prior (brach external) model here
+			commit.getAddedStatementsAsSet().stream().forEach(stmt -> stmt.transferToModel(model));
+			commit.getRemovedStatementsAsSet().stream().forEach(stmt -> stmt.transferToModel(model));
 			// if this crashes before returning this call, then cross branch streamer has to assume failure and retry adding/enqueuing upon restart
 			if (handlers.isEmpty()) { // there are not handlers to process , thus no queuing and error thrown
 				String msg = String.format("Branch %s received incomming commit %s to merge but no merge handlers are registered, dropping commit", this.getBranchName(), commit.getCommitId());
@@ -225,6 +228,7 @@ public class BranchImpl  implements Branch, Runnable {
                 	inExecutor.shutdown();
                 	return;
                 } else {
+                	log.info(String.format("Processing incoming commit %s on branch %s ", commit.getCommitId(), this.getBranchId()));
                 	forwardCommit(commit);
                 }
             }

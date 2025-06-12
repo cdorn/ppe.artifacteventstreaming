@@ -1,6 +1,7 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
 import org.apache.jena.graph.Triple;
+import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.rdf.model.Alt;
 import org.apache.jena.rdf.model.Bag;
 import org.apache.jena.rdf.model.Literal;
@@ -17,7 +18,7 @@ import lombok.NonNull;
 
 public class ContainedStatementImpl implements ContainedStatement {
 
-	private final Statement delegate;
+	private Statement delegate;
 	private Resource container;
 	private Property containmentProperty;
 	
@@ -65,6 +66,17 @@ public class ContainedStatementImpl implements ContainedStatement {
 			return delegate.toString();
 		} else {
 			return "<"+container.toString() +","+ containmentProperty.toString() +"> contain " + delegate.toString() ;
+		}
+	}
+	
+	@Override
+	public void transferToModel(OntModel model) {	
+		delegate = model.createStatement(delegate.getSubject(), delegate.getPredicate(), delegate.getObject());
+		if (containmentProperty != null) {
+			containmentProperty = containmentProperty.inModel(model);
+		}
+		if (container != null) {
+			container = container.inModel(model);
 		}
 	}
 	
@@ -208,6 +220,8 @@ public class ContainedStatementImpl implements ContainedStatement {
 	public Model getModel() {
 		return delegate.getModel();
 	}
+
+
 
 
 	

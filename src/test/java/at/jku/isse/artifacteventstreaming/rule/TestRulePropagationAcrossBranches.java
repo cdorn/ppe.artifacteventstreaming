@@ -25,6 +25,9 @@ import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.ActiveRuleTriggerObserver;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.PassiveRuleTriggerObserver;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.RuleTriggerObserverFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.artifacteventstreaming.testutils.ModelDiff;
@@ -85,24 +88,25 @@ class TestRulePropagationAcrossBranches {
 		observerSource = observerFactorySource.buildActiveInstance("RuleTriggerObserverSource", sourceModel, repoModel);
 		branchSource.appendBranchInternalCommitService(observerSource); // register rule service with branch
 		// connect branches
-		branchSource.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(branchSource, branchDestination, new InMemoryBranchStateCache()));
+		branchSource.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(branchSource, branchDestination, new InMemoryBranchStateCache()));			
 		
 		branchDestination.startCommitHandlers(null);
 		branchSource.startCommitHandlers(null);
-		branchSource.getDataset().begin();
 		
 		var sizeSource = sourceModel.size();
 		var sizeDest = destModel.size();
 		if (sizeSource != sizeDest) {
-			ModelDiff.printDiff(sourceModel, destModel, true);
+			var diff = ModelDiff.printDiff(sourceModel, destModel, true);
+			assertEquals(0, diff.getKey());
+			assertEquals(0, diff.getValue());
 		}
-		//assertEquals(sizeSource, sizeDest);
 	}
 	
 	
 	
 	@Test
 	void testRulePropagationToOtherBranch() throws Exception {				
+		branchSource.getDataset().begin();
 		// get and activate a rule
 		var def = schema.getRegisteredRuleRequirementsSizeGT1(1, observerSource.getRepo());
 		branchSource.commitChanges("Init commit");
@@ -135,9 +139,11 @@ class TestRulePropagationAcrossBranches {
 		var sizeSource = sourceModel.size();
 		var sizeDest = destModel.size();
 		if (sizeSource != sizeDest) {
-			ModelDiff.printDiff(sourceModel, destModel, true);
+			var diff = ModelDiff.printDiff(sourceModel, destModel, true);
+			assertEquals(0, diff.getKey());
+			assertEquals(0, diff.getValue());
 		}
-		assertEquals(sizeSource, sizeDest);
+		
 	}
 	
 	

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 import com.eventstore.dbclient.AppendToStreamOptions;
+import com.eventstore.dbclient.DeleteStreamOptions;
 import com.eventstore.dbclient.EventData;
 import com.eventstore.dbclient.EventDataBuilder;
 import com.eventstore.dbclient.EventStoreDBClient;
@@ -70,6 +71,15 @@ public class EventStoreFactory {
 	
 	 public PerBranchEventStore getEventStore(String branchURI) {
 		 return new EventStoreImpl(branchURI, client, jsonMapper);
+	 }
+	 
+	 public void removeBranchEventData(String branchURI) {
+		 try {						
+				client.getStreamMetadata(branchURI); //throws exception if doesn't exist, then we wont need to delete
+				client.deleteStream(branchURI, DeleteStreamOptions.get()).get();
+			} catch (Exception e) {
+				// ignore
+			}
 	 }
 	 
 	 @Data
@@ -260,5 +270,6 @@ public class EventStoreFactory {
 		}
 		 
 	 }
+	 
 	 
 }

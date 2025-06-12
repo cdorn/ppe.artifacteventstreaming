@@ -24,7 +24,7 @@ import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
-import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.RuleTriggerObserverFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.passiveprocessengine.rdfwrapper.CoreTypeFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.LazyLoadingLoopControllerService;
@@ -52,6 +52,11 @@ public class InMemoryEventStreamingSetupFactory extends AbstractEventStreamingSe
 	public void signalExternalSetupComplete() throws PersistenceException, BranchConfigurationException {
 		//no state to load as nonpersisted
 		branch.startCommitHandlers(null); 		 
+	}
+	
+	@Override
+	public void resetPersistedData() {
+		// no op
 	}
 	
 	@Slf4j
@@ -110,5 +115,7 @@ public class InMemoryEventStreamingSetupFactory extends AbstractEventStreamingSe
 			}
 		}
 	}
+
+
 	
 }

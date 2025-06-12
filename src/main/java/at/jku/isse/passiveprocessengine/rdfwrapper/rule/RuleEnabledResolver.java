@@ -1,5 +1,6 @@
 package at.jku.isse.passiveprocessengine.rdfwrapper.rule;
 
+import java.lang.reflect.Constructor;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.stream.Collectors;
 
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntClass.Named;
+import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.Resource;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
@@ -32,7 +34,10 @@ import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstanceType;
 import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
 import lombok.Getter;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEvaluationService {
 
 	private final RepairService repairService;
@@ -55,29 +60,23 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 	}
 	
 	protected void initOverride() {
+		// register rule definition as type
+		var ruleDefType = ruleSchema.getDefinitionType();
+		initOrGetType(ruleDefType);
+		var ruleEvalType = ruleSchema.getResultBaseType();
+		initOrGetType(ruleEvalType);
+		
+		
 		var ruleDefinitions = ruleRepo.getRuleDefinitions().stream().map(indiv -> indiv.getRuleDefinition().getURI()).collect(Collectors.toSet());
 		model.classes()
 			.filter(ontClass -> !isBlacklistedNamespace(ontClass.getNameSpace()))									
-			.filter(ontClass -> !ruleDefinitions.contains(ontClass.getURI())) // we dont want to cache rule evaluations here but via rule repo			
-			.forEach(ontClass -> { 
-			var type = new RDFInstanceType(ontClass, this);
-			typeIndex.put(ontClass, type);
-			type.cacheSuperProperties();
-			if (!ontClass.equals(getMetaschemata().getMetaElements().getMetaClass())) {
-				var individuals = ontClass.individuals(true).toList();
-				individuals.forEach(indiv -> instanceIndex.putIfAbsent(indiv.getURI(), new RDFInstance(indiv, type, this)));
-			}
-		} );
-		
+			.filter(ontClass -> !ruleDefinitions.contains(ontClass.getURI())) // we dont want to cache rule definitions here but via rule repo, the store just wrappers here			
+			.forEach(this::loadTypeInstances);
+		// store all rule definitions as wrappers
 		ruleRepo.getRuleDefinitions().forEach(ruleDef -> {
 			var wrapper = new RDFRuleDefinitionWrapper(ruleDef, this);			
 			typeIndex.put(ruleDef.getRuleDefinition(), wrapper);	
 		});
-		
-//		var ruleEvalWrappers = ruleSchema.getResultBaseType().individuals().collect(Collectors.toSet()); // we dont want to cache the result resources
-//		model.individuals()
-//			.filter(indiv -> !ruleEvalWrappers.contains(indiv))
-//			.forEach(indiv -> instanceIndex.put(indiv, new RDFInstance(indiv, this)));
 	}
 	
 	protected void removeRuleDefinition(RDFRuleDefinitionWrapper ruleDef) {
@@ -86,19 +85,60 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 		ruleRepo.removeRuleDefinition(ruleDef.getId());
 	}
 	
+	@Override
+	protected RDFInstanceType initOrGetType(OntClass ontClass) {
+		if (!typeIndex.containsKey(ontClass)) {
+			var constructor = metaschemata.getMetaElements().getTypeConstructorForNamespace(ontClass.getURI());
+			var type = createMostSpecificType(ontClass, constructor);
+			typeIndex.put(ontClass, type);
+			type.cacheSuperProperties();			
+		}
+		return typeIndex.get(ontClass);
+	}
+	
+	private RDFInstanceType createMostSpecificType(OntClass ontClass, Constructor<? extends RDFInstanceType> typeClassConstructor) {
+		if (typeClassConstructor == null) {
+			return new RDFInstanceType(ontClass, this);
+		} else {
+			try {
+				return typeClassConstructor.newInstance(ontClass, this);
+			} catch (Exception e) {
+				e.printStackTrace();
+				log.error(e.getMessage());
+				return null;
+			}
+		}
+	}
 
-	public RDFRuleDefinitionWrapper createInstance(RDFInstanceType type, String ruleName, String ruleExpression) {
+	public RDFRuleDefinitionWrapper createInstance(@NonNull RDFInstanceType type, @NonNull String ruleURI, @NonNull String ruleExpression, String title) {
 		OntClass ctxType = resolveTypeToClass(type);
 		try {
 			var ruleDef = ruleRepo.getRuleBuilder()
-				.withRuleURI(NodeToDomainResolver.BASE_NS+ruleName)
+				.withRuleURI(ruleURI)
 				.withContextType(ctxType)
-				.withRuleExpression(ruleExpression)
-				.withRuleTitle(ruleName)
+				.withRuleExpression(ruleExpression)		
+				.withRuleTitle(title)
 				.build();
 			var wrapper = new RDFRuleDefinitionWrapper(ruleDef, this);			
-			typeIndex.put(ruleDef.getRuleDefinition(), wrapper);
+			typeIndex.put(ruleDef.getRuleDefinition(), wrapper);		
 			return wrapper;
+		} catch (RuleException e) {
+			throw new RuntimeException("Unable to create rule: "+e.getMessage());
+		}
+	}
+	
+	public RDFRuleDefinitionWrapper createDerivedPropertyRule(RDFInstanceType ctxType, String ruleURI, String ruleExpression, OntRelationalProperty derivedProp) {
+		try {
+			var ruleDef = ruleRepo.getRuleBuilder()
+				.withContextType(ctxType.getType())
+				.withRuleURI(ruleURI)
+				.withRuleExpression(ruleExpression) // deriving/mapping rule here
+				.forDerivedProperty(derivedProp)
+				.withRuleTitle("DerivedProperty"+derivedProp.getLocalName())
+				.build();
+				var wrapper = new RDFRuleDefinitionWrapper(ruleDef, this);			
+				typeIndex.put(ruleDef.getRuleDefinition(), wrapper);
+				return wrapper;
 		} catch (RuleException e) {
 			throw new RuntimeException("Unable to create rule: "+e.getMessage());
 		}

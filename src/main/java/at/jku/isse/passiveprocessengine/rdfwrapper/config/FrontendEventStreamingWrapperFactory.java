@@ -15,13 +15,15 @@ import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationExce
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
+import at.jku.isse.artifacteventstreaming.branch.incoming.PropertyDefinitionAddedCacheUpdater;
+import at.jku.isse.artifacteventstreaming.branch.incoming.PropertyDefinitionRemovedCacheUpdater;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryEventStore;
 import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
-import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.RuleTriggerObserverFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.CoreTypeFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.CommitChangeEventTransformer;
@@ -77,20 +79,26 @@ public class FrontendEventStreamingWrapperFactory extends AbstractEventStreaming
 						.setStateKeeper(stateKeeper)
 						.setBranchURI(branchURI)
 						.build();		
-				var frontendModel = branch.getModel();	
-				var merger = new CompleteCommitMerger(branch);
-				branch.appendIncomingCommitMerger(merger);
+				
 				
 				//copy state/model from backend branch				
 				var sourceBranch = backendFactory.getBranch();
 				var backendDataset = sourceBranch.getDataset();
 				var backendModel = sourceBranch.getModel();
 				backendDataset.begin(ReadWrite.READ);
+				var frontendModel = branch.getModel();	
 				frontendModel.add(backendModel);				
 				backendDataset.end();
 				sourceBranch.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(sourceBranch, branch, new InMemoryBranchStateCache()));				
 								
-				var cardUtil = new WrapperMetaModelSchemaTypes(frontendModel);									
+				var cardUtil = new WrapperMetaModelSchemaTypes(frontendModel);	
+				var removedPropDefUpdater = new PropertyDefinitionRemovedCacheUpdater(branch, cardUtil);
+				branch.appendIncomingCommitMerger(removedPropDefUpdater);
+				var merger = new CompleteCommitMerger(branch);
+				branch.appendIncomingCommitMerger(merger);
+				var addedPropDefUpdater = new PropertyDefinitionAddedCacheUpdater(branch, cardUtil);
+				branch.appendIncomingCommitMerger(addedPropDefUpdater);	
+				
 				// setting up branch commit handlers				 														
 				// we need to update rule repo without executing rules
 				var observerFactory = new RuleTriggerObserverFactory(cardUtil);
@@ -112,6 +120,12 @@ public class FrontendEventStreamingWrapperFactory extends AbstractEventStreaming
 				throw new RuntimeException(e);
 			}
 		}
+	}
+
+
+	@Override
+	public void resetPersistedData() {
+		// no op, as all data stored in memory
 	}
 	
 	

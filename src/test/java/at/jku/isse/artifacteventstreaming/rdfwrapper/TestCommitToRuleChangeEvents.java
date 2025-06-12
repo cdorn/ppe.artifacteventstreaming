@@ -23,13 +23,13 @@ import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.rule.RepairService;
-import at.jku.isse.artifacteventstreaming.rule.RuleEvaluationIterationMetadata;
-import at.jku.isse.artifacteventstreaming.rule.RuleEvaluationListener;
 import at.jku.isse.artifacteventstreaming.rule.RuleException;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
-import at.jku.isse.artifacteventstreaming.rule.ActiveRuleTriggerObserver;
-import at.jku.isse.artifacteventstreaming.rule.RuleTriggerObserverFactory;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.ActiveRuleTriggerObserver;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.RuleEvaluationIterationMetadata;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.RuleEvaluationListener;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.RuleTriggerObserverFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
@@ -129,8 +129,8 @@ class TestCommitToRuleChangeEvents {
 		branch.commitChanges("Commit 2");
 		listener.printCurrentUpdates();
 		assertEquals(2, listener.getLatestUpdates().size());
-		assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().get().getValue());
-		assertEquals("entry1", listener.getLatestUpdates().stream().filter(update -> update.getName().equals("listOfString")).findAny().get().getValue());
+		assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getPropertyURI().toString().equals(RuleSchemaFactory.ruleHasConsistentResultURI)).findAny().get().getValue());
+		assertEquals("entry1", listener.getLatestUpdates().stream().filter(update -> update.getPropertyURI().toString().equals(listOfString.getId())).findAny().get().getValue());
 		listener.latestUpdates.clear();
 		
 		System.out.println("  ");
@@ -140,7 +140,7 @@ class TestCommitToRuleChangeEvents {
 		branch.commitChanges("Commit 3");
 		listener.printCurrentUpdates();
 		assertEquals(3, listener.getLatestUpdates().size()); // adding and replacements of existing item to next spot, no change of rule eval outcome, hence no event		
-		assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().isEmpty());
+		assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getPropertyURI().toString().equals(RuleSchemaFactory.ruleHasConsistentResultURI)).findAny().isEmpty());
 		listener.latestUpdates.clear();
 		
 		
@@ -151,7 +151,7 @@ class TestCommitToRuleChangeEvents {
 		branch.commitChanges("Commit 4");
 		listener.printCurrentUpdates();
 		assertEquals(3, listener.getLatestUpdates().size()); // removal of both entries
-		assertEquals(false, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().get().getValue());
+		assertEquals(false, listener.getLatestUpdates().stream().filter(update -> update.getPropertyURI().toString().equals(RuleSchemaFactory.ruleHasConsistentResultURI)).findAny().get().getValue());
 		listener.latestUpdates.clear();
 	}
 	
@@ -176,7 +176,7 @@ class TestCommitToRuleChangeEvents {
 		branch.commitChanges("Commit 2");
 		listener.printCurrentUpdates();
 		assertEquals(2, listener.getLatestUpdates().size());
-		assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().get().getValue());
+		assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getPropertyURI().toString().equals(RuleSchemaFactory.ruleHasConsistentResultURI)).findAny().get().getValue());
 		listener.latestUpdates.clear();
 		
 		branch.getDataset().begin();
@@ -184,7 +184,7 @@ class TestCommitToRuleChangeEvents {
 		branch.commitChanges("Commit 3");
 		listener.printCurrentUpdates();
 		assertEquals(1, listener.getLatestUpdates().size());
-		assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().isEmpty());
+		assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getPropertyURI().toString().equals(RuleSchemaFactory.ruleHasConsistentResultURI)).findAny().isEmpty());
 		listener.latestUpdates.clear();
 		
 		branch.getDataset().begin();
@@ -192,7 +192,7 @@ class TestCommitToRuleChangeEvents {
 		branch.commitChanges("Commit 4");
 		listener.printCurrentUpdates();
 		assertEquals(3, listener.getLatestUpdates().size()); // removal of both entries
-		assertEquals(false, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().get().getValue());
+		assertEquals(false, listener.getLatestUpdates().stream().filter(update -> update.getPropertyURI().toString().equals(RuleSchemaFactory.ruleHasConsistentResultURI)).findAny().get().getValue());
 		listener.latestUpdates.clear();
 	}
 	
@@ -218,7 +218,7 @@ class TestCommitToRuleChangeEvents {
 		branch.commitChanges("Commit 2");
 		listener.printCurrentUpdates();
 		assertEquals(2, listener.getLatestUpdates().size());
-		//assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().get().getValue());
+		//assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getPropertyURI().equals("ruleHasConsistentResult")).findAny().get().getValue());
 		listener.latestUpdates.clear();
 
 		System.out.println("  ");
@@ -228,7 +228,7 @@ class TestCommitToRuleChangeEvents {
 		branch.commitChanges("Commit 3");
 		listener.printCurrentUpdates();
 		assertEquals(1, listener.getLatestUpdates().size()); // update of the property, no change in evaluation result
-		assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getName().equals("ruleHasConsistentResult")).findAny().isEmpty());
+		assertEquals(true, listener.getLatestUpdates().stream().filter(update -> update.getPropertyURI().toString().equals(RuleSchemaFactory.ruleHasConsistentResultURI)).findAny().isEmpty());
 		listener.latestUpdates.clear();
 		
 		System.out.println("  ");

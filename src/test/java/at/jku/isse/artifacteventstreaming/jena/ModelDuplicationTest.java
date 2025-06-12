@@ -39,8 +39,7 @@ class ModelDuplicationTest {
 		m.setNsPrefix("isse", NS);
 		m.setNsPrefix("map", MAP_NS);
 		var metaModel = MetaModelOntology.buildInMemoryOntology(); 			
-		var metaUtil = new MetaModelSchemaTypes(m, metaModel);		
-		SingleResourceType singleType = metaUtil.getSingleType();		
+		var metaUtil = new MetaModelSchemaTypes(m, metaModel);			
 		MapResourceType mapTypeDef = metaUtil.getMapType();
 		OntClass artifactType = m.createOntClass(NS+"artifactType");		
 		OntClass mapType = mapTypeDef.getMapEntryClass();
@@ -62,7 +61,7 @@ class ModelDuplicationTest {
 		OntObjectProperty.Named hasMapPropCopy = copy.getObjectProperty(NS+"hasMapEntry");
 		OntIndividual art1copy = copy.getIndividual(NS+"art1");		
 		OntIndividual art3copy = artifactTypeCopy.createIndividual(NS+"art3");
-		MapResourceType mapTypeDef2 = new MapResourceType(copy, singleType);
+		MapResourceType mapTypeDef2 = new MapResourceType(copy, metaUtil.getPrimaryPropertyType());
 		Map<String, RDFNode> mapCopy = MapResource.asUnsafeMapResource(art1copy, hasMapPropCopy, mapTypeDef2);			
 		assertEquals(map.size(), mapCopy.size());
 		

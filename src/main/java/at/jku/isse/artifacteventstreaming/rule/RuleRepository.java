@@ -21,6 +21,11 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 
+import at.jku.isse.artifacteventstreaming.rule.definition.RDFRuleDefinition;
+import at.jku.isse.artifacteventstreaming.rule.definition.RuleDefinitionFactory;
+import at.jku.isse.artifacteventstreaming.rule.definition.RuleDefinitionRegistrar;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.RuleEvaluationFactory;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.RuleEvaluationWrapperResource;
 import at.jku.isse.designspace.rule.arl.exception.EvaluationException;
 import lombok.Getter;
 import lombok.NonNull;
@@ -47,15 +52,15 @@ public class RuleRepository {
 	 * this initialization does not cause rule reevaluation, just prepares all wrapper objects, evaluation is triggered by incoming change events
 	 */
 	private void loadFromModel() {		
-		factory.getDefinitionType().individuals(true).toList().stream().forEach(this::storeRuleDefinition); // FIXME: for some reason ruleEvalResources are also included here, need filtering out to avoid log warn messages
+		factory.getDefinitionType().individuals(false).toList().stream().forEach(this::storeRuleDefinition); // FIXME: for some reason ruleEvalResources are also included here, need filtering out to avoid log warn messages
 		factory.getResultBaseType().individuals().toList().stream().forEach(eval ->  // we need to have a list first as otherwise inference has concurrent modification exception
 				loadAndStoreEvaluationWrapperFromModel(eval)
 			);
 	}
 	
-	protected RuleEvaluationWrapperResource loadAndStoreEvaluationWrapperFromModel(OntIndividual eval) {
+	public RuleEvaluationWrapperResource loadAndStoreEvaluationWrapperFromModel(OntIndividual eval) {
 		try {
-			var evalWrapper = RuleEvaluationWrapperResource.loadFromModel(eval, factory, this);
+			var evalWrapper = RuleEvaluationFactory.loadFromModel(eval, factory, this);
 			evaluations.put(evalWrapper.getRuleEvalObj().getURI(), evalWrapper);
 			return evalWrapper;
 		} catch (EvaluationException e) {
@@ -77,14 +82,14 @@ public class RuleRepository {
 	 * no rule evaluations will be conducted at this time, as typically the model events/statements resulting from creating the definition will be processed via the RuleTriggerObserver
 	 * if no such observer is running, then manual rule evaluation instances are created upon calling {@link #getRulesToEvaluateUponRuleDefinitionActivation(OntIndividual) }
 	 */
-	protected void registerRuleDefinition(@NonNull RDFRuleDefinition def) {
+	public void registerRuleDefinition(@NonNull RDFRuleDefinition def) {
 		var key = def.getRuleDefinition().getURI();
 		definitions.putIfAbsent(key, def);
 	}
 	
-	protected RDFRuleDefinition storeRuleDefinition(@NonNull OntObject definition) {	
+	public RDFRuleDefinition storeRuleDefinition(@NonNull OntObject definition) {	
 		var key = definition.getURI();		
-		return definitions.computeIfAbsent(key, k -> RDFRuleDefinitionImpl.rebuildRDFRuleDefinitionImpl(definition, factory));	
+		return definitions.computeIfAbsent(key, k -> RuleDefinitionFactory.rebuildRDFRuleDefinitionImpl(definition, factory));	
 	}
 	
 	public void removeRuleDefinition(@NonNull String ruleDefinitionURI) {
@@ -110,7 +115,7 @@ public class RuleRepository {
 			var individuals = def.getRDFContextType().individuals().collect(Collectors.toSet());
 			return individuals.stream()	
 				.filter(indiv -> evaluations.findEvaluation(indiv, def).isEmpty()) // ensure there is not already one eval wrapper 
-				.map(ind -> RuleEvaluationWrapperResource.create(factory, def, ind))							
+				.map(ind -> RuleEvaluationFactory.create(factory, def, ind))							
 				.map(eval -> { evaluations.put(eval.getRuleEvalObj().getURI(), eval); return eval;} )
 				.map(RuleEvaluationWrapperResource.class::cast)
 				.collect(Collectors.toSet());			
@@ -171,8 +176,9 @@ public class RuleRepository {
 	 * @param definitionURI to remove the corresponding rule definition, without considering rule evaluations or repairs, would need to be done separately
 	 * used to clean up upon external deletion of underlying rdf statements.
 	 */
-	protected void removeRuleDefinitionWrapper(@NonNull String definitionURI) {
+	public void removeRuleDefinitionWrapper(@NonNull String definitionURI) {
 		definitions.remove(definitionURI);
+		//FIXME: how to remove rdf wrappers upon definition removal?! we dont know about these at this level
 	}
 	
 	/**
@@ -214,7 +220,7 @@ public class RuleRepository {
 		reEval.addAll(
 				definitions.values().stream().filter(def -> types.contains(def.getRDFContextType()))
 				.filter(def -> !isSubjectContextOfRule(def, ctxEval)) // filter out if this subject is already context of that rule, which can happen upon type changes
-				.map(def -> RuleEvaluationWrapperResource.create(factory, def, newSubject))	
+				.map(def -> RuleEvaluationFactory.create(factory, def, newSubject))	
 				.map(eval -> { evaluations.put(eval.getRuleEvalObj().getURI(), eval); return eval;} )
 				.map(RuleEvaluationWrapperResource.class::cast).toList());			
 		return reEval;
@@ -250,7 +256,7 @@ public class RuleRepository {
 			} else {
 			try {
 				var ruleRes = evalResource.as(OntIndividual.class);
-				var evalObj = RuleEvaluationWrapperResource.loadFromModel(ruleRes, factory, this);
+				var evalObj = RuleEvaluationFactory.loadFromModel(ruleRes, factory, this);
 				evaluations.put(evalObj.getRuleEvalObj().getURI(), evalObj);
 				evals.add(evalObj);
 			} catch (EvaluationException e) {
@@ -295,7 +301,7 @@ public class RuleRepository {
 	
 	private Entry<OntIndividual, Property> findListOwner(OntIndividual list) {		
 		// first obtain the owner of the list
-		var optOwner = factory.getSchemaFactory().getCurrentListOwner(list);
+		var optOwner = factory.getSchemaFactory().getListType().getCurrentListOwner(list);
 		// should only exist one such resource as we dont share lists across individuals
 		if (optOwner.isEmpty()) {			
 			return null;
@@ -363,7 +369,7 @@ public class RuleRepository {
 			var evalWrapper = evaluations.get(eval.getURI());
 			if (evalWrapper == null) {
 				try {				
-					evalWrapper = RuleEvaluationWrapperResource.loadFromModel(eval, factory, this);
+					evalWrapper = RuleEvaluationFactory.loadFromModel(eval, factory, this);
 					evaluations.put(eval.getURI(), evalWrapper);
 					return evalWrapper;
 				} catch (EvaluationException e) {
@@ -396,7 +402,7 @@ public class RuleRepository {
 					var evalObjWrapper = evaluations.remove(evalObj.getURI());
 					if (evalObjWrapper == null) {						
 						try { 
-							evalObjWrapper = RuleEvaluationWrapperResource.loadFromModel(evalObj, factory, this);
+							evalObjWrapper = RuleEvaluationFactory.loadFromModel(evalObj, factory, this);
 							// now we dont add to index here, as we remove these anyway before returning
 						} catch (EvaluationException e) {
 							// ignored, check via logs how to improve scope handling issues

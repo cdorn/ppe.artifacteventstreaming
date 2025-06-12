@@ -1,6 +1,7 @@
 package at.jku.isse.artifacteventstreaming.rule;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Optional;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -8,6 +9,8 @@ import java.util.stream.Collectors;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntProperty;
+
+import at.jku.isse.artifacteventstreaming.rule.evaluation.RuleEvaluationDTO;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +21,7 @@ public class RepairNodeDTO implements Comparable<RepairNodeDTO>{
 	@Getter private final OntIndividual node;
 	private final int posInParent;
 	@Getter private final String type;
-	@Getter private final OntIndividual subject;
+	@Getter private final OntObject subject;
 	@Getter private final OntProperty predicate;
 	@Getter private final OntObject objectValue;
 	@Getter private final Object literalValue;
@@ -61,11 +64,13 @@ public class RepairNodeDTO implements Comparable<RepairNodeDTO>{
 	
 	public static void removeTreeFromModel(@NonNull RuleEvaluationDTO ruleEvalDTO, @NonNull RuleSchemaProvider schema) {
 		var iter = ruleEvalDTO.getRuleEvalObj().listProperties(schema.getHasRepairNodesProperty().asNamed());
+		var indivs = new LinkedList<OntIndividual>();
 		while (iter.hasNext()) {
 			var stmt = iter.next();
 			var indiv = stmt.getObject().as(OntIndividual.class);
-			indiv.removeProperties();
+			indivs.add(indiv);
 		}
+		indivs.stream().forEach(indiv -> indiv.removeProperties());
 		ruleEvalDTO.getRuleEvalObj().removeAll(schema.getHasRepairNodesProperty().asNamed());
 	}
 	
@@ -100,7 +105,7 @@ public class RepairNodeDTO implements Comparable<RepairNodeDTO>{
 	
 	public RepairNodeDTO(
 			@NonNull String operator,
-			@NonNull OntIndividual subject,
+			@NonNull OntObject subject,
 			@NonNull OntProperty predicate,
 			Object literalValue,
 			OntObject objectValue,

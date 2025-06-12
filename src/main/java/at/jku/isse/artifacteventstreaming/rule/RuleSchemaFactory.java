@@ -11,6 +11,7 @@ import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
 
+import at.jku.isse.artifacteventstreaming.schemasupport.BasePropertyType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 
@@ -46,6 +47,7 @@ public class RuleSchemaFactory {
 	private OntClass definitionType;	
 	private OntClass resultBaseType;
 	private OntClass repairTreeNodeType;
+	private OntClass derivedPredicateRuleType;
 	
 	// subclass of Bag
 	private OntClass ruleScopeCollection;
@@ -67,15 +69,22 @@ public class RuleSchemaFactory {
 	// to link from eval base type to set of repair nodes
 	public static final String hasRepairNodesURI = uri+"hasRepairNodes";
 	
+	// Derived properties
+	public static final String derivedPropertyRuleDefinitionURI = uri+"DerivedPropertyRuleDefinition";
+	public static final String derivedPredicateURI = uri+"derivedProperty";
+	
+	
 	private final OntModel model;
 	private final Dataset ontology;
 	private final SingleResourceType singleType;	
+	private final BasePropertyType primaryPropertyType;
 
 	public RuleSchemaFactory(MetaModelSchemaTypes.MetaModelOntology metamodel) {
 		this.ontology = metamodel.getMetaontology();
 		ontology.begin(ReadWrite.WRITE);
 		this.model = metamodel.getMetamodel();
-		this.singleType = new SingleResourceType(model); // we use this type provider only on the meta model, no actual runtime model uses this instance
+		primaryPropertyType = new BasePropertyType(model);
+		this.singleType = new SingleResourceType(model, primaryPropertyType); // we use this type provider only on the meta model, no actual runtime model uses this instance
 		initTypes();
 		model.setNsPrefix("rules", uri);
 		ontology.commit();
@@ -89,6 +98,7 @@ public class RuleSchemaFactory {
 		initScopePartTypeProperties();
 		initRuleContextReferenceProperty();		
 		initRepairNodeTypeProperties();
+		initDerivedPredicateRuleProperties();
 	}
 
 	private void initOntClasses() {
@@ -110,6 +120,12 @@ public class RuleSchemaFactory {
 		repairTreeNodeType = model.getOntClass(repairTreeNodeURI);
 		if (repairTreeNodeType == null) {
 			repairTreeNodeType = model.createOntClass(repairTreeNodeURI);
+		}
+		
+		derivedPredicateRuleType = model.getOntClass(derivedPropertyRuleDefinitionURI);
+		if (derivedPredicateRuleType == null) {
+			derivedPredicateRuleType = model.createOntClass(derivedPropertyRuleDefinitionURI);
+			derivedPredicateRuleType.addSuperClass(definitionType);
 		}
 	}
 
@@ -136,7 +152,7 @@ public class RuleSchemaFactory {
 		if (evaluationResultProperty == null) {		
 			evaluationResultProperty = model.createObjectProperty(ruleEvaluationResultURI);
 			evaluationResultProperty.addDomain(resultBaseType);
-			// 	no range as any type of object is allowed to be in the output/result of a rule
+			// 	no range because any type of object is allowed to be in the output/result of a rule
 			//model.createObjectMaxCardinality(evaluationResultProperty, 1, null); has potentially multiple outcomes (when a set is returned)
 		}
 
@@ -181,7 +197,7 @@ public class RuleSchemaFactory {
 
 		OntObjectProperty usedInRuleProperty = model.getObjectProperty(usedInRuleURI);
 		if (usedInRuleProperty == null) {
-			usedInRuleProperty = singleType.createBaseObjectPropertyType(usedInRuleURI, ruleScopeCollection, resultBaseType);		
+			usedInRuleProperty = primaryPropertyType.createBaseObjectPropertyType(usedInRuleURI, ruleScopeCollection, resultBaseType);		
 			usedInRuleProperty.addInverseProperty(havingScopePartProperty);
 		}
 	}
@@ -250,6 +266,15 @@ public class RuleSchemaFactory {
 			hasRepairNodesProperty.addDomain(resultBaseType);
 			hasRepairNodesProperty.addRange(repairTreeNodeType);
 		}
+	}
+	
+	private void initDerivedPredicateRuleProperties() {
+		
+		var derivedPredicateProp = model.getObjectProperty(derivedPredicateURI);
+		if (derivedPredicateProp == null) {
+			singleType.createSingleObjectPropertyType(derivedPredicateURI, derivedPredicateRuleType, model.createOntClass(RDF.Property.getURI()));
+		}
+		
 	}
 	
 }

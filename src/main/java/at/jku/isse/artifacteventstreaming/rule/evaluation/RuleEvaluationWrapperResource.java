@@ -1,19 +1,20 @@
-package at.jku.isse.artifacteventstreaming.rule;
+package at.jku.isse.artifacteventstreaming.rule.evaluation;
 
 import java.util.AbstractMap;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.stream.IntStream;
-
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntProperty;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 
+import at.jku.isse.artifacteventstreaming.rule.RDFModelAccess;
+import at.jku.isse.artifacteventstreaming.rule.RepairNodeDTO;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
+import at.jku.isse.artifacteventstreaming.rule.definition.RDFRuleDefinition;
 import at.jku.isse.designspace.rule.arl.evaluator.RuleEvaluation;
 import at.jku.isse.designspace.rule.arl.evaluator.RuleEvaluationImpl;
-import at.jku.isse.designspace.rule.arl.exception.EvaluationException;
 import at.jku.isse.designspace.rule.arl.repair.AbstractRepairAction;
 import at.jku.isse.designspace.rule.arl.repair.AbstractRepairNode;
 import at.jku.isse.designspace.rule.arl.repair.RepairNode;
@@ -25,27 +26,11 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class RuleEvaluationWrapperResource extends RuleEvaluationDTO {
 
-	@Getter
-	private final RuleEvaluation delegate;
-	private Object result = null;
+	@Getter protected final RuleEvaluation delegate;
+	protected Object result = null;
 	
 	
-	// either create new	
-	/**
-	 * @param factory for accessing properties
-	 * @param def type of rule
-	 * @param contextInstance for which instance to create the evaluation object wrapped by this class
-	 * @return a new evaluation object wrapper, ensuring that the evaluation and context element point to the same rule scope. 
-	 */
-	public static RuleEvaluationWrapperResource create(@NonNull RuleSchemaProvider factory, @NonNull RDFRuleDefinition def, @NonNull OntIndividual contextInstance) {
-		var uri = createEvalURI(def, contextInstance);
-		var evalObj = def.getRuleDefinition().createIndividual(uri);	
-		evalObj.addLabel(def.getName());
-		addAddRuleEvaluationToNewOrExistingScope(contextInstance, evalObj, factory); // just to make sure that the context scope is set (no effect if already so)
-		return new RuleEvaluationWrapperResource(def, evalObj, contextInstance, factory);
-	}
-	
-	private static void addAddRuleEvaluationToNewOrExistingScope(OntIndividual subject, OntIndividual ruleEval, RuleSchemaProvider factory) {
+	protected static void addAddRuleEvaluationToNewOrExistingScope(OntIndividual subject, OntIndividual ruleEval, RuleSchemaProvider factory) {
 		OntIndividual scope = null;
 		var iter = subject.listProperties(factory.getHasRuleScope().asProperty());
 		while(iter.hasNext()) {
@@ -66,27 +51,8 @@ public class RuleEvaluationWrapperResource extends RuleEvaluationDTO {
 		ruleEval.addProperty(factory.getContextElementScopeProperty().asNamed(), scope);
 	}
 	
-	// or create from underlying ont object 
-	/**
-	 * @param ruleEvalObj pre-existing, that needs wrapping
-	 * @param factory to access properties 
-	 * @param ruleRepo to access existing definitions (or register new from ruleEvalObject reference
-	 * @return rule evaluation wrapper for the provided ont individual
-	 * @throws EvaluationException when ruleEvalObject is not a rule evaluation, or it does not point to context rule scope, or it does not point to a rule definition   
-	 */
-	public static RuleEvaluationWrapperResource loadFromModel(@NonNull OntIndividual ruleEvalObj, @NonNull RuleSchemaProvider factory, @NonNull RuleRepository ruleRepo) throws EvaluationException {
-		// check if an rule eval instance
-		var type = getRuleTypeClass(ruleEvalObj, factory); 							
-		// check if has context
-		var ctx = getContextInstanceFrom(ruleEvalObj, factory);		
-		// check if has definition, if so fetch from factory
-		var def = resolveDefinition(type, ruleRepo);
-		// dont evaluate unless evaluate() is called or access to result (lazy loading/generation of eval result)
-		return new RuleEvaluationWrapperResource(def, ruleEvalObj, ctx, factory);
-	}
-	
 	@SuppressWarnings("rawtypes")
-	private RuleEvaluationWrapperResource(RDFRuleDefinition def, OntIndividual ruleEvalObj, OntIndividual contextInstance, RuleSchemaProvider factory ) {
+	protected RuleEvaluationWrapperResource(RDFRuleDefinition def, OntIndividual ruleEvalObj, OntIndividual contextInstance, RuleSchemaProvider factory ) {
 		super(def, ruleEvalObj, contextInstance, factory);
 		this.delegate = new RuleEvaluationImpl(def, contextInstance);
 	}
@@ -192,7 +158,7 @@ public class RuleEvaluationWrapperResource extends RuleEvaluationDTO {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void updateRuleScope() {
+	protected void updateRuleScope() {
 		delegate.getAddedScopeElements().stream()		
 			.forEach(scopeEntry -> addPropertyToScope((Entry<Resource, Property>)scopeEntry, ruleEvalObj));
 		delegate.getRemovedScopeElements().stream()		
@@ -244,7 +210,7 @@ public class RuleEvaluationWrapperResource extends RuleEvaluationDTO {
 	}
 	
 	private RepairNodeDTO transform(AbstractRepairAction repairAction, RepairNodeDTO parentNode, int posInParent) {
-		var subject = (OntIndividual)repairAction.getElement();
+		var subject = (OntObject)repairAction.getElement();
 		var predicateName = repairAction.getProperty();
 		var predicate = resolvePredicate(predicateName, subject);
 		var value = repairAction.getValue();
@@ -279,7 +245,7 @@ public class RuleEvaluationWrapperResource extends RuleEvaluationDTO {
 					);
 	}
 	
-	private OntProperty resolvePredicate(@NonNull String predicate, @NonNull OntIndividual subject) {
+	private OntProperty resolvePredicate(@NonNull String predicate, @NonNull OntObject subject) {
 		var modelAccess = super.schemaProvider.getModelAccess();
 		var propOpt = modelAccess.getTypeOfInstance(subject).findAny().map(type -> modelAccess.resolveToProperty(type, predicate));
 		return propOpt.get();

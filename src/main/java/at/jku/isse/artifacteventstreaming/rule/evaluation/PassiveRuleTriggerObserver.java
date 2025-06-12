@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rule;
+package at.jku.isse.artifacteventstreaming.rule.evaluation;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -23,6 +23,10 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 
 import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
+import at.jku.isse.artifacteventstreaming.rule.AbstractRuleTriggerObserver;
+import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.designspace.rule.arl.evaluator.RuleEvaluation;
 import lombok.extern.slf4j.Slf4j;
 

@@ -16,6 +16,8 @@ import at.jku.isse.artifacteventstreaming.api.AbstractHandlerBase;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.ActiveRuleTriggerObserver;
+import at.jku.isse.artifacteventstreaming.rule.evaluation.RuleEvaluationListener;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 

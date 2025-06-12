@@ -19,6 +19,7 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.XSD;
 
 import lombok.Getter;
+import lombok.NonNull;
 
 public class MapResourceType  {
 
@@ -47,10 +48,10 @@ public class MapResourceType  {
 	@Getter
 	private final OntClass mapEntryClass;
 	private final Set<OntClass> subclassesCache = new HashSet<>();
-	private SingleResourceType singleType;
+	private final BasePropertyType primaryPropertyType;
 	
-	public MapResourceType(OntModel model, SingleResourceType singleType) {		
-		this.singleType = singleType;
+	public MapResourceType(@NonNull OntModel model, @NonNull BasePropertyType primaryType) {		
+		this.primaryPropertyType = primaryType;
 		mapEntryClass = model.getOntClass(ENTRY_TYPE_URI);
 		keyProperty = model.getDataProperty(KEY_PROPERTY_URI);
 		literalValueProperty = model.getDataProperty(LITERAL_VALUE_PROPERTY_URI);
@@ -80,7 +81,7 @@ public class MapResourceType  {
 	
 	public OntObjectProperty addLiteralMapProperty(OntClass resource, String propertyURI, OntDataRange valueType) {
 		OntModel model = resource.getModel();
-		if (singleType.existsPrimaryProperty(propertyURI)) {
+		if (primaryPropertyType.existsPrimaryProperty(propertyURI)) {
 			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty		
 		}
 		var uri = generateMapEntryTypeURI(propertyURI);
@@ -92,21 +93,24 @@ public class MapResourceType  {
 		mapType.addSuperClass(mapEntryClass);
 		subclassesCache.add(mapType);
 
-		OntDataProperty valueProp = model.createDataProperty(propertyURI+LITERAL_VALUE);
+		//use base property to enable tracking of existing properties
+		//OntDataProperty valueProp = model.createDataProperty(propertyURI+LITERAL_VALUE);
+		OntDataProperty valueProp = primaryPropertyType.createBaseDataPropertyType(model, propertyURI+LITERAL_VALUE, List.of(mapType), valueType);
 		valueProp.addSuperProperty(literalValueProperty);
-		valueProp.addDomain(mapType);
-		valueProp.addRange(valueType);
+		//valueProp.addDomain(mapType);
+		//valueProp.addRange(valueType);
 
-		OntObjectProperty hasMap = model.createObjectProperty(propertyURI);
-		hasMap.addDomain(resource);
-		hasMap.addRange(mapType);
+		OntObjectProperty hasMap = primaryPropertyType.createBaseObjectPropertyType(propertyURI, resource, mapType);
+//		OntObjectProperty hasMap = model.createObjectProperty(propertyURI);
+//		hasMap.addDomain(resource);
+//		hasMap.addRange(mapType);
 		mapReferenceSuperProperty.addSubProperty(hasMap);			
 		return hasMap;
 	}
 
 	public OntObjectProperty addObjectMapProperty(OntClass resource, String propertyURI, OntClass valueType) {
 		OntModel model = resource.getModel();
-		if (singleType.existsPrimaryProperty(propertyURI)) {
+		if (primaryPropertyType.existsPrimaryProperty(propertyURI)) {
 			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty		
 		}
 		var uri = generateMapEntryTypeURI(propertyURI);
@@ -118,14 +122,16 @@ public class MapResourceType  {
 		mapType.addSuperClass(mapEntryClass);
 		subclassesCache.add(mapType);
 
-		OntObjectProperty valueProp = model.createObjectProperty(propertyURI+OBJECT_VALUE);
+		OntObjectProperty valueProp = primaryPropertyType.createBaseObjectPropertyType(propertyURI+OBJECT_VALUE, mapType, valueType);
+		//OntObjectProperty valueProp = model.createObjectProperty(propertyURI+OBJECT_VALUE);
 		valueProp.addSuperProperty(objectValueProperty);
-		valueProp.addDomain(mapType);
-		valueProp.addRange(valueType);
+		//valueProp.addDomain(mapType);
+		//valueProp.addRange(valueType);
 
-		OntObjectProperty hasMap = model.createObjectProperty(propertyURI);
-		hasMap.addDomain(resource);
-		hasMap.addRange(mapType);
+		OntObjectProperty hasMap = primaryPropertyType.createBaseObjectPropertyType(propertyURI, resource, mapType);
+//		OntObjectProperty hasMap = model.createObjectProperty(propertyURI);
+//		hasMap.addDomain(resource);
+//		hasMap.addRange(mapType);
 		mapReferenceSuperProperty.addSubProperty(hasMap);	
 		return hasMap;
 	}
@@ -135,6 +141,11 @@ public class MapResourceType  {
 	}
 	
 
+	public void removePropertyURIfromCache(String propertyURI) {
+		// nothing to do, as all properties are removed via base/primary property cache,
+		// we do however would have stale subclasses cache entries (not a problem as long as we just override stale entries)
+	}
+	
 	/**
 	 * @param prop OntProperty to remove from its owning class including the specific map entry type and its value predicate
 	 */
@@ -145,11 +156,11 @@ public class MapResourceType  {
 		// remove from cache
 		subclassesCache.remove(mapType);
 		// remove any predicates from any properties that happen to be defined
-		MetaModelSchemaTypes.getExplicitlyDeclaredProperties(mapType).forEach(Resource::removeProperties);
+		MetaModelSchemaTypes.getExplicitlyDeclaredProperties(mapType).forEach(primaryPropertyType::removeBaseProperty);
 		// remove predicates association from mapType itself 
 		mapType.removeProperties();
 		// remove map reference property
-		singleType.removeBaseProperty(mapReferenceProperty);
+		primaryPropertyType.removeBaseProperty(mapReferenceProperty);
 	}
 	
 	public boolean isMapEntry(OntIndividual ontInd) {
@@ -172,6 +183,8 @@ public class MapResourceType  {
 		}
 		return props;
 	}
+	
+
 	
 	protected static class MapSchemaFactory {
 		

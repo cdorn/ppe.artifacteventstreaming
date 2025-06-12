@@ -126,7 +126,7 @@ public class StatementAugmentationSession {
 		 */  
 		var id = list.isAnon() ? list.getId() : list.getURI();
 		// first obtain the owner of the list
-		var optOwner = isDelete ? schemaUtils.getFormerListOwner(stmts) : schemaUtils.getCurrentListOwner((OntIndividual) list);
+		var optOwner = isDelete ? schemaUtils.getListType().getFormerListOwner(stmts) : schemaUtils.getListType().getCurrentListOwner((OntIndividual) list);
 		// should only exist one such resource as we dont share lists across individuals
 		if (optOwner.isEmpty()) {
 			log.error("Encountered ownerless list "+id);
@@ -135,7 +135,7 @@ public class StatementAugmentationSession {
 			return;
 		}
 		var owner = optOwner.get();
-		var commonProps = /*isDelete ? findFormerPropertiesBetween(owner, list) :*/ schemaUtils.getListType().findListReferencePropertiesBetween(owner, list); // list is never removed, just stays empty
+		var commonProps = isDelete ? findFormerPropertiesBetween(owner, list) : schemaUtils.getListType().findListReferencePropertiesBetween(owner, list); // list is never removed, just stays empty, except when individual removed
 		if (commonProps.size() != 1) {
 			log.error(String.format("Cannot unambiguously determine list ownership/containment property to use between %s and %s, found %s", owner.getURI(), id, commonProps.size()));
 			// just produce basic wrappers

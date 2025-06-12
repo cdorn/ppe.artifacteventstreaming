@@ -1,5 +1,8 @@
-package at.jku.isse.artifacteventstreaming.rule;
+package at.jku.isse.artifacteventstreaming.rule.definition;
 
+import at.jku.isse.artifacteventstreaming.rule.RuleException;
+import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import lombok.NonNull;
 
 public class RuleDefinitionRegistrar extends RuleDefinitionBuilder{

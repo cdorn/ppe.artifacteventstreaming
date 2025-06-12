@@ -80,11 +80,11 @@ public class SetWrapper extends TypedCollectionResource implements Set<Object> {
 	}
 
 	public Object[] toArray() {
-		throw new RuntimeException("Not supported");
+		return this.stream().toArray();
 	}
 
 	public <T> T[] toArray(T[] a) {
-		throw new RuntimeException("Not supported");
+		return (T[]) this.stream().toArray();
 	}
 
 	public boolean add(Object e) {
@@ -165,6 +165,9 @@ public class SetWrapper extends TypedCollectionResource implements Set<Object> {
 		@Override
 		public Object next() {			
 			RDFNode nextNode = delegate.next().getObject();
+			if (!delegate.hasNext()) {
+				delegate.close();
+			}
 			if (nextNode.isLiteral())
 				return nextNode.asLiteral().getValue();
 			else

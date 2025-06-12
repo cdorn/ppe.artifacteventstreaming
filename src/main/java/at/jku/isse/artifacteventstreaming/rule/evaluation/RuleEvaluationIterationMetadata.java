@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.rule;
+package at.jku.isse.artifacteventstreaming.rule.evaluation;
 
 import java.util.Collection;
 import java.util.HashSet;

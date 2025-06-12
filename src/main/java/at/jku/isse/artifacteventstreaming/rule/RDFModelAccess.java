@@ -53,9 +53,9 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     	singleFactory = propertyCardinalities.getSingleType();        
     }
     
-    public OntProperty resolveToProperty(OntClass ontClass, String propertyName) {
-    	return ontClass.declaredProperties()
-    	.filter(prop -> prop.getLocalName().equals(propertyName)) 
+    public OntProperty resolveToProperty(OntClass ontClass, String propertyName) {    	    			
+    	var allProps = ontClass.declaredProperties().toList();
+    	return allProps.stream().filter(prop -> prop.getLocalName().equals(propertyName)) 
     	.findAny().orElse(null);
     }
 
@@ -129,6 +129,11 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
         	var entry = RDFPropertyType.determineValueTypeAndCardinality(ontProp, mapFactory, listFactory, singleFactory);
         	return ArlType.get(typeKind(entry.getKey()), collectionKind(entry.getValue()), entry.getKey(), this);
         }
+    }
+    
+    public ArlType getArlTypeOfProperty(OntRelationalProperty ontProp) {
+        	var entry = RDFPropertyType.determineValueTypeAndCardinality(ontProp, mapFactory, listFactory, singleFactory);
+        	return ArlType.get(typeKind(entry.getKey()), collectionKind(entry.getValue()), entry.getKey(), this);
     }
     
     public ArlType arlTypeOfProperty(ArlType type, final String property) {
@@ -226,7 +231,7 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
         	if (first.getObject().canAs(OntIndividual.class)) {
         		return mapAsObjectValues(content, element, foundProp);        		
         	} else { //if not backed by an ontology then we cant reason and assume set
-        		return content.stream().map(Statement::getObject).collect(Collectors.toSet());
+        		return content.stream().map(Statement::getObject).toList();
         	}
         }         	
         //return element.getProperty(prop); 
@@ -234,13 +239,13 @@ public class RDFModelAccess extends ModelAccess<OntObject, Resource> {
     
     private Object mapLiteralValues(List<Statement> content, Property prop) {    	    	
     	if (content.size() > 1 || !prop.canAs(OntRelationalProperty.class)) { // either a set or we cant determine any type info from it
-    		return content.stream().map(lit -> lit.getObject().asLiteral().getValue()); // we assume no mixing in sets
+    		return content.stream().map(lit -> lit.getObject().asLiteral().getValue()).toList(); // we assume no mixing in sets
     	} else { // determine set or single
     		var ontProp = prop.as(OntRelationalProperty.class);
     		if (ontProp.hasSuperProperty(singleFactory.getSingleLiteralProperty(), false)) // single element
     			return content.get(0).getObject().asLiteral().getValue();
     		else
-    			return content.stream().map(lit -> lit.getObject().asLiteral().getValue()).collect(Collectors.toSet()); // we assume no mixing in sets
+    			return content.stream().map(lit -> lit.getObject().asLiteral().getValue()).toList(); // we assume no mixing in sets
     	}
     }
     

@@ -1,9 +1,10 @@
-package at.jku.isse.artifacteventstreaming.rule;
+package at.jku.isse.artifacteventstreaming.rule.definition;
 
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.vocabulary.RDFS;
 
+import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.designspace.rule.arl.exception.ParsingException;
 import at.jku.isse.designspace.rule.arl.expressions.Expression;
 import at.jku.isse.designspace.rule.arl.expressions.RootExpression;
@@ -15,8 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class RDFRuleDefinitionImpl implements RDFRuleDefinition {
 
-	private final OntObject ontObject;
-	private final RuleSchemaProvider factory;
+	protected final OntObject ontObject;
+	protected final RuleSchemaProvider factory;
 	private Expression<Object> syntaxTree;	
 	
 	protected RDFRuleDefinitionImpl(@NonNull OntObject ruleDefinition
@@ -29,16 +30,7 @@ public class RDFRuleDefinitionImpl implements RDFRuleDefinition {
 		setRuleExpression(expression);
 	}
 	
-	public static RDFRuleDefinitionImpl rebuildRDFRuleDefinitionImpl(@NonNull OntObject ruleDefinition
-								, @NonNull RuleSchemaProvider factory) {
-		var def = new RDFRuleDefinitionImpl(ruleDefinition, factory);
-		if (!def.reloadContextAndExpressionSuccessful()) {
-			return null;
-		} else
-			return def;
-	}
-	
-	private RDFRuleDefinitionImpl(@NonNull OntObject ruleDefinition
+	protected RDFRuleDefinitionImpl(@NonNull OntObject ruleDefinition
 			, @NonNull RuleSchemaProvider factory) {
 			this.ontObject = ruleDefinition;
 			this.factory = factory;				
@@ -109,7 +101,7 @@ public class RDFRuleDefinitionImpl implements RDFRuleDefinition {
 		return stmt != null ? stmt.getString() : null;
 	}
 
-	private void setExpressionError(String error) {
+	protected void setExpressionError(String error) {
 		ontObject.removeAll(factory.getExpressionErrorProperty())
 			.addLiteral(factory.getExpressionErrorProperty(), error);
 	}
@@ -193,7 +185,7 @@ public class RDFRuleDefinitionImpl implements RDFRuleDefinition {
 	@Override
 	public String toString() {
 		return "RuleDefinitionImpl [Name=" + getName() + ", CtxType=" + getContextType() + ", Expr=" + getRuleExpression() + ", ExpErr()="
-				+ getExpressionError() + ", Name=" + getName() + "]";
+				+ getExpressionError() + "]";
 	}
 
 	

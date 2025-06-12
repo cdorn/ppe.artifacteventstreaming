@@ -112,7 +112,6 @@ public class RDFInstanceType extends RDFElement {
 		}
 	}
 
-
 	public RDFPropertyType createMapPropertyType(String name, PrimitiveOrClassType valueType) {
 		if (valueType.isPrimitiveType()) {
 			var prop = resolver.getMetaschemata().getMapType().addLiteralMapProperty(this.type, makePropertyURI(name), valueType.getPrimitiveType());
@@ -131,7 +130,6 @@ public class RDFInstanceType extends RDFElement {
 		}
 	}
 
-
 	public RDFPropertyType createSetPropertyType(String name, PrimitiveOrClassType type) {
 		OntRelationalProperty prop =  createBasePropertyType(name, type);
 		if (prop != null) {
@@ -145,7 +143,7 @@ public class RDFInstanceType extends RDFElement {
 		if (type.isPrimitiveType()) {
 			return resolver.getMetaschemata().getSingleType().createBaseDataPropertyType(propUri, this.type, type.getPrimitiveType());
 		} else {
-			return resolver.getMetaschemata().getSingleType().createBaseObjectPropertyType(propUri, this.type, type.getClassType());
+			return resolver.getMetaschemata().getPrimaryPropertyType().createBaseObjectPropertyType(propUri, this.type, type.getClassType());
 		}
 	}
 	
@@ -159,7 +157,6 @@ public class RDFInstanceType extends RDFElement {
 		}
 	}
 
-
 	public RDFPropertyType createSinglePropertyType(String name, PrimitiveOrClassType type) {
 		var propUri = makePropertyURI(name);
 		if (propWrappers.containsKey(propUri)) return propWrappers.get(propUri);
@@ -172,7 +169,6 @@ public class RDFInstanceType extends RDFElement {
 		else 
 			return null;
 	}
-
 
 	public Set<RDFInstanceType> getAllSubtypesRecursively() {
 		return type.subClasses()
@@ -196,7 +192,6 @@ public class RDFInstanceType extends RDFElement {
 //			.map(Resource::getLocalName)
 //			.toList();
 	}
-
 
 	public RDFPropertyType getPropertyType(String uri) {
 		var pType = findExistingType(uri);
@@ -236,8 +231,4 @@ public class RDFInstanceType extends RDFElement {
 	public String toString() {
 		return "RDFInstanceType [" + getId() + "]";
 	}
-	
-	
-
-
 }

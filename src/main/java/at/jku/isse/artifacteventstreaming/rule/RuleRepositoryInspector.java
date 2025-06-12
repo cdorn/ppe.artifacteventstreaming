@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.rdf.model.Resource;
 
+import at.jku.isse.artifacteventstreaming.rule.evaluation.RuleEvaluationDTO;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
