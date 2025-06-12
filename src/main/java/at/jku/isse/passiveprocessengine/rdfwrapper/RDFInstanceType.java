@@ -14,6 +14,7 @@ import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntClass.CardinalityRestriction;
 import org.apache.jena.ontapi.model.OntClass.ValueRestriction;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
+import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDFS;
 
@@ -227,8 +228,40 @@ public class RDFInstanceType extends RDFElement {
 		return new PrimitiveOrClassType(this.type);
 	}
 
+	/**
+	 * @param predicate to remove from this type's property cache, and all its subclasses based on changes in the underlying model , does not remove the property from instances!!
+	 */
+	public void removeProperty(Property predicate) {
+		propWrappers.remove(predicate.getURI());
+		//need to remove those in subtypes as well
+		this.getType().subClasses(true)
+			.map(subClass -> resolver.findNonDeletedInstanceTypeByFQN(subClass.getURI()))
+			.filter(optClass -> optClass.isPresent())
+			.forEach(subClass -> subClass.get().removeProperty(predicate));
+	}
+	
+	/**
+	 * @param predicate to add to this type's property cache, and all its subclasses based on changes in the underlying model 
+	 * does not add this property to any instances!
+	 */
+	public void addProperty(Property predicate) {
+		if (!propWrappers.containsKey(predicate.getURI()) && predicate.canAs(OntRelationalProperty.class)) {
+			var prop = predicate.as(OntRelationalProperty.class);
+			insertAndReturn(prop);
+		//need to add those in subtypes as well
+		this.getType().subClasses(true)
+			.map(subClass -> resolver.findNonDeletedInstanceTypeByFQN(subClass.getURI()))
+			.filter(optClass -> optClass.isPresent())
+			.forEach(subClass -> subClass.get().addProperty(predicate));
+		}
+	}
+	
 	@Override
 	public String toString() {
 		return "RDFInstanceType [" + getId() + "]";
 	}
+
+
+
+	
 }

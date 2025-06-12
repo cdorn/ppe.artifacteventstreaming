@@ -27,7 +27,6 @@ import lombok.extern.slf4j.Slf4j;
  * branch-externally added properties do not exist in this branch, (we only update the cache, no update to the model)
 */
 @Slf4j
-
 public class PropertyDefinitionAddedCacheUpdater extends AbstractHandlerBase {
 
 	private final Branch branch;

@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.jena.ontapi.model.OntClass;
+import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntClass.Named;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.Resource;
@@ -69,7 +70,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 		
 		var ruleDefinitions = ruleRepo.getRuleDefinitions().stream().map(indiv -> indiv.getRuleDefinition().getURI()).collect(Collectors.toSet());
 		model.classes()
-			.filter(ontClass -> !isBlacklistedNamespace(ontClass.getNameSpace()))									
+			.filter(ontClass -> !isCacheBlacklistedNamespace(ontClass.getNameSpace()))									
 			.filter(ontClass -> !ruleDefinitions.contains(ontClass.getURI())) // we dont want to cache rule definitions here but via rule repo, the store just wrappers here			
 			.forEach(this::loadTypeInstances);
 		// store all rule definitions as wrappers
@@ -77,6 +78,40 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 			var wrapper = new RDFRuleDefinitionWrapper(ruleDef, this);			
 			typeIndex.put(ruleDef.getRuleDefinition(), wrapper);	
 		});
+	}
+	
+	@Override
+	public void loadInstanceViaUpdate(OntIndividual ontIndividual) {
+		if (!ontIndividual.isAnon() && !instanceIndex.containsKey(ontIndividual.getURI())) {
+			ontIndividual.classes(true).findFirst().ifPresent(ontClass -> {
+				// check if type is on blacklist, or the metaclass, or rule evaluation then abort
+				if (isCacheBlacklistedNamespace(ontClass.getNameSpace()) 
+						|| ontClass.equals(metaschemata.getMetaElements().getMetaClass())) {
+					return;
+				}
+				var ruleDefinitions = ruleRepo.getRuleDefinitions().stream().map(indiv -> indiv.getRuleDefinition().getURI()).collect(Collectors.toSet());
+				if (ruleDefinitions.contains(ontClass.getURI())) {
+					return; // we dont store rule evaluation either, done by rule repo separately
+				}
+				var constructor = metaschemata.getMetaElements().getInstanceConstructorForNamespace(ontClass.getURI());
+				var type = initOrGetType(ontClass);
+				instanceIndex.putIfAbsent(ontIndividual.getURI(), createMostSpecificInstance(ontIndividual, type, constructor));
+			});
+		}
+	}
+	
+	public boolean existsElement(String uri) {
+		var indiv =  model.getIndividual(uri);
+		if (indiv != null) return true;
+		else return (model.getOntClass(uri) != null);
+	}	
+	
+	@Override
+	public void loadTypeViaUpdate(OntClass ontClass) {
+		var ruleDefinitions = ruleRepo.getRuleDefinitions().stream().map(indiv -> indiv.getRuleDefinition().getURI()).collect(Collectors.toSet());
+		if (!ruleDefinitions.contains(ontClass.getURI())) {
+			super.loadTypeViaUpdate(ontClass);
+		} // else: we dont store rule definitions here, done by rule repo separately
 	}
 	
 	protected void removeRuleDefinition(RDFRuleDefinitionWrapper ruleDef) {
@@ -144,14 +179,13 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 		}
 	}
 	
-	public RDFRuleDefinitionWrapper getRuleByNameAndContext(String arg0, RDFInstanceType arg1) {
-		// we ignore type and just use the name as a URI
+	public RDFRuleDefinitionWrapper getRuleByURI(String arg0) {
 		if (!isValidURL(arg0)) {
 			arg0 = BASE_NS+arg0;
 		}	
 		var def = ruleRepo.findRuleDefinitionForURI(arg0);
 		if (def != null) {
-			return (RDFRuleDefinitionWrapper) typeIndex.computeIfAbsent(def.getRuleDefinition(), k-> new RDFRuleDefinitionWrapper(def, (RuleEnabledResolver) this));
+			return (RDFRuleDefinitionWrapper) typeIndex.computeIfAbsent(def.getRuleDefinition(), k-> new RDFRuleDefinitionWrapper(def, this));
 		} else {
 			return null;
 		}
@@ -294,5 +328,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 			resultMap.computeIfAbsent(defWrapper, k -> new HashSet<ResultEntry>()).add(entry);
 		});
 		return resultMap;
-	}	
+	}
+
+
 }
