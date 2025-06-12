@@ -48,6 +48,9 @@ class TestDerivedPropertyRuleDefinitions {
 	OntObjectProperty numbersListProp;
 	OntObjectProperty numbersListDerivedProp;
 	
+	OntObjectProperty artList;
+	OntObjectProperty artListDerivedProp;
+	
 	OntDataProperty priorityProp;
 	OntDataProperty labelProp;
 	OntDataProperty priorityDerivedProp;
@@ -83,6 +86,9 @@ class TestDerivedPropertyRuleDefinitions {
 		numbersDerivedProp.addDomain(artType);
 		
 		numbersListDerivedProp = schemaUtils.getListType().addLiteralListProperty(artType, baseURI+"numbersListDerived", m.getDatatype(XSD.xint));
+		
+		artList = schemaUtils.getListType().addObjectListProperty(artType, baseURI+"artList", artType);
+		artListDerivedProp = schemaUtils.getListType().addObjectListProperty(artType, baseURI+"artListDerived", artType);
 		
 		subProp = m.createObjectProperty(baseURI+LOCALPROP_SUBREF);
 		subProp.addRange(artSubType);
@@ -163,6 +169,34 @@ class TestDerivedPropertyRuleDefinitions {
 					.forDerivedProperty(refPropDerived)
 					.build();
 		assertFalse(ruleDef.hasExpressionError());
+		assertNotNull(ruleDef.getSyntaxTree());
+		assertTrue(ruleDef instanceof DerivedPropertyRuleDefinition);
+	}
+	
+	@Test
+	void testCompatibleListDerive() throws RuleException {
+			var ruleDef = factory.createRuleDefinitionBuilder()
+					.withContextType(artSubType)
+					.withDescription("Test3Rule")
+					.withRuleTitle("Test3RuleTitle")
+					.withRuleExpression("self.artList.asList()")
+					.forDerivedProperty(artListDerivedProp)
+					.build();
+		assertFalse(ruleDef.hasExpressionError());
+		assertNotNull(ruleDef.getSyntaxTree());
+		assertTrue(ruleDef instanceof DerivedPropertyRuleDefinition);
+	}
+	
+	@Test
+	void testInCompatibleListDerive() throws RuleException {
+		var ruleDef = factory.createRuleDefinitionBuilder()
+				.withContextType(artSubType)
+				.withDescription("Test3Rule")
+				.withRuleTitle("Test3RuleTitle")
+				.withRuleExpression("self.ref")
+				.forDerivedProperty(artListDerivedProp)
+				.build();
+		assertTrue(ruleDef.hasExpressionError());
 		assertNotNull(ruleDef.getSyntaxTree());
 		assertTrue(ruleDef instanceof DerivedPropertyRuleDefinition);
 	}

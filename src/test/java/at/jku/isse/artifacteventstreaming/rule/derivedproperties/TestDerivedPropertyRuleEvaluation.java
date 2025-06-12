@@ -1,10 +1,10 @@
 package at.jku.isse.artifacteventstreaming.rule.derivedproperties;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashSet;
 import java.util.List;
@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import at.jku.isse.artifacteventstreaming.rule.RuleException;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepository;
 import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
+import at.jku.isse.artifacteventstreaming.rule.definition.DerivedPropertyRuleDefinition;
 import at.jku.isse.artifacteventstreaming.rule.definition.RDFRuleDefinition;
 
 
@@ -200,7 +201,7 @@ class TestDerivedPropertyRuleEvaluation extends TestDerivedPropertyRuleDefinitio
 		evalWrapper.evaluate();
 		derivedList = inst1.getPropertyResourceValue(numbersListDerivedProp.asProperty()).as(Seq.class);
 		assertEquals(2, derivedList.size());
-		var content = Set.of(derivedList.getInt(1), derivedList.getInt(2)); // we dont know the order of the content in the derived source set
+		var content = Set.of(derivedList.getInt(1), derivedList.getInt(2)); 
 		assertEquals(Set.of(5,6), content); 
 		
 		inst1.removeAll(numbersProp.asProperty());
@@ -232,7 +233,7 @@ class TestDerivedPropertyRuleEvaluation extends TestDerivedPropertyRuleDefinitio
 		evalWrapper.evaluate();
 		derivedList = inst1.getPropertyResourceValue(numbersListDerivedProp.asProperty()).as(Seq.class);
 		assertEquals(2, derivedList.size());
-		var content = List.of(derivedList.getInt(1), derivedList.getInt(2)); // we dont know the order of the content in the derived source set
+		var content = List.of(derivedList.getInt(1), derivedList.getInt(2)); 
 		assertEquals(List.of(6,5), content); 
 		
 		sourceSeq.remove(2);
@@ -242,7 +243,47 @@ class TestDerivedPropertyRuleEvaluation extends TestDerivedPropertyRuleDefinitio
 		assertEquals(0, derivedList.size());
 	}
 
-	
+	@Test
+	void testCompatibleListDeriveEval() throws RuleException {
+		var sourceSeq = inst1.getModel().createSeq();
+		inst1.addProperty(artList.asProperty(), sourceSeq);
+		sourceSeq.add(inst2);
+		
+		var ruleDef = repo.getRuleBuilder()
+					.withContextType(artSubType)
+					.withDescription("Test3Rule")
+					.withRuleTitle("Test3RuleTitle")
+					.withRuleExpression("self.artList.asList()")
+					.forDerivedProperty(artListDerivedProp)
+					.build();
+		assertFalse(ruleDef.hasExpressionError());
+		assertNotNull(ruleDef.getSyntaxTree());
+		
+		var rulesToEval = repo.getRulesAffectedByCreation(inst1);				
+		assertEquals(1, rulesToEval.size());
+		var evalWrapper = rulesToEval.iterator().next();
+		evalWrapper.evaluate();
+		
+		var derivedList = inst1.getPropertyResourceValue(artListDerivedProp.asProperty()).as(Seq.class);
+		assertEquals(1, derivedList.size());
+		var entry = derivedList.getObject(1);
+		assertTrue(entry.isResource());
+		assertEquals(inst2, entry); // RDF is 1 index based!!!
+		
+		var inst3 = artSubType.createIndividual(baseURI+"inst3");
+		sourceSeq.add(1, inst3);
+		evalWrapper.evaluate();
+		derivedList = inst1.getPropertyResourceValue(artListDerivedProp.asProperty()).as(Seq.class);
+		assertEquals(2, derivedList.size());
+		var content = List.of(derivedList.getObject(1), derivedList.getObject(2)); 
+		assertEquals(List.of(inst3, inst2), content); 
+		
+		sourceSeq.remove(2);
+		sourceSeq.remove(1);
+		evalWrapper.evaluate();
+		derivedList = inst1.getPropertyResourceValue(artListDerivedProp.asProperty()).as(Seq.class);
+		assertEquals(0, derivedList.size());
+	}
 	
 	protected RDFRuleDefinition getBasicArtTypeWithDerivedTitleRule(int counter) throws RuleException {
 		return repo.getRuleBuilder()

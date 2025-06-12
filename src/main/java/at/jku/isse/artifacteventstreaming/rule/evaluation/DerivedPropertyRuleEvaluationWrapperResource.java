@@ -122,6 +122,7 @@ public class DerivedPropertyRuleEvaluationWrapperResource extends RuleEvaluation
 	
 	private void deriveListValue(List<?> result) {
 		var indiv = getContextInstance();
+		// for list, prop is always an OntObjectProperty pointing to the Seq resource that hold the actual data
 		var prop = derivedDef.getDerivedPredicate().asProperty();
 		var listContainer = getContextInstance().getPropertyResourceValue(prop);
 		Seq list = getAsSeqOrCreate(listContainer,  indiv);
@@ -130,10 +131,9 @@ public class DerivedPropertyRuleEvaluationWrapperResource extends RuleEvaluation
 			list.remove(i); 
 		}
 		if (result != null && !result.isEmpty()) { // when a list  is not cleared/removed
-			// for list, prop is always an OntObjectProperty pointing to the Seq resource that hold the actual data
 			var first = result.get(0); // assuming no type mixing
 			if (first instanceof Resource) {
-				result.forEach(list::add);	
+				result.stream().map(Resource.class::cast).forEach(list::add);	
 			} else { 
 				var model = indiv.getModel();
 				result.forEach(value -> list.add(model.createTypedLiteral(value)));

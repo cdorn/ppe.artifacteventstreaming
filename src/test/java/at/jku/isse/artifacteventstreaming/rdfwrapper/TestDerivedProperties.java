@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -72,7 +73,7 @@ class TestDerivedProperties {
 		// derived property
 		derivedListOfString = typeChild.createListPropertyType(NS+"derivedListOfString",typeFactory.getStringType());
 		derivedSetOfBaseArt = typeChild.createSetPropertyType(NS+"derivedSetOfBaseArt", typeBase.getAsPropertyType());
-		derivedListOfBaseArt = typeChild.createListPropertyType(NS+"derivedListOfBaseArt",typeFactory.getStringType());
+		derivedListOfBaseArt = typeChild.createListPropertyType(NS+"derivedListOfBaseArt", typeBase.getAsPropertyType());
 		derivedSetOfString = typeChild.createSetPropertyType(NS+"derivedSetOfString", typeFactory.getStringType());
 		backend.getBranch().commitChanges("schema created");
 		
@@ -113,6 +114,73 @@ class TestDerivedProperties {
 	
 	@Test
 	void testDerivedStringListProperty() throws Exception {
-		fail();
+		branch.getDataset().begin(ReadWrite.WRITE);
+		// we manually create rule on RDF level (later at wrapper level)
+		var ruleDef = resolver.getRuleRepo().getRuleBuilder()
+			.withContextType(typeChild.getType())
+			.withDescription("TestDerivedRuleStringSet")
+			.withRuleExpression("self.setOfBaseArt->collect(art | art.title).asList()")
+			.forDerivedProperty(derivedListOfString.getProperty())
+			.build();
+		assertFalse(ruleDef.hasExpressionError());
+		assertNotNull(ruleDef.getSyntaxTree());
+		assertTrue(ruleDef instanceof DerivedPropertyRuleDefinition);			
+		branch.commitChanges("RuleDef commit");
+		
+		branch.getDataset().begin(ReadWrite.WRITE);
+		var art1 = resolver.createInstance( NS+"Art1", typeChild);
+		var art2 = resolver.createInstance( NS+"Art2", typeChild);
+		var art3 = resolver.createInstance( NS+"Art3", typeChild);
+		art1.setSingleProperty(stringTitle.getId(), "Art1");
+		art2.setSingleProperty(stringTitle.getId(), "Art2");
+		art3.setSingleProperty(stringTitle.getId(), "Art3");
+		art1.add(setOfBaseArt.getId(), art2);
+		art1.add(setOfBaseArt.getId(), art3);
+		var derivedList = art1.getTypedProperty(derivedListOfString.getId(), List.class);
+		assertNotNull(derivedList);
+		assertEquals(0, derivedList.size()); //at this stage, the rule has not fired yet.
+		branch.commitChanges("Instances commit");
+		
+		branch.getDataset().begin(ReadWrite.READ);
+		derivedList = art1.getTypedProperty(derivedListOfString.getId(), List.class);
+		assertNotNull(derivedList);
+		assertEquals(2, derivedList.size());
+		assertEquals(Set.of("Art3", "Art2"), derivedList.stream().map(x -> x).collect(Collectors.toSet())); // we wont know the list order, hence just content compare
+	}
+	
+	@Test
+	void testDerivedBaseArtListProperty() throws Exception {
+		branch.getDataset().begin(ReadWrite.WRITE);
+		// we manually create rule on RDF level (later at wrapper level)
+		var ruleDef = resolver.getRuleRepo().getRuleBuilder()
+			.withContextType(typeChild.getType())
+			.withDescription("TestDerivedRuleStringSet")
+			.withRuleExpression("self.setOfBaseArt.asList()")
+			.forDerivedProperty(derivedListOfBaseArt.getProperty())
+			.build();
+		assertFalse(ruleDef.hasExpressionError());
+		assertNotNull(ruleDef.getSyntaxTree());
+		assertTrue(ruleDef instanceof DerivedPropertyRuleDefinition);			
+		branch.commitChanges("RuleDef commit");
+		
+		branch.getDataset().begin(ReadWrite.WRITE);
+		var art1 = resolver.createInstance( NS+"Art1", typeChild);
+		var art2 = resolver.createInstance( NS+"Art2", typeChild);
+		var art3 = resolver.createInstance( NS+"Art3", typeChild);
+		art1.setSingleProperty(stringTitle.getId(), "Art1");
+		art2.setSingleProperty(stringTitle.getId(), "Art2");
+		art3.setSingleProperty(stringTitle.getId(), "Art3");
+		art1.add(setOfBaseArt.getId(), art2);
+		art1.add(setOfBaseArt.getId(), art3);
+		var derivedList = art1.getTypedProperty(derivedListOfBaseArt.getId(), List.class);
+		assertNotNull(derivedList);
+		assertEquals(0, derivedList.size()); //at this stage, the rule has not fired yet.
+		branch.commitChanges("Instances commit");
+		
+		branch.getDataset().begin(ReadWrite.READ);
+		derivedList = art1.getTypedProperty(derivedListOfBaseArt.getId(), List.class);
+		assertNotNull(derivedList);
+		assertEquals(2, derivedList.size());
+		assertEquals(Set.of(art2, art3), derivedList.stream().map(x -> x).collect(Collectors.toSet())); 
 	}
 }
