@@ -78,7 +78,7 @@ public class ElementDeletedCacheUpdater extends AbstractHandlerBase {
 		.forEach(stmt -> { 
 			var optType = resolver.findNonDeletedInstanceTypeByFQN(stmt.getResource().getURI());
 			if (optType.isPresent()) {
-				optType.get().removeProperty(stmt.getPredicate());
+				optType.get().removeProperty(stmt.getSubject().getURI());
 			}
 		});
 		// added properties are handled in sibling ElementCreatedCacheUpdater

@@ -134,7 +134,7 @@ public class ElementCreatedCacheUpdater extends AbstractHandlerBase {
 		.filter(stmt -> !newOrRemovedResourceURIs.contains(stmt.getContainerOrSubject().getURI())) // newly added resource can be ignored
 		.filter(stmt -> stmt.getPredicate().equals(RDFS.domain)) // if a resource appears in the domain of a property --> property "added" to that class --> schema change
 		.filter(stmt -> stmt.getObject().isResource()) // we are talking about a resource
-		.map(stmt -> new ResourcePropertyTuple(stmt.getResource(), stmt.getPredicate()))
+		.map(stmt -> new ResourcePropertyTuple(stmt.getResource(), stmt.getSubject()))
 		.distinct()
 		.forEach(entry -> { 
 			var optType = resolver.findNonDeletedInstanceTypeByFQN(entry.resource().getURI());
@@ -145,7 +145,7 @@ public class ElementCreatedCacheUpdater extends AbstractHandlerBase {
 		// removed properties are handled in sibling ElementDeletedCacheUpdater
 	}
 	
-	record ResourcePropertyTuple(Resource resource, Property property ) {};
+	record ResourcePropertyTuple(Resource resource, Resource property ) {};
 
 	@Override
 	protected String getServiceTypeURI() {
