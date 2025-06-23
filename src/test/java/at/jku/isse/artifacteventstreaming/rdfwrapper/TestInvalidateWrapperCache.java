@@ -7,21 +7,15 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.rdf.model.Statement;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.rule.MockSchema;
-import at.jku.isse.artifacteventstreaming.rule.RuleRepositoryInspector;
-import at.jku.isse.artifacteventstreaming.rule.definition.DerivedPropertyRuleDefinition;
 import at.jku.isse.artifacteventstreaming.testutils.ModelDiff;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFInstance;
