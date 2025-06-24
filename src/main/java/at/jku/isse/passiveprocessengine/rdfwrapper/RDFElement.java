@@ -153,7 +153,7 @@ public abstract class RDFElement {
 	
 	protected OntRelationalProperty resolveProperty(String property, Cardinalities... expectedCardinalities) {
 		var expCardi = Set.of(expectedCardinalities);
-		RDFInstanceType type = (RDFInstanceType) getInstanceType();
+		RDFInstanceType type = getInstanceType();
 		if (type == null) { // we are untyped, thus return just the property, consumer needs to know what they are doing
 			property = makePropertyURI(property);
 			OntRelationalProperty prop = element.getModel().getObjectProperty(property);
@@ -164,7 +164,7 @@ public abstract class RDFElement {
 			}
 			return prop;
 		} else { // check if the cardinality matches
-			RDFPropertyType pType = (RDFPropertyType) type.getPropertyType(property);
+			RDFPropertyType pType = type.getPropertyType(property);
 			if (pType == null) {
 				throw new IllegalArgumentException("Property unknown: "+property);
 			}
@@ -219,6 +219,13 @@ public abstract class RDFElement {
 																							resolver, 
 																							MapResource.asUnsafeMapResource(this.element, named, resolver.getMetaschemata().getMapType()))); 					
 	}
+	
+	public void reloadMapProperty(@NonNull RDFPropertyType prop) {
+		var named = (OntObjectProperty.Named) prop.getProperty();
+		collectionPropertyCache.put(prop.getId(),  new MapWrapper(prop.getValueType().getAsPrimitiveOrClass(), 
+				resolver, 
+				MapResource.asUnsafeMapResource(this.element, named, resolver.getMetaschemata().getMapType()))); 
+	}
 
 	private Object getPropertyAsList(@NonNull RDFPropertyType prop) {
 		var named = (OntObjectProperty.Named) prop.getProperty();
@@ -228,7 +235,7 @@ public abstract class RDFElement {
 	private Object getPropertyAsSet(@NonNull RDFPropertyType prop) {
 		return collectionPropertyCache.computeIfAbsent(prop.getId(),  k -> new SetWrapper(this.element, prop.getProperty(), resolver, prop.getValueType().getAsPrimitiveOrClass()));
 	}
-
+	
 	private Object getSingleProperty(@NonNull RDFPropertyType prop) {
 		var stmt = element.getProperty(prop.getProperty().asProperty());
 		if (stmt == null) return null; // when there is no value available yet.

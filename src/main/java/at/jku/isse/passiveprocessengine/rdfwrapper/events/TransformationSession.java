@@ -62,7 +62,7 @@ public class TransformationSession extends StatementAugmentationSession {
 		 *  removing from a list
 		 *  --> here we can check if the elements is of list type
 		 */  
-		RDFInstance changeSubject = (RDFInstance) resolver.resolveToRDFElement(owner);
+		RDFElement changeSubject = resolver.resolveToRDFElement(owner);
 		stmts.stream()
 				.filter(wrapper -> wrapper.getStmt().getPredicate().getOrdinal() > 0) // filter out any non-'li' properties
 				.forEach(wrapper -> {

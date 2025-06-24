@@ -339,6 +339,7 @@ public class BranchImpl  implements Branch, Runnable {
 			log.warn(String.format("Failed to persist post-service commit %s %s with exception %s", commit.getCommitMessage(), commit.getCommitId(), e.getMessage()));
 			//SHOULD WE: rethrow e to signal that we cannot continue here as we would loose persisted commit history.
 			undoNoncommitedChanges();
+			e.printStackTrace();
 			throw e; // if so, then we need to abort transaction before rethrowing
 		} finally {
 			dataset.end();

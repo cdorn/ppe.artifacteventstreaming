@@ -25,6 +25,8 @@ import at.jku.isse.artifacteventstreaming.rule.RepairService;
 import at.jku.isse.artifacteventstreaming.rule.RuleSchemaProvider;
 import at.jku.isse.artifacteventstreaming.rule.evaluation.RuleTriggerObserverFactory;
 import at.jku.isse.passiveprocessengine.rdfwrapper.CoreTypeFactory;
+import at.jku.isse.passiveprocessengine.rdfwrapper.crossbranch.ElementCreatedCacheUpdater;
+import at.jku.isse.passiveprocessengine.rdfwrapper.crossbranch.ElementDeletedCacheUpdater;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.ChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.events.CommitChangeEventTransformer;
 import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.WrapperMetaModelSchemaTypes;
@@ -92,13 +94,7 @@ public class FrontendEventStreamingWrapperFactory extends AbstractEventStreaming
 				sourceBranch.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(sourceBranch, branch, new InMemoryBranchStateCache()));				
 								
 				var cardUtil = new WrapperMetaModelSchemaTypes(frontendModel);	
-				var removedPropDefUpdater = new PropertyDefinitionRemovedCacheUpdater(branch, cardUtil);
-				branch.appendIncomingCommitMerger(removedPropDefUpdater);
-				var merger = new CompleteCommitMerger(branch);
-				branch.appendIncomingCommitMerger(merger);
-				var addedPropDefUpdater = new PropertyDefinitionAddedCacheUpdater(branch, cardUtil);
-				branch.appendIncomingCommitMerger(addedPropDefUpdater);	
-				
+								
 				// setting up branch commit handlers				 														
 				// we need to update rule repo without executing rules
 				var observerFactory = new RuleTriggerObserverFactory(cardUtil);
@@ -113,6 +109,24 @@ public class FrontendEventStreamingWrapperFactory extends AbstractEventStreaming
 				branch.appendBranchInternalCommitService(changeTransformer);
 				//AND no need for loop controller as there is no lazy loading here, that happened already in backend,
 				var coreTypeFactory = new CoreTypeFactory(resolver);			
+				
+			//INCOMING COMMIT HANDLING CHAIN (needs access to resolver, hence done at end)
+				// cache invalidation for removed elements
+				var cacheInvalidatorRemovedElements = new ElementDeletedCacheUpdater(branch, resolver);
+				branch.appendIncomingCommitMerger(cacheInvalidatorRemovedElements);
+				// schema updater for removed properties
+				var removedPropDefUpdater = new PropertyDefinitionRemovedCacheUpdater(branch, cardUtil);
+				branch.appendIncomingCommitMerger(removedPropDefUpdater);
+				// change applier
+				var merger = new CompleteCommitMerger(branch);
+				branch.appendIncomingCommitMerger(merger);
+				// schema updater for added properties
+				var addedPropDefUpdater = new PropertyDefinitionAddedCacheUpdater(branch, cardUtil);
+				branch.appendIncomingCommitMerger(addedPropDefUpdater);	
+				// cache invalidation for added/changed elements
+				var cacheInvalidatorAddedElements = new ElementCreatedCacheUpdater(branch, resolver);
+				branch.appendIncomingCommitMerger(cacheInvalidatorAddedElements);
+			// END INCOMING COMMIT HANDLING CHAIN
 				
 				return new FrontendEventStreamingWrapperFactory(resolver, changeTransformer
 						, coreTypeFactory, observer.getFactory(), branch, stateKeeper);																			

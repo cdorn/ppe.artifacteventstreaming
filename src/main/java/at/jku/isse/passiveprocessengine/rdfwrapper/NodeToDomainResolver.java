@@ -74,7 +74,7 @@ public class NodeToDomainResolver {
 
 	protected void init() {
 		model.classes()
-		.filter(ontClass -> !isBlacklistedNamespace(ontClass.getNameSpace()))		
+		.filter(ontClass -> !isCacheBlacklistedNamespace(ontClass.getNameSpace()))		
 		.forEach(this::loadTypeInstances );		
 	}
 	
@@ -83,6 +83,24 @@ public class NodeToDomainResolver {
 		var type = initOrGetType(ontClass);
 		if (!ontClass.equals(metaschemata.getMetaElements().getMetaClass())) {
 			ontClass.individuals(true).forEach(indiv -> instanceIndex.putIfAbsent(indiv.getURI(), createMostSpecificInstance(indiv, type, constructor)));
+		}
+	}
+	
+	public void loadTypeViaUpdate(OntClass ontClass) {
+		initOrGetType(ontClass);
+	}
+	
+	public void loadInstanceViaUpdate(OntIndividual ontIndividual) {
+		if (!ontIndividual.isAnon() && !instanceIndex.containsKey(ontIndividual.getURI())) {
+			ontIndividual.classes(true).findFirst().ifPresent(ontClass -> {
+				// check if type is on blacklist, or the metaclass, then abort
+				if (isCacheBlacklistedNamespace(ontClass.getNameSpace()) 
+						|| ontClass.equals(metaschemata.getMetaElements().getMetaClass())) 
+					return;
+				var constructor = metaschemata.getMetaElements().getInstanceConstructorForNamespace(ontClass.getURI());
+				var type = initOrGetType(ontClass);
+				instanceIndex.putIfAbsent(ontIndividual.getURI(), createMostSpecificInstance(ontIndividual, type, constructor));
+			});
 		}
 	}
 	
@@ -109,7 +127,7 @@ public class NodeToDomainResolver {
 		return typeIndex.get(ontClass);
 	}
 	
-	protected boolean isBlacklistedNamespace(String namespace) {
+	protected boolean isCacheBlacklistedNamespace(String namespace) {
 		return namespace.equals(RDF.uri) || 
 				namespace.equals(RDFS.uri) ||	
 				namespace.equals(OWL2.NS) ||
@@ -120,44 +138,7 @@ public class NodeToDomainResolver {
 	}
 	
 	public RDFInstanceType resolveToType(@NonNull OntClass ontClass) {
-//		if (node instanceof OntDataRange.Named named) {
-//			RDFDatatype datatype = named.toRDFDatatype();
-//			if (datatype == null)
-//				return BuildInType.STRING; // just for testing
-//			// this is ugly, as we duplicate a type system, while we could work with the datatypes directly (but then having to rely on RDF/JENA)
-//			Class clazz = datatype.getJavaClass();
-//			if (clazz == null) {
-//				log.warn(String.format("Unsupported literal type %s returning STRING RDFInstanceType instead", datatype.getURI()));
-//				return BuildInType.STRING;
-//			}
-//			String clazzName = clazz.getSimpleName();			
-//			switch(clazzName) {
-//				case"Long", "Integer":
-//					return BuildInType.INTEGER;
-//				case"Float", "Double":
-//					return BuildInType.FLOAT;
-//				case"Date":
-//					return BuildInType.DATE;
-//				case"Boolean":
-//					return BuildInType.BOOLEAN;
-//				case"String","Short":
-//					return BuildInType.STRING;
-//				default: 
-//					log.warn(String.format("Unsupported literal type %s returning STRING RDFInstanceType instead", clazzName));
-//					return BuildInType.STRING;
-//			}
-//			
-//		} else if (node instanceof OntClass ontClass) {
-//			if (ontClass.getURI().equals(RuleSchemaFactory.ruleDefinitionURI))
-//				return BuildInType.RULE;
-//			//if (ontClass.getURI().equals(OWL2.Class.getURI()))
-			//	return BuildInType.METATYPE;
 			return typeIndex.get(ontClass);
-//		} else if (node.canAs(OntClass.class)) {
-//			return typeIndex.get(node.as(OntClass.class));
-//		}
-//		log.warn(String.format("Unknown RDFNode type %s cannot be resolved to a RDFInstanceType", node.toString()));
-//		return null;
 	}
 	
 	public OntClass getMapEntryBaseType() {		
@@ -168,33 +149,8 @@ public class NodeToDomainResolver {
 		return metaschemata.getListType().getListClass();
 	}
 	
-//	public OntDataRange resolveAtomicInstanceType(RDFInstanceType type) {
-//		if (BuildInType.BOOLEAN.equals(type)) {
-//			return model.getDatatype(XSD.xboolean);
-//		} 
-//		if (BuildInType.INTEGER.equals(type)) {
-//			return model.getDatatype(XSD.xint);
-//		}
-//		if (BuildInType.FLOAT.equals(type)) {
-//			return model.getDatatype(XSD.xfloat);
-//		}
-//		if (BuildInType.STRING.equals(type)) {
-//			return model.getDatatype(XSD.xstring);
-//		}
-//		if (BuildInType.DATE.equals(type)) {
-//			return model.getDatatype(XSD.date);
-//		} 
-//		else {
-//			return model.getDatatype(XSD.xstring);
-//		}
-//	}
 	
 	public OntClass resolveTypeToClass(RDFInstanceType type) {		
-//			if (type.equals(BuildInType.RULE)) {
-//				return  model.getOntClass(RuleSchemaFactory.ruleDefinitionURI);
-//			} else if (type.equals(BuildInType.METATYPE)) {
-//				return metaClass; //model.createOntClass(OWL2.Class.getURI());
-//			} else
 		return type.getType();	
 	}
 
@@ -277,10 +233,29 @@ public class NodeToDomainResolver {
 		return subclasses;
 	}
 	
+	/**
+	 * @param uri of ontClass resource to remove from the type index, if contained.
+	 * Only for keeping the cache/index up to date, not for completely removing the resource from the underlying model (use {@link RDFInstanceType#delete()} for that purpose)
+	 */
+	public void removeInstanceTypeFromIndex(String uri) {
+		findNonDeletedInstanceTypeByFQN(uri).ifPresent(type -> typeIndex.remove(type.getType()));
+	}
+	
+	/**
+	 * @param rdfInstance to remove from the instance index, if contained.
+	 * Only for keeping the cache/index up to date, not for completely removing the resource from the underlying model (use {@link RDFElement#delete()} for that purpose)
+	 */
 	public void removeInstanceFromIndex(RDFInstance rdfInstance) {
 		instanceIndex.remove(rdfInstance.getInstance().getURI());
 	}
 	
+	/**
+	 * @param uri of the resource to remove from the instance index, if contained.
+	 * Only for keeping the cache/index up to date, not for completely removing the resource from the underlying model (use {@link RDFElement#delete()} for that purpose)
+	 */
+	public void removeInstanceFromIndex(String uri) {
+		instanceIndex.remove(uri);
+	}
 
 	public void startReadTransaction() {
 		dataset.begin(ReadWrite.READ); //TODO  perhaps this needs to be called from within branch
@@ -328,27 +303,17 @@ public class NodeToDomainResolver {
 	/**
 	 * assumes ID is a URI as used per underlying RDF implementation
 	 */
-
 	public Optional<RDFInstance> findInstanceById(@NonNull String arg0) {
 		// as we are caching all individuals, lets just search our cache
 		return Optional.ofNullable(instanceIndex.get(arg0));
-		
-//		var res = ResourceFactory.createResource(arg0);
-//		if (model.contains(res, RDF.type)) {
-//			var indiv = model.getIndividual(res);
-//			return Optional.ofNullable(instanceIndex.computeIfAbsent(indiv, k -> new RDFInstance(k, this)));
-//		} else
-//			return Optional.empty();
 	}
 
 
 	public Set<RDFInstance> getAllInstancesOfTypeOrSubtype(@NonNull RDFInstanceType type) {
-		
-			var indivs = type.getType().individuals(false).toList(); 
-			return indivs.stream()
-			.map(el -> instanceIndex.computeIfAbsent(el.getURI(), k->new RDFInstance(el, type, this)))
-			.collect(Collectors.toSet());
-		
+		var indivs = type.getType().individuals(false).toList(); 
+		return indivs.stream()
+				.map(el -> instanceIndex.computeIfAbsent(el.getURI(), k->new RDFInstance(el, type, this)))
+				.collect(Collectors.toSet());
 	}
 
 	public RDFElement resolveToRDFElement(RDFNode node) {
@@ -418,5 +383,7 @@ public class NodeToDomainResolver {
 		//FIXME: proper check, but the exception based check above is too slow.
 		return url.startsWith("http");
 	}
+
+
 
 }
