@@ -96,15 +96,19 @@ public class NodeToDomainResolver {
 				// check if type is on blacklist, or the metaclass, then abort
 				if (isCacheBlacklistedNamespace(ontClass.getNameSpace()) 
 						|| ontClass.equals(metaschemata.getMetaElements().getMetaClass())) 
-					return;
-				var constructor = metaschemata.getMetaElements().getInstanceConstructorForNamespace(ontClass.getURI());
+					return;				
 				var type = initOrGetType(ontClass);
-				instanceIndex.putIfAbsent(ontIndividual.getURI(), createMostSpecificInstance(ontIndividual, type, constructor));
+				instanceIndex.putIfAbsent(ontIndividual.getURI(), createMostSpecificInstance(ontIndividual, type));
 			});
 		}
 	}
 	
-	protected RDFInstance createMostSpecificInstance(OntIndividual indiv, RDFInstanceType type, Constructor<? extends RDFInstance> subClassConstructor) {
+	protected RDFInstance createMostSpecificInstance(OntIndividual indiv, RDFInstanceType type) {
+		var subClassConstructor = metaschemata.getMetaElements().getInstanceConstructorForNamespace(type.getType().getURI());		
+		return createMostSpecificInstance(indiv, type, subClassConstructor);
+	}
+	
+	protected RDFInstance createMostSpecificInstance(OntIndividual indiv, RDFInstanceType type, Constructor<? extends RDFInstance> subClassConstructor) {		
 		if (subClassConstructor == null) {
 			return new RDFInstance(indiv, type, this);
 		} else {
@@ -168,7 +172,7 @@ public class NodeToDomainResolver {
 						.findAny().orElse(null);
 				if (rdfType != null) {
 					var type = initOrGetType(rdfType);
-					var instance = instanceIndex.putIfAbsent(indiv.getURI(), new RDFInstance(indiv, type, this));
+					var instance = instanceIndex.putIfAbsent(indiv.getURI(), createMostSpecificInstance(indiv, type));
 					result.add(instance);
 				}
 			}
@@ -294,12 +298,15 @@ public class NodeToDomainResolver {
 		} else {
 			uri = id;
 		}
-		var individual = model.createIndividual(uri, type.getType());
-		individual.addLabel(wasValidId ? individual.getLocalName() : id);
-		var constructor = metaschemata.getMetaElements().getInstanceConstructorForNamespace(type.getType().getURI());		
-		return instanceIndex.computeIfAbsent(individual.getURI(), k -> createMostSpecificInstance(individual, type, constructor));
+		var validId = wasValidId;	
+		return instanceIndex.computeIfAbsent(uri, k -> { 
+			var individual = model.createIndividual(uri, type.getType());
+			individual.addLabel(validId ? individual.getLocalName() : id);			
+			return createMostSpecificInstance(individual, type);
+			
+		});
 	}
-
+	
 	/**
 	 * assumes ID is a URI as used per underlying RDF implementation
 	 */
@@ -312,7 +319,8 @@ public class NodeToDomainResolver {
 	public Set<RDFInstance> getAllInstancesOfTypeOrSubtype(@NonNull RDFInstanceType type) {
 		var indivs = type.getType().individuals(false).toList(); 
 		return indivs.stream()
-				.map(el -> instanceIndex.computeIfAbsent(el.getURI(), k->new RDFInstance(el, type, this)))
+				.map(el -> instanceIndex.computeIfAbsent(el.getURI(),  k-> { 					
+					return createMostSpecificInstance(el, type); }))
 				.collect(Collectors.toSet());
 	}
 

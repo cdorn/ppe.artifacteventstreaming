@@ -22,6 +22,7 @@ import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import at.jku.isse.passiveprocessengine.rdfwrapper.RDFElement;
+import at.jku.isse.passiveprocessengine.rdfwrapper.metaschema.MetaElementFactory;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -45,6 +46,8 @@ public class ElementCreatedCacheUpdater extends AbstractHandlerBase {
 
 	@Override
 	public void handleCommit(Commit commit) {
+		//TODO: check if there is a resource that is class and instance at the same time, whether it is then correctly handled twice!!
+		
 		// whenever a resource is added the type of OntIndividual, we add it to the cache
 		// rule/evaluation changes are handled by the rule repo etc.
 		var newOrRemovedResources = new HashSet<String>(); // resources that are added do not need to be reloaded
@@ -117,12 +120,22 @@ public class ElementCreatedCacheUpdater extends AbstractHandlerBase {
 			.map(stmt -> new ResourcePropertyTuple(stmt.getContainerOrSubject(), stmt.getContainmentPropertyOrPredicate()))
 			.distinct() // to ensure that for each resource and map property we call reloading only once
 			.forEach(stmt -> { 
-				RDFElement el = resolver.findInstanceById(stmt.resource().getURI()).orElse(null); // instance
-				if (el == null) { // or type
-					el = resolver.findNonDeletedInstanceTypeByFQN(stmt.resource().getURI()).orElse(null);
+				// special Maps, such as ConstructorIndex in MetaElementFactory
+				if (stmt.resource().getURI().equals(MetaElementFactory.constructorIndex_URI)) {
+					if (stmt.property().getURI().equals(MetaElementFactory.propertyConstructorForClass_URI)) {
+						resolver.getMetaschemata().getMetaElements().reloadInstanceConstructors();
+					} else if (stmt.property().getURI().equals(MetaElementFactory.propertyTypeConstructorForClass_URI)) {
+						resolver.getMetaschemata().getMetaElements().reloadTypeConstructors();	
+					}
 				}
-				if (el != null) {
-					el.reloadMapProperty(el.getInstanceType().getPropertyType(stmt.property().getURI()));
+				else {				
+					RDFElement el = resolver.findInstanceById(stmt.resource().getURI()).orElse(null); // instance
+					if (el == null) { // or type
+						el = resolver.findNonDeletedInstanceTypeByFQN(stmt.resource().getURI()).orElse(null);
+					}
+					if (el != null) {
+						el.reloadMapProperty(el.getInstanceType().getPropertyType(stmt.property().getURI()));
+					} 
 				}
 			});
 	}

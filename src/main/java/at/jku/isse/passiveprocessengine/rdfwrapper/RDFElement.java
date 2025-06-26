@@ -197,7 +197,13 @@ public abstract class RDFElement {
 		// check if single or collection property
 			var prop = optProp.get();
 			if (prop.getCardinality().equals(Cardinalities.SINGLE)) {
-				return (T) getSingleProperty(prop);
+				Object value = getSingleProperty(prop);
+				if (value == null) return null;
+				if (clazz.isAssignableFrom(value.getClass())) {
+					return (T) value ;
+				} else {
+					throw new RuntimeException("Incompatible Classes: expected "+clazz.getSimpleName() +" but got: "+value.getClass().getSimpleName());
+				}
 			}
 			if (Set.class.isAssignableFrom(clazz) && prop.getCardinality().equals(Cardinalities.SET)) {
 				return (T) getPropertyAsSet(prop);

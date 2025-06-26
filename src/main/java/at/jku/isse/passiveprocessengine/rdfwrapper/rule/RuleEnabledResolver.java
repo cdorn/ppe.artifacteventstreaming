@@ -93,9 +93,8 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 				if (ruleDefinitions.contains(ontClass.getURI())) {
 					return; // we dont store rule evaluation either, done by rule repo separately
 				}
-				var constructor = metaschemata.getMetaElements().getInstanceConstructorForNamespace(ontClass.getURI());
 				var type = initOrGetType(ontClass);
-				instanceIndex.putIfAbsent(ontIndividual.getURI(), createMostSpecificInstance(ontIndividual, type, constructor));
+				instanceIndex.putIfAbsent(ontIndividual.getURI(), createMostSpecificInstance(ontIndividual, type));
 			});
 		}
 	}
@@ -268,7 +267,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 						repairTree.flattenRepairTree();
 						rootRepairNode = repairTree;
 					}
-					var ctxWrapper = instanceIndex.computeIfAbsent(instance.getURI(), k -> new RDFInstance(instance, null, this));
+					var ctxWrapper = instanceIndex.computeIfAbsent(instance.getURI(), k -> createMostSpecificInstance(instance, type));
 					return new ResultEntry(ctxWrapper, result, error, rootEvalNode, rootRepairNode);
 				})
 				.collect(Collectors.toSet());	
@@ -293,7 +292,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 
 	public Set<ResultEntry> getEvaluationResults(RDFRuleDefinitionWrapper rule) {
 		var def = rule.getRuleDef().getRuleDefinition();
-		var evals =  ruleRepo.getEvaluations();
+		var evals =  ruleRepo.getEvaluations();		
 		return def.individuals()
 				.map(eval -> evals.get(eval.getURI()))
 				.filter(Objects::nonNull)
@@ -301,7 +300,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 					var result = evalWrapper.isConsistent();
 					var error = evalWrapper.getEvaluationError();
 					var ctx = evalWrapper.getContextInstance();
-					var ctxWrapper = instanceIndex.computeIfAbsent(ctx.getURI(), k -> new RDFInstance(ctx, null, this));
+					var ctxWrapper = instanceIndex.computeIfAbsent(ctx.getURI(), k -> new RDFInstance(ctx, null, this)); //TODO: ok to not wrap in most specific type here?!!
 					var evalRoot = evalWrapper.getDelegate().getEvaluationTree();
 					var repairRoot = evalWrapper.getDelegate().getRepairTree();
 					return new ResultEntry(ctxWrapper, result, error, evalRoot, repairRoot);
@@ -319,7 +318,7 @@ public class RuleEnabledResolver extends NodeToDomainResolver implements RuleEva
 			var result = evalWrapper.isConsistent();
 			var error = evalWrapper.getEvaluationError();
 			var ctx = evalWrapper.getContextInstance();
-			var ctxWrapper = instanceIndex.computeIfAbsent(ctx.getURI(), k -> new RDFInstance(ctx, null, this));
+			var ctxWrapper = instanceIndex.computeIfAbsent(ctx.getURI(), k -> new RDFInstance(ctx, null, this)); //TODO: ok to not wrap in most specific type here?!!
 			var evalRoot = evalWrapper.getDelegate().getEvaluationTree();
 			var repairRoot = evalWrapper.getDelegate().getRepairTree();
 			var entry = new ResultEntry(ctxWrapper, result, error, evalRoot, repairRoot);

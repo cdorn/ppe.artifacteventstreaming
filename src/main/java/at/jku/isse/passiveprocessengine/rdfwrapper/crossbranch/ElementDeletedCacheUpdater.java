@@ -39,6 +39,8 @@ public class ElementDeletedCacheUpdater extends AbstractHandlerBase {
 
 	@Override
 	public void handleCommit(Commit commit) {
+		//TODO: check if there is a resource that is class and instance at the same time, whether it is then correctly handled twice!!
+		
 		// whenever a resource has the type of OntIndividual removed, we remove it from the cache. same for ontclasses
 		// rule/evaluation changes are handled by the rule repo etc.
 		var removedResources = new HashSet<String>(); // resources that are removed do not need to be reloaded

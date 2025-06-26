@@ -7,6 +7,7 @@ import java.util.Map;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.vocabulary.XSD;
 
 import at.jku.isse.artifacteventstreaming.schemasupport.BasePropertyType;
@@ -30,9 +31,9 @@ public class MetaElementFactory {
 	public static final String propertyMetadataPredicate_URI = META_NS+"propertyMetadata";
 
 	private static final String constructorIndexType_URI = META_NS+"ConstructorIndex";
-	private static final String constructorIndex_URI = META_NS+"DefaultInstanceConstructorIndex";
-	private static final String propertyConstructorForClass_URI = META_NS+"useConstructorForInstance";
-	private static final String propertyTypeConstructorForClass_URI = META_NS+"useConstructorForType";
+	public static final String constructorIndex_URI = META_NS+"DefaultInstanceConstructorIndex";
+	public static final String propertyConstructorForClass_URI = META_NS+"useConstructorForInstance";
+	public static final String propertyTypeConstructorForClass_URI = META_NS+"useConstructorForType";
 	
 	private final MapResourceType mapType;
 	private final Map<String, Constructor<? extends RDFInstance>> instanceConstructors = new HashMap<>();
@@ -40,6 +41,9 @@ public class MetaElementFactory {
 	private MapResource rawInstanceConstructorIndex;
 	private MapResource rawTypeConstructorIndex;
 	private final OntModel model;
+	private final OntIndividual constructorIndexResource;
+	private final OntObjectProperty.Named propertyConstructorForClass;
+	private final OntObjectProperty.Named propertyTypeConstructorForClass;
 	
 	@Getter public final OntClass metaClass;
 	
@@ -47,14 +51,18 @@ public class MetaElementFactory {
 		this.mapType = mapType;		
 		this.model = model;
 		metaClass = model.getOntClass(META_NS+META_CLASS_LOCALNAME);
-		loadInstanceConstructors(model);
-		loadTypeConstructors(model);
+		//load instance constructors
+		var constructorIndexType = model.getOntClass(constructorIndexType_URI);
+		constructorIndexResource = constructorIndexType.createIndividual(constructorIndex_URI);
+		propertyConstructorForClass = model.getObjectProperty(propertyConstructorForClass_URI);
+		reloadInstanceConstructors();		
+		// load type constructors		
+		propertyTypeConstructorForClass = model.getObjectProperty(propertyTypeConstructorForClass_URI);
+		reloadTypeConstructors();
 	}
 	
-	private void loadInstanceConstructors(OntModel model) {
-		var constructorIndexType = model.getOntClass(constructorIndexType_URI);
-		var constructorIndexResource = constructorIndexType.createIndividual(constructorIndex_URI);
-		var propertyConstructorForClass = model.getObjectProperty(propertyConstructorForClass_URI);
+	
+	public void reloadInstanceConstructors() {
 		rawInstanceConstructorIndex = MapResource.asUnsafeMapResource(constructorIndexResource, propertyConstructorForClass.asNamed(), mapType);
 		rawInstanceConstructorIndex.entrySet().stream()
 			.filter(entry -> entry.getValue().isLiteral())
@@ -74,11 +82,8 @@ public class MetaElementFactory {
 		});
 	}
 	
-	private void loadTypeConstructors(OntModel model) {
-		var constructorIndexType = model.getOntClass(constructorIndexType_URI);
-		var constructorIndexResource = constructorIndexType.createIndividual(constructorIndex_URI);
-		var propertyConstructorForClass = model.getObjectProperty(propertyTypeConstructorForClass_URI);
-		rawTypeConstructorIndex = MapResource.asUnsafeMapResource(constructorIndexResource, propertyConstructorForClass.asNamed(), mapType);
+	public void reloadTypeConstructors() {
+		rawTypeConstructorIndex = MapResource.asUnsafeMapResource(constructorIndexResource, propertyTypeConstructorForClass.asNamed(), mapType);
 		rawTypeConstructorIndex.entrySet().stream()
 			.filter(entry -> entry.getValue().isLiteral())
 			.forEach(entry -> {
@@ -96,6 +101,7 @@ public class MetaElementFactory {
 			}
 		});
 	}
+
 	
 	public Constructor<? extends RDFInstance> getInstanceConstructorForNamespace(String uri) {
 		return instanceConstructors.get(uri);
@@ -116,7 +122,6 @@ public class MetaElementFactory {
 			log.error("Couldn't find expected constructor for: "+clazz.getName());
 			return;
 		} 
-		//clazz.getConstructor(OntIndividual.class, RDFInstanceType.class, NodeToDomainResolver.class);
 		typeConstructors.put(uri, constructor);
 		//store with branch if never stored before or different fqn
 		var fqn = clazz.getCanonicalName();
@@ -145,7 +150,6 @@ public class MetaElementFactory {
 			log.error("Couldn't find constructor for: "+clazz.getName());
 			return;
 		} 
-		//clazz.getConstructor(OntIndividual.class, RDFInstanceType.class, NodeToDomainResolver.class);
 		instanceConstructors.put(uri, constructor);
 		//store with branch if never stored before or different fqn
 		var fqn = clazz.getCanonicalName();
