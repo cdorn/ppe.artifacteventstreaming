@@ -21,12 +21,12 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.Test;
 
-import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
+import at.jku.isse.artifacteventstreaming.schemasupport.UntypedMapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.ResourceMismatchException;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
-import at.jku.isse.passiveprocessengine.rdfwrapper.collections.ResourceMismatchException;
 
 class ModelDuplicationTest {
 
@@ -52,7 +52,7 @@ class ModelDuplicationTest {
 		// lets create some instances:
 		OntIndividual art1 = artifactType.createIndividual(NS+"art1");
 		OntIndividual art2 = artifactType.createIndividual(NS+"art2");
-		Map<String, RDFNode> map = MapResource.asUnsafeMapResource(art1, hasMapProp, mapTypeDef);			
+		Map<String, RDFNode> map = UntypedMapResource.asUnsafeMapResource(art1, hasMapProp, mapTypeDef);			
 		map.put("key2", art2);		
 		
 		//create a deep copy:
@@ -62,7 +62,7 @@ class ModelDuplicationTest {
 		OntIndividual art1copy = copy.getIndividual(NS+"art1");		
 		OntIndividual art3copy = artifactTypeCopy.createIndividual(NS+"art3");
 		MapResourceType mapTypeDef2 = new MapResourceType(copy, metaUtil.getPrimaryPropertyType());
-		Map<String, RDFNode> mapCopy = MapResource.asUnsafeMapResource(art1copy, hasMapPropCopy, mapTypeDef2);			
+		Map<String, RDFNode> mapCopy = UntypedMapResource.asUnsafeMapResource(art1copy, hasMapPropCopy, mapTypeDef2);			
 		assertEquals(map.size(), mapCopy.size());
 		
 		mapCopy.clear();		

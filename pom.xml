@@ -2,9 +2,17 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>at.jku.isse</groupId>
-	<artifactId>artifacteventstreaming</artifactId>
-	<version>0.0.5-SNAPSHOT</version>
+	<groupId>at.jku.isse.artifacteventstreaming</groupId>
+	<artifactId>core</artifactId>
+	<version>0.1.0</version>
+
+	<licenses>
+        <license>
+          <name>GNU Lesser General Public License v3.0</name>
+          <url>http://www.gnu.org/licenses/lgpl-3.0.txt</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -18,49 +26,19 @@
 	</properties>
 
 	<distributionManagement>
-        <repository>
-            <id>JKU.ISSE.MAVEN</id>
-             <url>https://isse.jku.at/reposilite/snapshots</url>
-        </repository>
+		<repository>
+        <id>github</id>
+        <name>cdorn</name>
+        <url>https://maven.pkg.github.com/cdorn/ppe.artifacteventstreaming</url>
+    </repository>
 	</distributionManagement>
 
-	<repositories>
-		<!-- The order of definitions matters. Explicitly defining central here
-            to make sure it has the highest priority. -->
-		<!-- Main Maven repository -->
-		<repository>
-			<id>central</id>
-			<url>https://repo.maven.apache.org/maven2</url>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-		</repository>
-		<!-- own ones -->
-		<repository>
-			<id>JKU.ISSE.MAVEN</id>
-            <url>https://isse.jku.at/reposilite/snapshots</url>
-			<snapshots>
-				<enabled>true</enabled>
-			</snapshots>
-		</repository>
-	</repositories>
-
 	<dependencies>
-		<!--<dependency>
-			<groupId>at.jku.isse.designspace</groupId>
-			<artifactId>artifact-connector.core</artifactId>
-			<version>3.0.0</version>
-		</dependency>-->
 		<dependency>
 			<groupId>org.apache.jena</groupId>
 			<artifactId>apache-jena-libs</artifactId>
 			<type>pom</type>
 			<version>5.1.0</version>
-		</dependency>
-		<dependency>
-  			<groupId>at.jku.isse</groupId>
-  			<artifactId>service-rule</artifactId>
-  			<version>6.0.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.rocksdb</groupId>
@@ -73,14 +51,14 @@
 			<version>5.2.0</version>
 		</dependency>
 		<dependency>
-    		<groupId>com.fasterxml.jackson.core</groupId>
-    		<artifactId>jackson-databind</artifactId>
-    		<version>2.18.1</version>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>2.18.1</version>
 		</dependency>
 		<dependency>
-    		<groupId>commons-io</groupId>
-    		<artifactId>commons-io</artifactId>
-    		<version>2.15.1</version>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.15.1</version>
 		</dependency>
 
 		<dependency>
@@ -95,10 +73,10 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-    		<groupId>org.mockito</groupId>
-    		<artifactId>mockito-core</artifactId>
-    		<version>5.14.2</version>
-    		<scope>test</scope>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-core</artifactId>
+			<version>5.14.2</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.mockito</groupId>

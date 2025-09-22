@@ -5,6 +5,7 @@ import java.util.List;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
+import org.apache.jena.shared.Lock;
 
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
@@ -26,9 +27,6 @@ public interface Branch {
 	// one deactivated the branch object should not be used any more and all distributers connected to this branch object should be notified and paused as well, resp, updated with a new branch object
 	public void deactivate();
 	
-	//public BlockingQueue<Commit> getInQueue();	
-	//public BlockingQueue<Commit> getOutQueue();
-	
 	/**
 	 * @param commitMsg
 	 *  * Upon commit transaction, it does the following: 
@@ -46,6 +44,8 @@ public interface Branch {
  *    6) it store the commit id as being augmented in the ehcache
  *    7) it commits the changes to the backend model (internal transaction)
  *    8) it puts the augmented commit into the branch's outqueue.
+ *    Notice: use {@link concludeTransaction(Lock writeLock, String commitMsg)} when having obtained a write lock instead which wraps around this method
+ *    
  *    @return the newly created/augmented commit
 	 * @throws BranchConfigurationException 
 	 * @throws PersistenceException 
@@ -130,5 +130,21 @@ public interface Branch {
 	 * @throws Exception when handling of preliminary commit or any other replaying to get up to date fails
 	 */
 	void startCommitHandlers(Commit unfinishedPreliminaryCommit) throws PersistenceException, BranchConfigurationException;
+	
+	/**
+	 *  if the underlying model is based on a transactional dataset, use this delegate method to start a read transaction without having to know about the dataset directly
+	*/
+	void startReadTransaction();
+	
+	/**
+	 *  if the underlying model is based on a transactional dataset, use this delegate method to obtain a lock to ensure noone else is writing to this model/dataset in the meantime
+	*/
+	Lock startWriteTransaction();
+	
+	/**
+	 *  when having acquired a lock, use this method instead of {@link commitChanges(String commitMsg)} to complete the write transaction and release the lock
+	*/
+	Commit concludeTransaction(Lock writeLock, String commitMsg)
+			throws BranchConfigurationException, PersistenceException;
 	
 }

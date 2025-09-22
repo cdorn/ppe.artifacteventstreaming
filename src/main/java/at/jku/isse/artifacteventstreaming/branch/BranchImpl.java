@@ -19,6 +19,7 @@ import org.apache.jena.rdf.model.NodeIterator;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Seq;
+import org.apache.jena.shared.Lock;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.Branch;
@@ -149,8 +150,6 @@ public class BranchImpl  implements Branch, Runnable {
 	public String toString() {
 		return "Branch[" + branchResource.getLabel() + "]";
 	}
-    
-	
 	
 	// incoming commit handling -------------------------------------------------------------------------
 	
@@ -240,6 +239,7 @@ public class BranchImpl  implements Branch, Runnable {
 	private void forwardCommit(Commit commit) {					
 	//	if (dataset.isInTransaction()) // this is too brittle, we need to ensure this is not happening by other means
 	//		dataset.abort();
+		//TODO: obtain a write lock here, otherwise we might interfer with regular commit operation
 		dataset.begin(ReadWrite.WRITE);
 		handlers.stream().forEach(handler -> handler.handleCommit(commit));
 //		dataset.commit(); this is done by internal commit handler
@@ -283,6 +283,41 @@ public class BranchImpl  implements Branch, Runnable {
 	public List<OntIndividual> getLocalCommitServiceConfig() {
 		Seq list = createOrGetListResource(AES.localCommitService);
 		return fromSeqResourceToContent(list);
+	}
+	
+	// Transaction handling
+	@Override
+	public void startReadTransaction() {
+		dataset.begin(ReadWrite.READ); 
+	}
+
+	@Override
+	public Lock startWriteTransaction() {
+		dataset.begin(ReadWrite.WRITE);		
+		var writeLock = dataset.getLock();
+		writeLock.enterCriticalSection(false);		
+		return writeLock;
+	}
+	
+	@Override
+	public Commit concludeTransaction(Lock writeLock, String commitMsg) throws BranchConfigurationException, PersistenceException {
+		if (dataset.transactionMode() != null && dataset.transactionMode().equals(ReadWrite.WRITE)) {			
+			try {
+				var commit = this.commitChanges(commitMsg);
+				if (writeLock != null) {
+					writeLock.leaveCriticalSection();
+					writeLock = null;
+				}
+				return commit;
+				// dataset write transaction end set by commitChanges() logic
+			} catch (PersistenceException | BranchConfigurationException e) {			
+				e.printStackTrace();
+				return null;
+			} 
+		} else {
+			dataset.end();
+			return null;
+		}
 	}
 	
 	/**
