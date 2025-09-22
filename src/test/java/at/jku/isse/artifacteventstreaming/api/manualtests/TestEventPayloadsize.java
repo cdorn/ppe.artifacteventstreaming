@@ -20,7 +20,6 @@ import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
-import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 
@@ -47,10 +46,7 @@ class TestEventPayloadsize {
 		var listener = new StatementAggregator();
 		listener.registerWithModel(m);
 		
-		
-		
-		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
-		new RuleSchemaFactory(metaModel); // add rule schema to meta model					
+		var metaModel = MetaModelOntology.buildInMemoryOntology(); 		
 		var schemaUtils = new MetaModelSchemaTypes(m, metaModel); 
 		var props = new LinkedList<OntRelationalProperty>();
 		var types = new LinkedList<OntClass>();

@@ -1,21 +1,23 @@
-package at.jku.isse.passiveprocessengine.rdfwrapper.collections;
+package at.jku.isse.artifacteventstreaming.schemasupport;
 
 import org.apache.jena.datatypes.RDFDatatype;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataRange;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntObject;
+import org.apache.jena.ontapi.model.OntObjectProperty.Named;
+import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.RDFNode;
 
-import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
+import lombok.NonNull;
 
-public abstract class TypedCollectionResource {
-	protected final NodeToDomainResolver resolver;
+public class TypedListWrapper extends UntypedListWrapper {
+
 	protected final OntClass objectType;
 	protected final RDFDatatype literalType;
 	
-	TypedCollectionResource(OntObject classOrDataRange, NodeToDomainResolver resolver) {
-		this.resolver = resolver;
+	public TypedListWrapper(@NonNull OntObject owner, @NonNull OntRelationalProperty listReferenceProperty, OntObject classOrDataRange, @NonNull ListResourceType listType) {
+		super(owner, listReferenceProperty, listType);
 		if (classOrDataRange instanceof OntClass ontClass) {
 			this.objectType = ontClass;
 			this.literalType = null;
@@ -28,6 +30,36 @@ public abstract class TypedCollectionResource {
 		}
 	}
 	
+	
+	@Override
+	public boolean add(RDFNode node) {
+		checkOrThrow(node);
+		listContent.add(node);							
+		return true;
+	}
+	
+	
+	@Override
+	public RDFNode set(int index, RDFNode node) {
+		var priorObj = get(index);
+		checkOrThrow(node);
+		listContent.set(index+1, node);	
+		return priorObj;
+	}
+	
+	@Override
+	public void add(int index, RDFNode node) {		
+		checkOrThrow(node);
+		listContent.add(index+1, node);	
+	}
+	
+	private void checkOrThrow(RDFNode node) {
+		if (!isAssignable(node) ) { //&& node.asLiteral()
+			var allowedType = this.literalType!=null ? this.literalType.getURI() : this.objectType.getURI();
+			throw new IllegalArgumentException(String.format("Cannot add %s into a list allowing only values of type %s", node.toString(), allowedType));
+		}			
+	}
+
 	protected boolean isAssignable(RDFNode node) {
 		if (this.literalType != null &&  // with have a literal type, but value is neither a literal, nor a compatible literal
 				(!node.isLiteral() || !literalType.isValidValue(node.asLiteral().getValue())) ) 	{
@@ -39,10 +71,6 @@ public abstract class TypedCollectionResource {
 			}
 			if (!node.asResource().canAs(OntIndividual.class)) {// not a typed resource
 				return false;
-			}
-			if (objectType.equals(resolver.getMetaschemata().getMetaElements().getMetaClass())) {
-				// we accept any ont classes here incl metaclass itself
-				return node.canAs(OntClass.class);
 			} 			
 			var ontInd = node.asResource().as(OntIndividual.class);
 			return isInstanceOfClassHierachy(ontInd, objectType); // this is way too slow, needs some caching mechanism.
@@ -54,6 +82,4 @@ public abstract class TypedCollectionResource {
 	protected boolean isInstanceOfClassHierachy(OntIndividual ontInd, OntClass toMatch) {
 		return ontInd.classes().anyMatch(type -> type.equals(toMatch));
 	}
-	
-	public abstract void delete();
 }

@@ -1,4 +1,4 @@
-package at.jku.isse.passiveprocessengine.rdfwrapper.collections;
+package at.jku.isse.artifacteventstreaming.schemasupport;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,22 +12,20 @@ import java.util.stream.StreamSupport;
 
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty.Named;
+import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.NodeIterator;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Seq;
 
-import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
-import at.jku.isse.passiveprocessengine.rdfwrapper.RDFElement;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
-public class ListWrapper extends TypedCollectionResource implements List<Object> {
+public class UntypedListWrapper implements List<RDFNode> {
 
-	private final Seq listContent;
+	protected final Seq listContent;
 	
-	public ListWrapper(@NonNull OntObject owner, @NonNull Named listReferenceProperty, @NonNull NodeToDomainResolver resolver, OntObject classOrDataRange) {
-		super(classOrDataRange, resolver);
-		this.listContent = resolver.getMetaschemata().getListType().getOrCreateSequenceFor(owner, listReferenceProperty);
+	public UntypedListWrapper(@NonNull OntObject owner, @NonNull OntRelationalProperty listReferenceProperty, @NonNull ListResourceType listType) {
+		this.listContent = listType.getOrCreateSequenceFor(owner, listReferenceProperty);
 	}
 	
 	@Override
@@ -40,16 +38,13 @@ public class ListWrapper extends TypedCollectionResource implements List<Object>
 	}
 	@Override
 	public boolean contains(Object o) {
-		if (o instanceof RDFElement rdfEl) {
-			return listContent.contains(rdfEl.getElement());
-		} else { // a literal
-			return listContent.contains(listContent.getModel().createTypedLiteral(o));
-		}
+		RDFNode node = (RDFNode)o;
+		return listContent.contains(node);
 	}
 	
 	@Override
-	public Iterator<Object> iterator() {
-		return new IteratorWrapper(listContent.iterator(), resolver);
+	public Iterator<RDFNode> iterator() {
+		return new IteratorWrapper(listContent.iterator());
 	}
 	@Override
 	public Object[] toArray() {
@@ -61,16 +56,15 @@ public class ListWrapper extends TypedCollectionResource implements List<Object>
 		return (T[]) this.stream().toArray();
 	}
 	@Override
-	public boolean add(Object e) {
-		var node = resolver.convertToRDF(e);
-		checkOrThrow(node);
+	public boolean add(RDFNode node) {
 		listContent.add(node);							
 		return true;
 	}
 	
 	@Override
 	public boolean remove(Object o) {
-		int pos = this.indexOf(o);
+		RDFNode node = (RDFNode)o;
+		int pos = this.indexOf(node);
 		if (pos >= 0) {
 			listContent.remove(pos+1);
 			return true;
@@ -83,17 +77,17 @@ public class ListWrapper extends TypedCollectionResource implements List<Object>
 		return c.stream().allMatch(this::contains);
 	}
 	@Override
-	public boolean addAll(Collection<? extends Object> c) {
+	public boolean addAll(Collection<? extends RDFNode> c) {
 		c.stream().forEach(this::add);
 		return true;
 	}
 	
 	@Override
-	public boolean addAll(int index, Collection<? extends Object> c) {
+	public boolean addAll(int index, Collection<? extends RDFNode> c) {
 		if (c.isEmpty()) 
 			return false;
 		else {
-			List<Object> list = new ArrayList<>(c);
+			List<RDFNode> list = new ArrayList<>(c);
 			Collections.reverse(list);
 			list.stream().forEach(element -> add(index, element));
 			return true;			
@@ -120,69 +114,54 @@ public class ListWrapper extends TypedCollectionResource implements List<Object>
 		}
 	}
 	
-	@Override
 	public void delete() {
 		listContent.removeProperties();
 	}
 	
 	@Override
-	public Object get(int index) {
-		var content = listContent.getObject(index+1); //RDF lists are 1-based
-		return resolver.convertFromRDF(content);
+	public RDFNode get(int index) {
+		return listContent.getObject(index+1); //RDF lists are 1-based
 	}
 	
 	@Override
-	public Object set(int index, Object e) {
+	public RDFNode set(int index, RDFNode node) {
 		var priorObj = get(index);
-		var node = resolver.convertToRDF(e);
-		checkOrThrow(node);
 		listContent.set(index+1, node);	
 		return priorObj;
 	}
 	
 	@Override
-	public void add(int index, Object e) {		
-		var node = resolver.convertToRDF(e);
-		checkOrThrow(node);
+	public void add(int index, RDFNode node) {		
 		listContent.add(index+1, node);	
 	}
-	
-	private void checkOrThrow(RDFNode node) {
-		if (!isAssignable(node) ) { //&& node.asLiteral()
-			var allowedType = this.literalType!=null ? this.literalType.getURI() : this.objectType.getURI();
-			throw new IllegalArgumentException(String.format("Cannot add %s into a list allowing only values of type %s", node.toString(), allowedType));
-		}			
-	}
+
 	
 	@Override
-	public Object remove(int index) {
+	public RDFNode remove(int index) {
 		var priorObj = get(index);
 		listContent.remove(index+1);
 		return priorObj;
 	}
 	@Override
-	public int indexOf(Object e) {
-		if (e instanceof RDFElement rdfEl) {
-			return listContent.indexOf(rdfEl.getElement())-1;
-		} else { // a literal
-			return listContent.indexOf(listContent.getModel().createTypedLiteral(e))-1;
-		}
+	public int indexOf(Object o) {
+		RDFNode node = (RDFNode)o;
+		return listContent.indexOf(node)-1;
 	}
 	@Override
 	public int lastIndexOf(Object o) {
 		throw new RuntimeException("Not supported");
 	}
 	@Override
-	public ListIterator<Object> listIterator() {
+	public ListIterator<RDFNode> listIterator() {
 		throw new RuntimeException("Not supported");
 	}
 	@Override
-	public ListIterator<Object> listIterator(int index) {
+	public ListIterator<RDFNode> listIterator(int index) {
 		throw new RuntimeException("Not supported");
 	}
 	@Override
-	public List<Object> subList(int fromIndex, int toIndex) {
-		List<Object> sublist = new LinkedList<>();
+	public List<RDFNode> subList(int fromIndex, int toIndex) {
+		List<RDFNode> sublist = new LinkedList<>();
 		for (int i = fromIndex ; i < toIndex;  i++ ) {
 			sublist.add(get(i)); // no need to incl index as get(index) will do that to 1-based index
 		}
@@ -190,17 +169,16 @@ public class ListWrapper extends TypedCollectionResource implements List<Object>
 	}
 	
 	@Override
-	public Stream<Object> stream() {
+	public Stream<RDFNode> stream() {
 		var iter = this.iterator();
-		Iterable<Object> iterable = () -> iter;
+		Iterable<RDFNode> iterable = () -> iter;
 		return StreamSupport.stream(iterable.spliterator(), false);
 	}
 	
 	@RequiredArgsConstructor
-	public static class IteratorWrapper implements Iterator<Object>{
+	public static class IteratorWrapper implements Iterator<RDFNode>{
 
 		private final NodeIterator delegate;
-		private final NodeToDomainResolver resolver;
 		
 		@Override
 		public boolean hasNext() {
@@ -208,16 +186,14 @@ public class ListWrapper extends TypedCollectionResource implements List<Object>
 		}
 
 		@Override
-		public Object next() {
+		public RDFNode next() {
 			RDFNode nextNode = delegate.next();
-			if (nextNode.isLiteral())
-				return nextNode.asLiteral().getValue();
-			else
-				return resolver.resolveToRDFElement(nextNode);
+			if (!delegate.hasNext()) {
+				delegate.close();
+			}
+			return nextNode;
 		}
 
 	}
 
-
-	
 }

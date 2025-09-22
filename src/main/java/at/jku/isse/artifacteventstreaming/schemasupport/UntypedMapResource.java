@@ -21,30 +21,28 @@ import org.apache.jena.rdf.model.impl.ModelCom;
 import org.apache.jena.rdf.model.impl.StatementImpl;
 import org.apache.jena.vocabulary.RDF;
 
-import at.jku.isse.passiveprocessengine.rdfwrapper.collections.ResourceMismatchException;
-
-public class MapResource implements Map<String, RDFNode> {	
+public class UntypedMapResource implements Map<String, RDFNode> {	
 
 	private final OntObject mapOwner;
-	private final OntObjectProperty.Named mapEntryProperty;	
+	private final Property mapEntryProperty;	
 	private final Map<String, Statement> map = new HashMap<>();
 	
 	private final MapResourceType mapType;
 	
-	private MapResource(OntObject mapOwner, OntObjectProperty.Named mapEntryProperty, MapResourceType mapType) {		
+	protected UntypedMapResource(OntObject mapOwner, OntObjectProperty mapEntryProperty, MapResourceType mapType) {		
 		this.mapType = mapType;
 		this.mapOwner = mapOwner;
-		this.mapEntryProperty = mapEntryProperty;		
-		loadMap(mapOwner.listProperties(mapEntryProperty), mapType).stream().forEach(entry -> map.put(entry.getKey(), entry.getValue()));
+		this.mapEntryProperty = mapEntryProperty.asProperty();		
+		loadMap(mapOwner.listProperties(this.mapEntryProperty), mapType).stream().forEach(entry -> map.put(entry.getKey(), entry.getValue()));
 	}
 
-	public static MapResource asUnsafeMapResource(OntObject mapOwner, OntObjectProperty.Named mapEntryProperty, MapResourceType mapType)  {
-			return new MapResource(mapOwner, mapEntryProperty, mapType);
+	public static UntypedMapResource asUnsafeMapResource(OntObject mapOwner, OntObjectProperty.Named mapEntryProperty, MapResourceType mapType)  {
+			return new UntypedMapResource(mapOwner, mapEntryProperty, mapType);
 	}
 
-	public static MapResource asMapResource(OntObject mapOwner, OntObjectProperty.Named mapEntryProperty, MapResourceType mapType) throws ResourceMismatchException {		
+	public static UntypedMapResource asMapResource(OntObject mapOwner, OntObjectProperty.Named mapEntryProperty, MapResourceType mapType) throws ResourceMismatchException {		
 		if (mapType.isMapEntrySubclass(mapEntryProperty)) {
-			return new MapResource(mapOwner, mapEntryProperty, mapType);
+			return new UntypedMapResource(mapOwner, mapEntryProperty, mapType);
 		}
 		else
 			throw new ResourceMismatchException(String.format("Provided property %s is not in range of a %s", mapEntryProperty.getURI(), MapResourceType.ENTRY_TYPE_URI));		

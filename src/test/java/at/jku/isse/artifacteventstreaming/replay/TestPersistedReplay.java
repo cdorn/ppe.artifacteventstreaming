@@ -9,9 +9,7 @@ import com.eventstore.dbclient.DeleteStreamOptions;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
-import at.jku.isse.artifacteventstreaming.rule.MockSchema;
-import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
-import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
+import at.jku.isse.artifacteventstreaming.schemasupport.UntypedMapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 
@@ -25,7 +23,6 @@ public class TestPersistedReplay extends TestContainmentReplay{
 		removeStream(branchURI);		
 		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_RDFS_INF );
 		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
-		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
 		schemaUtil = new MetaModelSchemaTypes(m, metaModel);
 		schema = new MockSchema(m, schemaUtil);
 		aggr = new StatementAggregator();
@@ -37,7 +34,7 @@ public class TestPersistedReplay extends TestContainmentReplay{
 
 		issue1 = schema.createIssue("Issue1");
 		var seq = schemaUtil.getListType().getOrCreateSequenceFor(issue1, schema.getLabelProperty());
-		var map = MapResource.asUnsafeMapResource(issue1, schema.getKeyValueProperty().asNamed(), schemaUtil.getMapType());
+		var map = UntypedMapResource.asUnsafeMapResource(issue1, schema.getKeyValueProperty().asNamed(), schemaUtil.getMapType());
 		
 		issue1.addProperty(schema.getPriorityProperty(), m.createTypedLiteral(1L));
 		issue1.removeAll(schema.getStateProperty());

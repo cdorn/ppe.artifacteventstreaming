@@ -1,4 +1,4 @@
-package at.jku.isse.passiveprocessengine.rdfwrapper.collections;
+package at.jku.isse.artifacteventstreaming.schemasupport;
 
 import java.util.Collection;
 import java.util.Iterator;
@@ -11,30 +11,26 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.apache.jena.ontapi.model.OntObject;
-import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.StmtIterator;
 
-import at.jku.isse.passiveprocessengine.rdfwrapper.NodeToDomainResolver;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
-public class SetWrapper extends TypedCollectionResource implements Set<Object> {
+public class UntypedSetWrapper implements Set<RDFNode> {
 
-	private final OntObject setOwner;
-	private final Property setProperty;
+	protected final OntObject setOwner;
+	protected final Property setProperty;
 	
-	public SetWrapper(@NonNull  OntObject setOwner, @NonNull  OntRelationalProperty setProperty, @NonNull NodeToDomainResolver resolver, @NonNull  OntObject classOrDataRange) {
-		super(classOrDataRange, resolver);		
+	public UntypedSetWrapper(@NonNull  OntObject setOwner, @NonNull Property setProperty) {
 		this.setOwner = setOwner;
-		this.setProperty = setProperty.asProperty();
+		this.setProperty = setProperty;
 	}
 	
-	
 	@Override
-	public boolean remove(Object o) {				
-		var node = resolver.convertToRDF(o); 		
+	public boolean remove(Object o) {		
+		RDFNode node = (RDFNode)o;
 		var oldValue = setOwner.hasProperty(setProperty, node);
 		setOwner.remove(setProperty, node);
 		return oldValue;	
@@ -45,13 +41,12 @@ public class SetWrapper extends TypedCollectionResource implements Set<Object> {
 		setOwner.removeAll(setProperty);
 	}
 	
-	@Override
 	public void delete() {
 		this.clear();
 	}
 	
 	@Override
-	public void forEach(Consumer<? super Object> action) {
+	public void forEach(Consumer<? super RDFNode> action) {
 		throw new RuntimeException("Not supported");
 	}
 
@@ -71,12 +66,12 @@ public class SetWrapper extends TypedCollectionResource implements Set<Object> {
 	}
 
 	public boolean contains(Object o) {
-		var node = resolver.convertToRDF(o);
+		RDFNode node = (RDFNode)o;
 		return setOwner.hasProperty(setProperty, node);
 	}
 
-	public Iterator<Object> iterator() {
-		return new IteratorWrapper(setOwner.listProperties(setProperty), resolver);
+	public Iterator<RDFNode> iterator() {
+		return new IteratorWrapper(setOwner.listProperties(setProperty));
 	}
 
 	public Object[] toArray() {
@@ -87,12 +82,7 @@ public class SetWrapper extends TypedCollectionResource implements Set<Object> {
 		return (T[]) this.stream().toArray();
 	}
 
-	public boolean add(Object e) {
-		var node = resolver.convertToRDF(e);
-		if (!isAssignable(node) ) { 
-			var allowedType = this.literalType!=null ? this.literalType.getURI() : this.objectType.getURI();
-			throw new IllegalArgumentException(String.format("Cannot add %s into a set allowing only values of type %s", node.toString(), allowedType));
-		}				
+	public boolean add(RDFNode node) {		
 		var oldValue = setOwner.hasProperty(setProperty, node);
 		if (oldValue) {
 			return false;
@@ -106,7 +96,7 @@ public class SetWrapper extends TypedCollectionResource implements Set<Object> {
 		return c.stream().allMatch(this::contains);
 	}
 
-	public boolean addAll(Collection<? extends Object> c) {
+	public boolean addAll(Collection<? extends RDFNode> c) {
 		if (c.isEmpty()) 
 			return false;
 		else {
@@ -130,7 +120,7 @@ public class SetWrapper extends TypedCollectionResource implements Set<Object> {
 	}
 
 	@Override
-	public Spliterator<Object> spliterator() {
+	public Spliterator<RDFNode> spliterator() {
 		throw new RuntimeException("Not supported");
 	}
 
@@ -139,23 +129,22 @@ public class SetWrapper extends TypedCollectionResource implements Set<Object> {
 	}
 
 	@Override
-	public boolean removeIf(Predicate<? super Object> filter) {
+	public boolean removeIf(Predicate<? super RDFNode> filter) {
 		throw new RuntimeException("Not supported");
 	}
 
 	@Override
-	public Stream<Object> stream() {
+	public Stream<RDFNode> stream() {
 		var iter = this.iterator();
-		Iterable<Object> iterable = () -> iter;
+		Iterable<RDFNode> iterable = () -> iter;
 		return StreamSupport.stream(iterable.spliterator(), false);
 	}
 
 
 	@RequiredArgsConstructor
-	public static class IteratorWrapper implements Iterator<Object>{
+	public static class IteratorWrapper implements Iterator<RDFNode>{
 
 		private final StmtIterator delegate;
-		private final NodeToDomainResolver resolver;
 		
 		@Override
 		public boolean hasNext() {
@@ -163,17 +152,13 @@ public class SetWrapper extends TypedCollectionResource implements Set<Object> {
 		}
 
 		@Override
-		public Object next() {			
+		public RDFNode next() {			
 			RDFNode nextNode = delegate.next().getObject();
 			if (!delegate.hasNext()) {
 				delegate.close();
 			}
-			if (nextNode.isLiteral())
-				return nextNode.asLiteral().getValue();
-			else
-				return resolver.resolveToRDFElement(nextNode);
+			return nextNode;
 		}
 
 	}
-	
 }

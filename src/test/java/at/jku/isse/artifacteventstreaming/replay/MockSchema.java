@@ -1,13 +1,13 @@
-package at.jku.isse.artifacteventstreaming.rule;
+package at.jku.isse.artifacteventstreaming.replay;
 
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntObjectProperty;
+import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.vocabulary.XSD;
 
-import at.jku.isse.artifacteventstreaming.rule.definition.RDFRuleDefinition;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import lombok.Getter;
 import lombok.NonNull;
@@ -65,23 +65,5 @@ public class MockSchema {
 	public void addRequirement(OntIndividual issue, OntIndividual req) {
 		issue.addProperty(requirementsProperty.asProperty(), req);
 	}
-	
-	public RDFRuleDefinition getRegisteredRuleRequirementsSizeGT1(int counter, RuleRepository repo) throws RuleException {
-		return repo.getRuleBuilder()
-				.withContextType(issueType)
-				.withDescription("TestRuleDescription-"+counter)
-				.withRuleTitle("RequirementsSizeGT1-"+counter)
-				.withRuleExpression("self.requirements.size() > 1")
-				.build();
-	}
-	
-	public RDFRuleDefinition getRegisteredRuleRequirementsSizeEq2(int counter, RuleRepository repo) throws RuleException {
-		return repo.getRuleBuilder()
-				.withContextType(issueType)
-				.withDescription("TestRuleDescription-"+counter)
-				.withRuleTitle("RequirementsSizeGT1-"+counter)
-				.withRuleExpression("self.requirements.size() = 2")
-				.build();
-	}
-	
+
 }

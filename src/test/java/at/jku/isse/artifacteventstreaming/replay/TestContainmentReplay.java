@@ -27,12 +27,10 @@ import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.CommitToHistoryHandler;
-import at.jku.isse.artifacteventstreaming.rule.MockSchema;
-import at.jku.isse.artifacteventstreaming.rule.RuleSchemaFactory;
-import at.jku.isse.artifacteventstreaming.schemasupport.MapResource;
+import at.jku.isse.artifacteventstreaming.schemasupport.UntypedMapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.ResourceMismatchException;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
-import at.jku.isse.passiveprocessengine.rdfwrapper.collections.ResourceMismatchException;
 
 @ExtendWith(MockitoExtension.class) 
 class TestContainmentReplay {
@@ -53,7 +51,6 @@ class TestContainmentReplay {
 				
 		m = OntModelFactory.createModel( OntSpecification.OWL2_DL_MEM_RDFS_INF );
 		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
-		new RuleSchemaFactory(metaModel); // add rule schema to meta model		
 		schemaUtil = new MetaModelSchemaTypes(m, metaModel);
 		schema = new MockSchema(m, schemaUtil);
 		aggr = new StatementAggregator();
@@ -70,7 +67,7 @@ class TestContainmentReplay {
 
 		issue1 = schema.createIssue("Issue1");
 		var seq = schemaUtil.getListType().getOrCreateSequenceFor(issue1, schema.getLabelProperty());
-		var map = MapResource.asUnsafeMapResource(issue1, schema.getKeyValueProperty().asNamed(), schemaUtil.getMapType());
+		var map = UntypedMapResource.asUnsafeMapResource(issue1, schema.getKeyValueProperty().asNamed(), schemaUtil.getMapType());
 		
 		issue1.addProperty(schema.getPriorityProperty(), m.createTypedLiteral(1L));
 		issue1.removeAll(schema.getStateProperty());
@@ -208,18 +205,18 @@ class TestContainmentReplay {
 		
 		var fwd = session.playForwardOneTimestamp();
 		assertEquals(5, fwd.size()); //type info and entry linking
-		var map = MapResource.asUnsafeMapResource(issue1, schema.getKeyValueProperty().asNamed(), schemaUtil.getMapType());
+		var map = UntypedMapResource.asUnsafeMapResource(issue1, schema.getKeyValueProperty().asNamed(), schemaUtil.getMapType());
 		assertEquals(1, map.get("First").asLiteral().getInt());
 		
 		fwd = session.playForwardOneTimestamp();
 		assertEquals(5, fwd.size()); //type info and entry linking
-		map = MapResource.asUnsafeMapResource(issue1, schema.getKeyValueProperty().asNamed(), schemaUtil.getMapType()); // need to reload map
+		map = UntypedMapResource.asUnsafeMapResource(issue1, schema.getKeyValueProperty().asNamed(), schemaUtil.getMapType()); // need to reload map
 		assertEquals(1, map.get("First").asLiteral().getInt());
 		assertEquals(2, map.get("Second").asLiteral().getInt());
 		
 		fwd = session.playForwardOneTimestamp();
 		assertEquals(2, fwd.size()); // replacing 
-		map = MapResource.asUnsafeMapResource(issue1, schema.getKeyValueProperty().asNamed(), schemaUtil.getMapType()); // need to reload map
+		map = UntypedMapResource.asUnsafeMapResource(issue1, schema.getKeyValueProperty().asNamed(), schemaUtil.getMapType()); // need to reload map
 		assertEquals(3, map.get("First").asLiteral().getInt());
 		assertEquals(2, map.get("Second").asLiteral().getInt());
 	}

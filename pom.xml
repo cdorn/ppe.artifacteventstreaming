@@ -2,9 +2,9 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>at.jku.isse</groupId>
-	<artifactId>artifacteventstreaming</artifactId>
-	<version>0.0.5-SNAPSHOT</version>
+	<groupId>at.jku.isse.artifacteventstreaming</groupId>
+	<artifactId>core</artifactId>
+	<version>0.1.0</version>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -17,7 +17,7 @@
 		<lombok.version>1.18.30</lombok.version>
 	</properties>
 
-	<distributionManagement>
+<!--	<distributionManagement>
         <repository>
             <id>JKU.ISSE.MAVEN</id>
              <url>https://isse.jku.at/reposilite/snapshots</url>
@@ -25,9 +25,9 @@
 	</distributionManagement>
 
 	<repositories>
-		<!-- The order of definitions matters. Explicitly defining central here
-            to make sure it has the highest priority. -->
-		<!-- Main Maven repository -->
+		 The order of definitions matters. Explicitly defining central here
+            to make sure it has the highest priority. 
+		 Main Maven repository 
 		<repository>
 			<id>central</id>
 			<url>https://repo.maven.apache.org/maven2</url>
@@ -35,7 +35,7 @@
 				<enabled>false</enabled>
 			</snapshots>
 		</repository>
-		<!-- own ones -->
+		 own ones 
 		<repository>
 			<id>JKU.ISSE.MAVEN</id>
             <url>https://isse.jku.at/reposilite/snapshots</url>
@@ -43,24 +43,14 @@
 				<enabled>true</enabled>
 			</snapshots>
 		</repository>
-	</repositories>
+	</repositories>-->
 
 	<dependencies>
-		<!--<dependency>
-			<groupId>at.jku.isse.designspace</groupId>
-			<artifactId>artifact-connector.core</artifactId>
-			<version>3.0.0</version>
-		</dependency>-->
 		<dependency>
 			<groupId>org.apache.jena</groupId>
 			<artifactId>apache-jena-libs</artifactId>
 			<type>pom</type>
 			<version>5.1.0</version>
-		</dependency>
-		<dependency>
-  			<groupId>at.jku.isse</groupId>
-  			<artifactId>service-rule</artifactId>
-  			<version>6.0.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.rocksdb</groupId>
