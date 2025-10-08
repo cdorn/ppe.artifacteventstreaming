@@ -42,14 +42,15 @@ class TestRecoverBranchState {
 	private static final String DEST = "dest";
 
 	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/branchRecoveryTest");
+	public static Resource repoRes = ResourceFactory.createResource(repoURI.toString());
 	
 	private static URI branchURI;
 	private static URI branchURI2;
 	
 	@BeforeAll
 	static void setup() throws URISyntaxException {
-		branchURI = BranchBuilder.generateBranchURI(repoURI, SOURCE);
-		branchURI2 = BranchBuilder.generateBranchURI(repoURI, DEST);
+		branchURI = BranchBuilder.generateBranchURI(repoRes, SOURCE);
+		branchURI2 = BranchBuilder.generateBranchURI(repoRes, DEST);
 	}
 	
 	@Test
@@ -59,7 +60,7 @@ class TestRecoverBranchState {
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		//OntModel branchModel = OntModelFactory.createModel();
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
-		URI branchURI = BranchBuilder.generateBranchURI(repoURI, "main");
+		URI branchURI = BranchBuilder.generateBranchURI(repoRes, "main");
 		BranchStateUpdater stateKeeper = stateFactory.createStateKeeperFor(branchURI);
 		Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel)
 				.setStateKeeper(stateKeeper)				
@@ -124,7 +125,7 @@ class TestRecoverBranchState {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
-		URI branchURI = BranchBuilder.generateBranchURI(repoURI, "main");
+		URI branchURI = BranchBuilder.generateBranchURI(repoRes, "main");
 		BranchStateUpdater stateKeeper = stateFactory.createStateKeeperFor(branchURI);
 		CountDownLatch latch = new CountDownLatch(1);
 		SyncForTestingService service1 = new SyncForTestingService("Out1", latch, repoModel);

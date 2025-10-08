@@ -38,7 +38,7 @@ class TestServiceRegistration {
 		var outService = new SyncForTestingService("Out1", latch, repoModel);
 		var localService1 = new LongRunningNoOpLocalService("Local1", repoModel, 500);
 		var localService2 = new LongRunningNoOpLocalService("Local2", repoModel, 500);
-		BranchImpl branch = (BranchImpl) repo.getInitializedBranchBuilder()
+		BranchImpl branch = (BranchImpl) repo.getInitializedBranchBuilder("main")
 				.addBranchInternalCommitService(localService1)
 				.addBranchInternalCommitService(localService2)
 				.addOutgoingCommitDistributer(outService)

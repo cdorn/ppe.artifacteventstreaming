@@ -2,14 +2,19 @@ package at.jku.isse.artifacteventstreaming.branch;
 
 import java.net.URI;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
+import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
@@ -22,6 +27,7 @@ import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactoryRegistry;
 import at.jku.isse.artifacteventstreaming.api.StateKeeperFactory;
+import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.NotFoundException;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +36,7 @@ import lombok.extern.slf4j.Slf4j;
 public class BranchRepository {
 
 	private final URI repositoryURI;
+	private final Resource repoRes; 
 	private final Dataset repoDataset;
 	private final OntModel repoModel;
 	private final DatasetRepository datasetLoader;
@@ -46,6 +53,7 @@ public class BranchRepository {
 		if (datasetOpt.isEmpty()) {
 			throw new NotFoundException("Could not find repository for: "+repositoryURI);
 		}
+		this.repoRes = ResourceFactory.createResource(repositoryURI.toString());
 		this.repoDataset = datasetOpt.get();
 		this.repoModel = OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		this.stateKeeperFactory = stateKeeperFactory;
@@ -61,8 +69,28 @@ public class BranchRepository {
 		return repoModel;
 	}
 	
-	public BranchBuilder getInitializedBranchBuilder() {
+	public BranchBuilder getInitializedBranchBuilder(String branchName) throws BranchConfigurationException {
+		
+		if (BranchBuilder.doesDatasetContainBranch(repoDataset, repoRes, branchName)) {
+			var msg = String.format("Branch %s already exists in repo %s", branchName, repoRes.getURI());
+			log.warn(msg);
+			throw new BranchConfigurationException(msg);
+		}
 		return new BranchBuilder(repositoryURI, repoDataset, repoModel);
+	}
+	
+	public Set<String> getAllBranchURIs() {
+		// dataset.getDefaultModel().contains(branchRes, AES.partOfRepository, repoRes);
+		var branchURIs = new HashSet<String>();
+		repoDataset.begin(ReadWrite.READ);
+		Resource repoRes = ResourceFactory.createResource(repositoryURI.toString());
+		var iter = repoModel.listResourcesWithProperty(AES.partOfRepository, repoRes);
+		while (iter.hasNext()) {
+			var branchRes = iter.next();
+			branchURIs.add(branchRes.getURI());
+		}
+		repoDataset.end();
+		return branchURIs;
 	}
 	
 	public Branch getOrLoadBranch(URI branchURI) throws Exception {
@@ -79,6 +107,7 @@ public class BranchRepository {
 				branch = new BranchBuilder(repositoryURI, repoDataset)
 						.setDataset(datasetOpt.get())
 						.setBranchLocalName(BranchBuilder.getBranchNameFromURI(branchURI))
+						.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF) // DEFER: technical debt - we set the inference model here statically, not as part of the configuration. For now we assume all use cases will require this anyway.
 						.setStateKeeper(stateKeeper)
 						.build();
 				Commit prelimUnfinishedCommit = stateKeeper.loadState();

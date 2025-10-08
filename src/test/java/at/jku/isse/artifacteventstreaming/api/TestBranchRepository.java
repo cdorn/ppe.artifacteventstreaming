@@ -1,7 +1,9 @@
 package at.jku.isse.artifacteventstreaming.api;
 
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.when;
 
 import java.net.URI;
@@ -42,7 +44,7 @@ class TestBranchRepository {
 		CountDownLatch latch = new CountDownLatch(1);
 		DatasetRepository dataLoader = new InMemoryDatasetLoader();
 		ServiceFactoryRegistry factoryRegistry = new ServiceFactoryRegistry(); // not used for the first repo
-		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
+		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory(); 
 		
 		BranchRepository repo = new BranchRepository(repoURI, dataLoader, stateFactory , factoryRegistry);
 		OntModel repoModel = repo.getRepositoryModel();
@@ -83,8 +85,8 @@ class TestBranchRepository {
 		factoryRegistry2.register(CompleteCommitMerger.getWellknownServiceTypeURI(), CompleteCommitMerger.getServiceFactory());
 		factoryRegistry2.register(SyncForTestingService.getWellknownServiceTypeURI(), SyncForTestingService.getServiceFactory("BranchCopySignaller", latch2, repoModel2));
 		
-		Branch sourceBranch2 = repo2.getOrLoadBranch(URI.create(repoURI+"::source"));
-		Branch destinationBranch2 = repo2.getOrLoadBranch(URI.create(repoURI+"::destination"));
+		Branch sourceBranch2 = repo2.getOrLoadBranch(URI.create(repoURI+"#source"));
+		Branch destinationBranch2 = repo2.getOrLoadBranch(URI.create(repoURI+"#destination"));
 		assertNotNull(destinationBranch2);
 		assertNotNull(sourceBranch2);
 		OntModel model2 = sourceBranch2.getModel();
@@ -115,20 +117,20 @@ class TestBranchRepository {
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();		
 		try {
 			BranchRepository repo = new BranchRepository(repoURI, nullRepo, stateFactory , factoryRegistry);
-			assert(false);
+			assertFalse(false);
 		} catch(NotFoundException re) {
-			assert(true);
+			assertTrue(true);
 		}	
 	}
 
 	@Test
 	void testUnloadableBranchset() throws Exception {
 		when(nullRepo.loadDataset(repoURI)).thenReturn(Optional.of(DatasetFactory.createTxnMem()));
-		when(nullRepo.loadDataset(URI.create(repoURI.toString()+"::main"))).thenReturn(Optional.empty());
+		when(nullRepo.loadDataset(URI.create(repoURI.toString()+"#main"))).thenReturn(Optional.empty());
 		ServiceFactoryRegistry factoryRegistry = new ServiceFactoryRegistry(); // not used for the first repo
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();		
 		BranchRepository repo = new BranchRepository(repoURI, nullRepo, stateFactory , factoryRegistry);
-		Branch branch = repo.getOrLoadBranch(URI.create(repoURI+"::main"));
+		Branch branch = repo.getOrLoadBranch(URI.create(repoURI+"#main"));
 		assertNull(branch);
 	}
 	
@@ -157,10 +159,10 @@ class TestBranchRepository {
 		factoryRegistry2.unregister(SyncForTestingService.getWellknownServiceTypeURI());
 		//testing unregistering
 		try {
-			Branch sourceBranch2 = repo2.getOrLoadBranch(URI.create(repoURI+"::source"));
-			assert(false);
+			Branch sourceBranch2 = repo2.getOrLoadBranch(URI.create(repoURI+"#source"));
+			assertFalse(false);
 		} catch(Exception e) {
-			assert(true);
+			assertTrue(true);
 		}
 		
 	}

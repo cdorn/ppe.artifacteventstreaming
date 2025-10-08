@@ -12,6 +12,8 @@ import java.net.URI;
 import org.apache.commons.io.FileUtils;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.tdb2.TDB2Factory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -22,6 +24,7 @@ import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 class TestPersistentBranchCreation {
 
 	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testbranch");
+	public static Resource repoRes = ResourceFactory.createResource(repoURI.toString());
 	
 	@BeforeAll
 	static void prepareDirectory() throws Exception {
@@ -74,10 +77,14 @@ class TestPersistentBranchCreation {
 		String name = BranchBuilder.getBranchNameFromURI(repoURI);
 		assertNull(name);
 		
-		name = BranchBuilder.getBranchNameFromURI(URI.create(repoURI.toString()+"::"));
+		
+		name = BranchBuilder.getBranchNameFromURI(URI.create(repoURI.toString()+"#"));
+		assertEquals("", name);
+		
+		name = BranchBuilder.getBranchNameFromURI(URI.create(repoURI.toString()));
 		assertEquals(null, name);
 		
-		name = BranchBuilder.getBranchNameFromURI(URI.create(repoURI.toString()+"::test"));
+		name = BranchBuilder.getBranchNameFromURI(URI.create(repoURI.toString()+"#test"));
 		assertEquals("test", name);
 	}
 	
@@ -86,14 +93,14 @@ class TestPersistentBranchCreation {
 	void testLoadExistingBranch() {				
 		String directory = "repos/"+repoURI.getPath() ;
 		Dataset dataset = TDB2Factory.connectDataset(directory) ;
-		assertTrue(BranchBuilder.doesDatasetContainBranch(dataset, repoURI, "main"));
+		assertTrue(BranchBuilder.doesDatasetContainBranch(dataset, repoRes, "main"));
 	}
 	
 	@Test
 	void testLoadNonExistingBranch() {
 		String directory = "repos/"+repoURI.getPath() ;
 		Dataset dataset = TDB2Factory.connectDataset(directory) ;
-		assertFalse(BranchBuilder.doesDatasetContainBranch(dataset, repoURI, "main"+System.currentTimeMillis()));
+		assertFalse(BranchBuilder.doesDatasetContainBranch(dataset, repoRes, "main"+System.currentTimeMillis()));
 	}
 
 }

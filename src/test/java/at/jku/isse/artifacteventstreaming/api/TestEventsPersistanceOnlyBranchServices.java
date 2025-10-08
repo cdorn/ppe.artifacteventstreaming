@@ -19,6 +19,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.rocksdb.RocksDBException;
 
 import com.eventstore.dbclient.DeleteStreamOptions;
@@ -34,6 +36,7 @@ import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonDese
 import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonSerializer;
 import at.jku.isse.artifacteventstreaming.replay.ContainedStatementImpl;
 
+@TestInstance(Lifecycle.PER_CLASS)
 class TestEventsPersistanceOnlyBranchServices {
 
 	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/repo3");
