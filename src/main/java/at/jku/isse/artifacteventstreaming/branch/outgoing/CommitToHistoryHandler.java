@@ -8,6 +8,7 @@ import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
+import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.replay.InMemoryHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +31,7 @@ public class CommitToHistoryHandler extends AbstractHandlerBase {
 		this.cache = cache;		
 	}
 	
-	public void init() throws Exception {
+	public void init() {
 		// Unclear yet what need/should be initialized
 		 
 //		Commit lastCommit = sourceBranch.getLastCommit();
@@ -95,7 +96,7 @@ public class CommitToHistoryHandler extends AbstractHandlerBase {
 		@Override
 		public CommitHandler getCommitHandlerInstanceFor(Branch sourceBranch
 				, OntIndividual serviceConfigEntryPoint
-				) throws Exception {
+				) {
 			// simple, as we dont have any config to do
 			 CommitToHistoryHandler streamer = new CommitToHistoryHandler(sourceBranch, historyRepo, cache);
 			 streamer.init();

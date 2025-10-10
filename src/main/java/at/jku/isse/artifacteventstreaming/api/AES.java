@@ -26,6 +26,7 @@ public class AES {
     }
     
     public static final Property partOfRepository = property("partOfRepository");
+    public static final Property repositoryOwnedBy = property("ownedBy");
     public static final Property hasLastCommit = property("hasLastCommit");
    
     public static final Property incomingCommitMerger = property("hasIncomingCommitMerger");

@@ -29,6 +29,7 @@ import at.jku.isse.artifacteventstreaming.api.ServiceFactoryRegistry;
 import at.jku.isse.artifacteventstreaming.api.StateKeeperFactory;
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.NotFoundException;
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
@@ -69,31 +70,44 @@ public class BranchRepository {
 		return repoModel;
 	}
 	
-	public BranchBuilder getInitializedBranchBuilder(String branchName) throws BranchConfigurationException {
+	public RegisteringBranchBuilder getInitializedBranchBuilder(String branchName) throws BranchConfigurationException {
 		
-		if (BranchBuilder.doesDatasetContainBranch(repoDataset, repoRes, branchName)) {
+		var uri = BranchBuilder.generateBranchURI(repoRes, branchName);
+		if (BranchBuilder.doesDatasetContainBranch(repoDataset, repoRes, uri)) {
 			var msg = String.format("Branch %s already exists in repo %s", branchName, repoRes.getURI());
 			log.warn(msg);
 			throw new BranchConfigurationException(msg);
 		}
-		return new BranchBuilder(repositoryURI, repoDataset, repoModel);
+		var builder = new RegisteringBranchBuilder(repositoryURI, repoDataset, repoModel);
+		builder.setBranchLocalName(branchName);
+		return builder;
 	}
 	
-	public Set<String> getAllBranchURIs() {
-		// dataset.getDefaultModel().contains(branchRes, AES.partOfRepository, repoRes);
-		var branchURIs = new HashSet<String>();
+	public Set<Resource> getAllBranches() {
+		var branchSet = new HashSet<Resource>();
 		repoDataset.begin(ReadWrite.READ);
-		Resource repoRes = ResourceFactory.createResource(repositoryURI.toString());
 		var iter = repoModel.listResourcesWithProperty(AES.partOfRepository, repoRes);
 		while (iter.hasNext()) {
 			var branchRes = iter.next();
-			branchURIs.add(branchRes.getURI());
+			branchSet.add(branchRes);
 		}
 		repoDataset.end();
-		return branchURIs;
+		return branchSet;
 	}
 	
-	public Branch getOrLoadBranch(URI branchURI) throws Exception {
+	public Set<Resource> getBranchesForUser(String userId) {
+		var branchSet = new HashSet<Resource>();
+		repoDataset.begin(ReadWrite.READ);
+		var iter = repoModel.listResourcesWithProperty(AES.repositoryOwnedBy, userId);
+		while (iter.hasNext()) {
+			var branchRes = iter.next();
+			branchSet.add(branchRes);
+		}
+		repoDataset.end();
+		return branchSet;
+	}
+	
+	public Branch getOrLoadBranch(URI branchURI) throws PersistenceException, BranchConfigurationException{
 		Branch branch = branches.get(branchURI.toString());
 		if (branch != null) {
 			return branch;
@@ -119,7 +133,7 @@ public class BranchRepository {
 		}
 	}
 
-	private void initializeBranch(Branch branch) throws Exception {
+	private void initializeBranch(Branch branch) throws BranchConfigurationException {
 		// we inspect the branch resource for any configuration data
 		for(var config : branch.getLocalCommitServiceConfig()) {
 			CommitHandler handler = resolveHandler(branch, config);
@@ -144,22 +158,22 @@ public class BranchRepository {
 		}
 	}
 	
-	private CommitHandler resolveHandler(Branch branch, OntIndividual config) throws Exception{
+	private CommitHandler resolveHandler(Branch branch, OntIndividual config) throws BranchConfigurationException {
 		Statement typeStmt = config.getProperty(AES.isConfigForHandlerType);
 		if (typeStmt != null) {
 			Optional<ServiceFactory> factory = factoryRegistry.getFactory(typeStmt.getResource().getURI());
 			if (factory.isPresent()) {
 				try {
 					return factory.get().getCommitHandlerInstanceFor(branch, config);
-				} catch (Exception e) {
+				} catch (BranchConfigurationException e) {
 					String msg = String.format("Error creating CommitHandler %s while initializing branch %s: %s", typeStmt.getResource().getURI(), branch.getBranchId(), e.getMessage());
 					log.warn(msg);
-					throw new Exception(msg);
+					throw e;
 				}
 			} else {
 				String msg = String.format("Could not resolve Factory for %s while initializing branch %s", typeStmt.getResource().getURI(), branch.getBranchId());
 				log.warn(msg);
-				throw new Exception(msg);
+				throw new BranchConfigurationException(msg);
 			}
 		}
 		return null;
@@ -167,5 +181,30 @@ public class BranchRepository {
 
 	public void registerBranch(Branch branch) {
 		branches.put(branch.getBranchResource().getURI(), branch);
+	}
+
+	public void remove(Branch branch) {
+		branch.deactivate();
+		branches.remove(branch.getBranchId());
+		branch.getDataset().begin(ReadWrite.WRITE);
+		//TODO: what to do if there is an ongoing write session with Lock?!
+		branch.getModel().removeAll();
+		branch.getDataset().commit();
+		branch.getDataset().close();
+		
+	}
+	
+	public class RegisteringBranchBuilder extends BranchBuilder{
+
+ 		public RegisteringBranchBuilder(@NonNull URI repositoryURI, @NonNull Dataset repoDataset, @NonNull OntModel repoModel) {
+			super(repositoryURI, repoDataset, repoModel);
+		}
+		
+		@Override
+		public Branch build() {
+			var branch = super.build();
+			registerBranch(branch);
+			return branch;
+		}
 	}
 }

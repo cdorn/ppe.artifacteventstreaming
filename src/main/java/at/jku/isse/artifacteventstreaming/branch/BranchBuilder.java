@@ -53,13 +53,15 @@ public class BranchBuilder {
 	private List<IncrementalCommitHandler> services = new LinkedList<>();
 	private Set<CommitHandler> outgoingCommitDistributers = new HashSet<>();
 	private TimeStampProvider timeStampProvider;
-	
+	private String owner;
+	private static UrlValidator validator = new UrlValidator();
 	
 	
 	public BranchBuilder(@NonNull URI repositoryURI, @NonNull Dataset repoDataset, @NonNull OntModel repoModel) {
 		this.repositoryRes = ResourceFactory.createResource(repositoryURI.toString());
 		this.repoDataset = repoDataset;	
 		this.repoModel = repoModel;
+		this.branchURI = URI.create(generateNonValidatedBranchURI(repositoryRes, branchName));
 	}
 	
 	/**
@@ -70,23 +72,31 @@ public class BranchBuilder {
 		this.repositoryRes = ResourceFactory.createResource(repositoryURI.toString());
 		this.repoDataset = repoDataset;	
 		this.repoModel = null;
+		this.branchURI = URI.create(generateNonValidatedBranchURI(repositoryRes, branchName));
 	}
 	
 	/**
-	 * if not used, by default the 'main' branch will be created.
+	 * if not used, by default the 'main' branch will be created. Override branchURI
 	 */
-	public BranchBuilder setBranchLocalName(@NonNull String branchName) {
+	public BranchBuilder setBranchLocalName(@NonNull String branchName) throws BranchConfigurationException {
 		if (branchName.isEmpty()) {
-			throw new RuntimeException("Branchname cannot be empty");
+			throw new BranchConfigurationException("Branchname cannot be empty");
 		}
-		this.branchName = branchName;
-		return this;
+		var uri = generateNonValidatedBranchURI(repositoryRes, branchName);
+		if (validator.isValid(uri)) {
+			this.branchURI = URI.create(uri);
+			return this;
+		} else
+			throw new BranchConfigurationException("Local branch name results in invalid Branch URI "+uri);
 	}
 	
 	/**
-	 * if not used, by default the 'main' branch will be created.
+	 * if not used, by default the 'main' branch will be created, overrides branch name
 	 */
-	public BranchBuilder setBranchURI(@NonNull URI branchURI) {		
+	public BranchBuilder setBranchURI(@NonNull URI branchURI) throws BranchConfigurationException {		
+		if (branchURI.getFragment() == null ) {
+			throw new BranchConfigurationException("BranchURI requires a fragment to be used as local unique name, but was: "+branchURI);
+		}
 		this.branchURI = branchURI;
 		return this;
 	}
@@ -141,35 +151,37 @@ public class BranchBuilder {
 		return this;
 	}
 	
+	/**
+	 * if not used, not owner is recorded.
+	 */
+	public BranchBuilder addOwner(String ownerId) {
+		this.owner = ownerId;
+		return this;
+	}
 	
-	public static URI generateBranchURI(Resource repositoryRes, String branchName) throws URISyntaxException {
+	
+	private static String generateNonValidatedBranchURI(Resource repositoryRes, String branchName) {
 		var baseURI = repositoryRes.getNameSpace();
 		var localNamePart = repositoryRes.getLocalName() != null ? "/"+repositoryRes.getLocalName() : "";
-		return new URI(baseURI.substring(0, baseURI.length()-1)
-				+localNamePart+"#"+branchName);
-		//return new URI(Objects.toString(repositoryRes)+"::"+branchName);
+		return baseURI.substring(0, baseURI.length()-1) +localNamePart+"#"+branchName;
+	}
+	
+	
+	public static URI generateBranchURI(Resource repositoryRes, String branchName) throws BranchConfigurationException  {
+		var uri = generateNonValidatedBranchURI(repositoryRes, branchName);
+		if (validator.isValid(uri)) return URI.create(uri);
+		else throw new BranchConfigurationException("Local branch name results in invalid Branch URI "+uri);
 	}
 	
 	public static String getBranchNameFromURI(@NonNull URI branchURI) {
-//		int pos = branchURI.toString().lastIndexOf("::");
-//		if (pos < 0 || pos == branchURI.toString().length()-2) {
-//			return null;
-//		} else {
-//			return branchURI.toString().substring(pos+2);
-//		}
 		return branchURI.getFragment();
 	}
 	
-	public Branch build() throws Exception {
-
-			
+	public Branch build()  {
 		if (branchDataset == null) {
 			setDataset(DatasetFactory.createTxnMem());
 		}
-		if (branchURI == null) {
-			branchURI = generateBranchURI(repositoryRes, branchName);
-		}
-		OntIndividual branchResource = prepareBranch(branchURI);
+		OntIndividual branchResource = prepareBranch(branchURI, owner);
 		BlockingQueue<Commit> inQueue = new LinkedBlockingQueue<>();
 		BlockingQueue<Commit> outQueue = new LinkedBlockingQueue<>();
 
@@ -182,10 +194,11 @@ public class BranchBuilder {
 		}
 		BranchImpl branch = new BranchImpl(branchDataset, model, branchResource, stateKeeper, inQueue, outQueue, timeStampProvider);
 		addCommitHandlers(branch);
+		
 		return branch;
 	}
 	
-	private OntIndividual prepareBranch(URI branchURI) {
+	private OntIndividual prepareBranch(@NonNull URI branchURI, String owner) {
 		Resource branchRes = ResourceFactory.createResource(branchURI.toString());
 		OntIndividual branchResource = null;
 		repoDataset.begin(ReadWrite.WRITE);
@@ -195,7 +208,10 @@ public class BranchBuilder {
 			branchResource = repoModel.createIndividual(branchURI.toString());		
 		} else { // we assume, each branch has its own model, hence we create the core concepts here as well
 			addCoreConcepts(repoModel);
-			branchResource = buildBranchResource(repositoryRes, repoModel, branchURI);			
+			branchResource = buildBranchResource(repositoryRes, repoModel, branchURI);	
+			if (owner != null && !owner.isEmpty()) {
+				branchResource.addLiteral(AES.repositoryOwnedBy, owner);
+			}
 		}	
 		repoDataset.commit();
 		repoDataset.end();
@@ -234,18 +250,31 @@ public class BranchBuilder {
 
 	}
 	
-	public static boolean doesDatasetContainBranch(Dataset dataset, @NonNull Resource repositoryRes, @NonNull String branchName) {
+
+	public static boolean doesDatasetContainBranch(Dataset dataset, @NonNull Resource repositoryRes, @NonNull URI branchURI) {
 		if (dataset == null) return false;
 		dataset.begin();
-		URI branchURI;
-		try {
-			branchURI = generateBranchURI(repositoryRes, branchName);
-		} catch (URISyntaxException e) {
-			return false;
-		}
 		Resource branchRes = ResourceFactory.createResource(branchURI.toString());
 		boolean doesContain = dataset.getDefaultModel().contains(branchRes, AES.partOfRepository, repositoryRes);
 		dataset.end();
 		return doesContain;
+	}
+	
+	public static class UrlValidator {
+		public boolean isValid(final String value) {
+	        if (value == null) {
+	            return false;
+	        }
+	        final URI uri; // ensure value is a valid URI
+	        try {
+	            uri = new URI(value);
+	        } catch (final URISyntaxException e) {
+	            return false;
+	        }
+	        if (uri.getFragment() != null)
+	        	return true;
+	        else
+	        	return false;
+		}
 	}
 }

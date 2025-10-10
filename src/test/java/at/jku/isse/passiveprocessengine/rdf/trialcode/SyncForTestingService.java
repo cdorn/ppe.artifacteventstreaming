@@ -75,7 +75,7 @@ public class SyncForTestingService extends CommitLoggingService {
 		final OntModel model;
 		
 		@Override
-		public CommitHandler getCommitHandlerInstanceFor(Branch sourceBranch, OntIndividual serviceConfigEntryPoint) throws Exception {
+		public CommitHandler getCommitHandlerInstanceFor(Branch sourceBranch, OntIndividual serviceConfigEntryPoint)  {
 			// simple, as we dont have any config to do
 			return new SyncForTestingService(serviceName, latch, model);
 		}

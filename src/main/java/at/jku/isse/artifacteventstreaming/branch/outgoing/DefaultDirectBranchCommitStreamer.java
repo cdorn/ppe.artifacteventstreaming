@@ -14,6 +14,7 @@ import at.jku.isse.artifacteventstreaming.api.BranchStateKeeper;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
+import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.BranchRepository;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +40,7 @@ public class DefaultDirectBranchCommitStreamer extends AbstractHandlerBase {
 	}
 	
 	// at this point, both branches have state loaded but not necessarily any serice, but this is enought to enqueue any commits that havent been delivered yet
-	public void init() throws Exception {
+	public void init() throws PersistenceException {
 		Commit lastCommit = sourceBranch.getLastCommit();
 		if (lastCommit == null) // no commit yet
 			return;
@@ -117,13 +118,21 @@ public class DefaultDirectBranchCommitStreamer extends AbstractHandlerBase {
 		private final BranchStateCache cache;
 		
 		@Override
-		public CommitHandler getCommitHandlerInstanceFor(Branch sourceBranch, OntIndividual serviceConfigEntryPoint) throws Exception {
+		public CommitHandler getCommitHandlerInstanceFor(Branch sourceBranch, OntIndividual serviceConfigEntryPoint) throws BranchConfigurationException {
 			// simple, as we dont have any config to do
 			Resource destBranchRes = serviceConfigEntryPoint.getPropertyResourceValue(AES.destinationBranch);
-			Branch destBranch = branchRepo.getOrLoadBranch(URI.create(destBranchRes.getURI()));
-			 DefaultDirectBranchCommitStreamer streamer = new DefaultDirectBranchCommitStreamer(sourceBranch, destBranch, cache);
-			 streamer.init();
-			 return streamer;
+			Branch destBranch;
+			try {
+				destBranch = branchRepo.getOrLoadBranch(URI.create(destBranchRes.getURI()));
+				DefaultDirectBranchCommitStreamer streamer = new DefaultDirectBranchCommitStreamer(sourceBranch, destBranch, cache);
+				 streamer.init();
+				 return streamer;
+			} catch (PersistenceException | BranchConfigurationException e) {
+				log.error("Error instantiating DefaultDirectBranchCommitStreamer" , e);
+				throw new BranchConfigurationException("Error instantiating DefaultDirectBranchCommitStreamer due to "+e.getMessage());
+			}
+			 
+			 
 		}
 		
 	}

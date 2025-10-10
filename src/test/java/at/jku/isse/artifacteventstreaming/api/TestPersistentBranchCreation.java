@@ -19,6 +19,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 
 class TestPersistentBranchCreation {
@@ -27,14 +28,14 @@ class TestPersistentBranchCreation {
 	public static Resource repoRes = ResourceFactory.createResource(repoURI.toString());
 	
 	@BeforeAll
-	static void prepareDirectory() throws Exception {
+	static void prepareDirectory() {
 		removeDataset(repoURI);
 		String directory = "repos/"+repoURI.getPath() ;
 		Dataset repoDataset = TDB2Factory.connectDataset(directory) ;		
 		Branch branch = new BranchBuilder(repoURI, repoDataset)				
 				.build();
 		repoDataset.begin();
-		assertEquals(branch.getBranchName(), "main");
+		assertEquals("main", branch.getBranchName());
 		repoDataset.end();
 	}
 	
@@ -57,7 +58,7 @@ class TestPersistentBranchCreation {
 	@Test
 	void testEmptyBranchName() {
 		try {
-		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())		
+		new BranchBuilder(repoURI, DatasetFactory.createTxnMem())		
 				.setBranchLocalName("")
 				.build();
 			assert(false);
@@ -66,7 +67,7 @@ class TestPersistentBranchCreation {
 		}
 		
 		try {
-		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())		
+		new BranchBuilder(repoURI, DatasetFactory.createTxnMem())		
 				.setBranchLocalName(null)
 				.build();
 			assert(false);
@@ -90,17 +91,19 @@ class TestPersistentBranchCreation {
 	
 
 	@Test
-	void testLoadExistingBranch() {				
+	void testLoadExistingBranch() throws BranchConfigurationException {				
 		String directory = "repos/"+repoURI.getPath() ;
 		Dataset dataset = TDB2Factory.connectDataset(directory) ;
-		assertTrue(BranchBuilder.doesDatasetContainBranch(dataset, repoRes, "main"));
+		var uri = BranchBuilder.generateBranchURI(repoRes, "main");
+		assertTrue(BranchBuilder.doesDatasetContainBranch(dataset, repoRes, uri));
 	}
 	
 	@Test
-	void testLoadNonExistingBranch() {
+	void testLoadNonExistingBranch() throws BranchConfigurationException {
 		String directory = "repos/"+repoURI.getPath() ;
 		Dataset dataset = TDB2Factory.connectDataset(directory) ;
-		assertFalse(BranchBuilder.doesDatasetContainBranch(dataset, repoRes, "main"+System.currentTimeMillis()));
+		var uri = BranchBuilder.generateBranchURI(repoRes, "main"+System.currentTimeMillis());
+		assertFalse(BranchBuilder.doesDatasetContainBranch(dataset, repoRes, uri));
 	}
 
 }

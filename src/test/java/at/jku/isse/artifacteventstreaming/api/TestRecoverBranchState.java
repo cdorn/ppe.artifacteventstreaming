@@ -48,7 +48,7 @@ class TestRecoverBranchState {
 	private static URI branchURI2;
 	
 	@BeforeAll
-	static void setup() throws URISyntaxException {
+	static void setup() throws Exception {
 		branchURI = BranchBuilder.generateBranchURI(repoRes, SOURCE);
 		branchURI2 = BranchBuilder.generateBranchURI(repoRes, DEST);
 	}
