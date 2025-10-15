@@ -79,7 +79,12 @@ public class BranchRepository {
 			throw new BranchConfigurationException(msg);
 		}
 		var builder = new RegisteringBranchBuilder(repositoryURI, repoDataset, repoModel);
-		builder.setBranchLocalName(branchName);
+		builder.setBranchLocalName(branchName)
+				.setStateKeeper(stateKeeperFactory.createStateKeeperFor(uri))
+				.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF); // we set the default inference model here statically, can be overridden if necessary
+		var optDataset = datasetLoader.loadDataset(uri);
+		if (optDataset.isPresent())
+			builder.setDataset(optDataset.get());
 		return builder;
 	}
 	
@@ -95,10 +100,10 @@ public class BranchRepository {
 		return branchSet;
 	}
 	
-	public Set<Resource> getBranchesForUser(String userId) {
+	public Set<Resource> getBranchesOwnedByUser(String userId) {
 		var branchSet = new HashSet<Resource>();
 		repoDataset.begin(ReadWrite.READ);
-		var iter = repoModel.listResourcesWithProperty(AES.repositoryOwnedBy, userId);
+		var iter = repoModel.listResourcesWithProperty(AES.ownedBy, userId);
 		while (iter.hasNext()) {
 			var branchRes = iter.next();
 			branchSet.add(branchRes);
@@ -118,7 +123,7 @@ public class BranchRepository {
 				return null;
 			} else {
 				BranchStateUpdater stateKeeper = stateKeeperFactory.createStateKeeperFor(branchURI);
-				branch = new BranchBuilder(repositoryURI, repoDataset)
+				branch = new BranchBuilder(repositoryURI, repoDataset, repoModel)
 						.setDataset(datasetOpt.get())
 						.setBranchLocalName(BranchBuilder.getBranchNameFromURI(branchURI))
 						.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF) // DEFER: technical debt - we set the inference model here statically, not as part of the configuration. For now we assume all use cases will require this anyway.

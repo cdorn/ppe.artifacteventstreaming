@@ -210,7 +210,7 @@ public class BranchBuilder {
 			addCoreConcepts(repoModel);
 			branchResource = buildBranchResource(repositoryRes, repoModel, branchURI);	
 			if (owner != null && !owner.isEmpty()) {
-				branchResource.addLiteral(AES.repositoryOwnedBy, owner);
+				branchResource.addLiteral(AES.ownedBy, owner);
 			}
 		}	
 		repoDataset.commit();
