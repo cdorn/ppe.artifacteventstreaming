@@ -184,7 +184,7 @@ public class BranchBuilder {
 		OntIndividual branchResource = prepareBranch(branchURI, owner);
 		BlockingQueue<Commit> inQueue = new LinkedBlockingQueue<>();
 		BlockingQueue<Commit> outQueue = new LinkedBlockingQueue<>();
-
+		branchDataset.begin(ReadWrite.WRITE);
 		OntModel model = OntModelFactory.createModel(branchDataset.getDefaultModel().getGraph(), modelSpec);
 		if (stateKeeper == null) {
 			stateKeeper = new StateKeeperImpl(branchURI, new InMemoryBranchStateCache(), new InMemoryEventStore());
@@ -194,7 +194,8 @@ public class BranchBuilder {
 		}
 		BranchImpl branch = new BranchImpl(branchDataset, model, branchResource, stateKeeper, inQueue, outQueue, timeStampProvider);
 		addCommitHandlers(branch);
-		
+		branchDataset.commit();
+		branchDataset.end();
 		return branch;
 	}
 	

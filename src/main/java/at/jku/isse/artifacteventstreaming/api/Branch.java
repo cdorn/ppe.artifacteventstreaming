@@ -136,6 +136,8 @@ public interface Branch {
 	*/
 	void startReadTransaction();
 	
+	void completeReadTransaction();
+	
 	/**
 	 *  if the underlying model is based on a transactional dataset, use this delegate method to obtain a lock to ensure noone else is writing to this model/dataset in the meantime
 	*/
@@ -144,7 +146,8 @@ public interface Branch {
 	/**
 	 *  when having acquired a lock, use this method instead of {@link commitChanges(String commitMsg)} to complete the write transaction and release the lock
 	*/
-	Commit concludeTransaction(Lock writeLock, String commitMsg)
-			throws BranchConfigurationException, PersistenceException;
+	Commit concludeTransaction(Lock writeLock, String commitMsg);
+	
+	void abortWriteTransaction(@NonNull Lock lock);
 	
 }

@@ -41,6 +41,8 @@ public class BranchImpl  implements Branch, Runnable {
 	private final Dataset dataset;
 	private final OntModel model;
 	private final OntIndividual branchResource;
+	private final String branchResourceURI;
+	private final String branchResourceLabel;
 	@Getter private final BranchStateUpdater stateKeeper;
 	private final TimeStampProvider timeStampProvider;
 	
@@ -67,6 +69,8 @@ public class BranchImpl  implements Branch, Runnable {
 		this.dataset = dataset;
 		this.model = model;
 		this.branchResource = branchResource;
+		this.branchResourceURI = branchResource.getURI(); // cached so we wont have to access different dataset
+		this.branchResourceLabel = branchResource.getLocalName();
 		this.stateKeeper = stateKeeper;
 		this.inQueue = inQueue;
 		this.outQueue = outQueue;
@@ -128,12 +132,12 @@ public class BranchImpl  implements Branch, Runnable {
 
 	@Override
 	public String getBranchId() {
-		return branchResource.getURI();
+		return branchResourceURI;
 	}
 
 	@Override
 	public String getBranchName() {
-		return branchResource.getLabel();
+		return branchResourceLabel;
 	}
 
 	@Override
@@ -148,7 +152,7 @@ public class BranchImpl  implements Branch, Runnable {
 	
     @Override
 	public String toString() {
-		return "Branch[" + branchResource.getLabel() + "]";
+		return "Branch[" + branchResourceLabel + "]";
 	}
 	
 	// incoming commit handling -------------------------------------------------------------------------
@@ -292,6 +296,11 @@ public class BranchImpl  implements Branch, Runnable {
 	}
 
 	@Override
+	public void completeReadTransaction() {
+		dataset.end();
+	}
+	
+	@Override
 	public Lock startWriteTransaction() {
 		dataset.begin(ReadWrite.WRITE);		
 		var writeLock = dataset.getLock();
@@ -300,24 +309,29 @@ public class BranchImpl  implements Branch, Runnable {
 	}
 	
 	@Override
-	public Commit concludeTransaction(Lock writeLock, String commitMsg) throws BranchConfigurationException, PersistenceException {
+	public void abortWriteTransaction(@NonNull Lock lock) {
+		dataset.abort();
+		dataset.end();
+		lock.leaveCriticalSection();
+	}
+	
+	@Override
+	public Commit concludeTransaction(@NonNull Lock writeLock, String commitMsg) {
+		Commit commit = null;
 		if (dataset.transactionMode() != null && dataset.transactionMode().equals(ReadWrite.WRITE)) {			
 			try {
-				var commit = this.commitChanges(commitMsg);
-				if (writeLock != null) {
-					writeLock.leaveCriticalSection();
-					writeLock = null;
-				}
-				return commit;
+				commit = this.commitChanges(commitMsg);
 				// dataset write transaction end set by commitChanges() logic
 			} catch (PersistenceException | BranchConfigurationException e) {			
-				e.printStackTrace();
-				return null;
-			} 
+				log.error("Failed to persist commit: "+commitMsg, e);
+			} finally {
+				writeLock.leaveCriticalSection();
+			}
 		} else {
 			dataset.end();
-			return null;
+			
 		}
+		return commit;
 	}
 	
 	/**
@@ -339,7 +353,7 @@ public class BranchImpl  implements Branch, Runnable {
 			}
 			return null;
 		} else {
-			var commit = new StatementCommitImpl( branchResource.getURI() , commitMsg, getLastCommitId(), timeStampProvider.getCurrentTimeStamp(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());
+			var commit = new StatementCommitImpl( branchResourceURI , commitMsg, getLastCommitId(), timeStampProvider.getCurrentTimeStamp(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());
 			handleCommitInternally(commit);
 			outQueue.add(commit); 
 			return commit;
@@ -349,7 +363,7 @@ public class BranchImpl  implements Branch, Runnable {
 	@Override
 	public Commit commitMergeOf(Commit mergedCommit) throws PersistenceException {
 		//we always create a local commit upon a merge to signal that we received and processed that commit
-		var commit = new StatementCommitImpl( branchResource.getURI() , mergedCommit.getCommitId(), mergedCommit.getCommitMessage(), getLastCommitId(), timeStampProvider.getCurrentTimeStamp(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());
+		var commit = new StatementCommitImpl( branchResourceURI , mergedCommit.getCommitId(), mergedCommit.getCommitMessage(), getLastCommitId(), timeStampProvider.getCurrentTimeStamp(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());
 		if (commit.isEmpty()) {
 			log.info(String.format("MergeCommit %s merged into branch %s has no changes after incoming processing",commit.getCommitId(), this.branchResource.getURI()));
 		}
@@ -360,7 +374,7 @@ public class BranchImpl  implements Branch, Runnable {
 	}
 	
 	private void handleCommitInternally(Commit commit) throws PersistenceException {
-		log.debug(String.format("Handling commit %s in branch %s", commit.getCommitId(), branchResource.getURI()));
+		log.debug(String.format("Handling commit %s in branch %s", commit.getCommitId(), branchResourceURI));
 		// clear the changes
 		try {
 			if (!services.isEmpty() && !commit.isEmpty()) {
@@ -368,7 +382,7 @@ public class BranchImpl  implements Branch, Runnable {
 			}		 
 		// persist augmented commit and  mark preliminary commit as processed
 			stateKeeper.afterServices(commit);
-			log.debug(String.format("Branch %s contains now %s statements", branchResource.getLabel(), model.size()));
+			log.debug(String.format("Branch %s contains now %s statements", branchResourceLabel, model.size()));
 			dataset.commit(); // together with commit persistence			
 		} catch (Exception e) {
 			log.warn(String.format("Failed to persist post-service commit %s %s with exception %s", commit.getCommitMessage(), commit.getCommitId(), e.getMessage()));
@@ -441,7 +455,7 @@ public class BranchImpl  implements Branch, Runnable {
 
 		
 		if (commit.isEmpty()) {
-			log.info(String.format("Commit %s of branch %s has no changes after local service processing", commit.getCommitId(), this.branchResource.getURI()));
+			log.info(String.format("Commit %s of branch %s has no changes after local service processing", commit.getCommitId(), branchResourceURI));
 		}
 	}
 	

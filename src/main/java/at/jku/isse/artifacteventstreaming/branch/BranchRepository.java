@@ -56,10 +56,13 @@ public class BranchRepository {
 		}
 		this.repoRes = ResourceFactory.createResource(repositoryURI.toString());
 		this.repoDataset = datasetOpt.get();
+		repoDataset.begin(ReadWrite.WRITE);
 		this.repoModel = OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		this.stateKeeperFactory = stateKeeperFactory;
 		this.factoryRegistry = factoryRegistry;
 		this.datasetLoader = datasetLoader;
+		repoDataset.commit();
+		repoDataset.end();
 	}
 
 	public Dataset getRepositoryDataset() {
@@ -83,8 +86,9 @@ public class BranchRepository {
 				.setStateKeeper(stateKeeperFactory.createStateKeeperFor(uri))
 				.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF); // we set the default inference model here statically, can be overridden if necessary
 		var optDataset = datasetLoader.loadDataset(uri);
-		if (optDataset.isPresent())
+		if (optDataset.isPresent()) {
 			builder.setDataset(optDataset.get());
+		}
 		return builder;
 	}
 	
@@ -111,7 +115,7 @@ public class BranchRepository {
 		repoDataset.end();
 		return branchSet;
 	}
-	
+		
 	public Branch getOrLoadBranch(URI branchURI) throws PersistenceException, BranchConfigurationException{
 		Branch branch = branches.get(branchURI.toString());
 		if (branch != null) {
@@ -190,7 +194,20 @@ public class BranchRepository {
 
 	public void remove(Branch branch) {
 		branch.deactivate();
+		
+		repoDataset.begin(ReadWrite.WRITE);
+		repoModel.remove(branch.getBranchResource(), AES.partOfRepository, repoRes);
+		branch.getBranchResource().removeProperties();
+		repoDataset.commit();
+		repoDataset.end();
+		
 		branches.remove(branch.getBranchId());
+		branch.getDataset().begin(ReadWrite.WRITE);
+		branch.getModel().removeAll();
+		branch.getDataset().commit();
+		branch.getDataset().end();
+		
+		//TODO: remove branch config info from repoModel/Dataset, currently only direct branch properties removed
 		branch.getDataset().begin(ReadWrite.WRITE);
 		//TODO: what to do if there is an ongoing write session with Lock?!
 		branch.getModel().removeAll();
