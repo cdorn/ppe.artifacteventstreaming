@@ -32,6 +32,7 @@ import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCom
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryDatasetLoader;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryStateKeeperFactory;
+import at.jku.isse.artifacteventstreaming.schemasupport.DefaultInMemoryMetaModelOntologyProvider;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
 
 @ExtendWith(MockitoExtension.class) 
@@ -46,7 +47,7 @@ class TestBranchRepository {
 		ServiceFactoryRegistry factoryRegistry = new ServiceFactoryRegistry(); // not used for the first repo
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory(); 
 		
-		BranchRepository repo = new BranchRepository(repoURI, dataLoader, stateFactory , factoryRegistry);
+		BranchRepository repo = new BranchRepository(repoURI, dataLoader, stateFactory , factoryRegistry, new DefaultInMemoryMetaModelOntologyProvider());
 		OntModel repoModel = repo.getRepositoryModel();
 		factoryRegistry.register(DefaultDirectBranchCommitStreamer.SERVICE_TYPE_URI, new DefaultDirectBranchCommitStreamer.DefaultServiceFactory(repo, new InMemoryBranchStateCache()));
 		BranchImpl branchSource = (BranchImpl) new BranchBuilder(repoURI, repo.getRepositoryDataset())
@@ -79,7 +80,7 @@ class TestBranchRepository {
 		// typically this is only done once per JVM, but here duplicated to simulate persistence at the level of datasets.
 		CountDownLatch latch2 = new CountDownLatch(1);
 		ServiceFactoryRegistry factoryRegistry2 = new ServiceFactoryRegistry();
-		BranchRepository repo2 = new BranchRepository(repoURI, dataLoader, stateFactory, factoryRegistry2);
+		BranchRepository repo2 = new BranchRepository(repoURI, dataLoader, stateFactory, factoryRegistry2, new DefaultInMemoryMetaModelOntologyProvider());
 		OntModel repoModel2 = repo2.getRepositoryModel();
 		factoryRegistry2.register(DefaultDirectBranchCommitStreamer.SERVICE_TYPE_URI, new DefaultDirectBranchCommitStreamer.DefaultServiceFactory(repo2, new InMemoryBranchStateCache()));
 		factoryRegistry2.register(CompleteCommitMerger.getWellknownServiceTypeURI(), CompleteCommitMerger.getServiceFactory());
@@ -116,7 +117,7 @@ class TestBranchRepository {
 		ServiceFactoryRegistry factoryRegistry = new ServiceFactoryRegistry(); // not used for the first repo
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();		
 		try {
-			BranchRepository repo = new BranchRepository(repoURI, nullRepo, stateFactory , factoryRegistry);
+			BranchRepository repo = new BranchRepository(repoURI, nullRepo, stateFactory , factoryRegistry, new DefaultInMemoryMetaModelOntologyProvider());
 			assertFalse(false);
 		} catch(NotFoundException re) {
 			assertTrue(true);
@@ -129,7 +130,7 @@ class TestBranchRepository {
 		when(nullRepo.loadDataset(URI.create(repoURI.toString()+"#main"))).thenReturn(Optional.empty());
 		ServiceFactoryRegistry factoryRegistry = new ServiceFactoryRegistry(); // not used for the first repo
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();		
-		BranchRepository repo = new BranchRepository(repoURI, nullRepo, stateFactory , factoryRegistry);
+		BranchRepository repo = new BranchRepository(repoURI, nullRepo, stateFactory , factoryRegistry, new DefaultInMemoryMetaModelOntologyProvider());
 		Branch branch = repo.getOrLoadBranch(URI.create(repoURI+"#main"));
 		assertNull(branch);
 	}
@@ -142,7 +143,7 @@ class TestBranchRepository {
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
 		
 		CountDownLatch latch = new CountDownLatch(1);
-		BranchRepository repo = new BranchRepository(repoURI, dataLoader, stateFactory , factoryRegistry);
+		BranchRepository repo = new BranchRepository(repoURI, dataLoader, stateFactory , factoryRegistry, new DefaultInMemoryMetaModelOntologyProvider());
 		OntModel repoModel = repo.getRepositoryModel();
 		factoryRegistry.register(DefaultDirectBranchCommitStreamer.SERVICE_TYPE_URI, new DefaultDirectBranchCommitStreamer.DefaultServiceFactory(repo, new InMemoryBranchStateCache()));
 		BranchImpl branchSource = (BranchImpl) new BranchBuilder(repoURI, repo.getRepositoryDataset())
@@ -152,7 +153,7 @@ class TestBranchRepository {
 		
 		// now lets recreate config:
 		ServiceFactoryRegistry factoryRegistry2 = new ServiceFactoryRegistry();
-		BranchRepository repo2 = new BranchRepository(repoURI, dataLoader, stateFactory, factoryRegistry2);
+		BranchRepository repo2 = new BranchRepository(repoURI, dataLoader, stateFactory, factoryRegistry2, new DefaultInMemoryMetaModelOntologyProvider());
 		OntModel repoModel2 = repo2.getRepositoryModel();
 		var factory = SyncForTestingService.getServiceFactory("BranchCopySignaller", latch, repoModel2);
 		factoryRegistry2.register(SyncForTestingService.getWellknownServiceTypeURI(), factory);

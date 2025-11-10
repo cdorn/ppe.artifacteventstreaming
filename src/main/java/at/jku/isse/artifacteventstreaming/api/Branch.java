@@ -9,6 +9,7 @@ import org.apache.jena.shared.Lock;
 
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import lombok.NonNull;
 
 
@@ -22,6 +23,8 @@ public interface Branch {
 	public String getRepositoryURI();
 	public Commit getLastCommit();
 	public BranchStateKeeper getStateKeeper();
+	public MetaModelSchemaTypes getSchemaUtils();
+	public void setSchemaUtils(MetaModelSchemaTypes utils);	
 	
 	// stops all incoming handlers, and distributers etc, so the branch can be garbage collected,
 	// one deactivated the branch object should not be used any more and all distributers connected to this branch object should be notified and paused as well, resp, updated with a new branch object

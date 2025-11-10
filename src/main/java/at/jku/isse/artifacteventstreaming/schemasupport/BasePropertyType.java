@@ -22,7 +22,8 @@ public class BasePropertyType {
 	}
 
 	private void fillCache(OntModel model) {
-		var iter = model.listResourcesWithProperty(RDF.type, RDF.Nodes.Property);
+		var node = model.getResource(RDF.Nodes.Property.getURI());
+		var iter = model.listResourcesWithProperty(RDF.type, node);
 		while (iter.hasNext()) {
 			propertyCache.add(iter.next().getURI());
 		}

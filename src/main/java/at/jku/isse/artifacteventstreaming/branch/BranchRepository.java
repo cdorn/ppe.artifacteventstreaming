@@ -24,6 +24,7 @@ import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.DatasetRepository;
 import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
+import at.jku.isse.artifacteventstreaming.api.MetaModelOntologyProvider;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
 import at.jku.isse.artifacteventstreaming.api.ServiceFactoryRegistry;
 import at.jku.isse.artifacteventstreaming.api.StateKeeperFactory;
@@ -44,12 +45,15 @@ public class BranchRepository {
 	private final StateKeeperFactory stateKeeperFactory;
 	private final ServiceFactoryRegistry factoryRegistry;
 	private final Map<String, Branch> branches = new HashMap<>();
+	private final MetaModelOntologyProvider metaOntologyProvider;
 
 	public BranchRepository(@NonNull URI repositoryURI
 			, @NonNull DatasetRepository datasetLoader
 			, @NonNull StateKeeperFactory stateKeeperFactory
-			, @NonNull ServiceFactoryRegistry factoryRegistry) throws NotFoundException {
+			, @NonNull ServiceFactoryRegistry factoryRegistry
+			, @NonNull MetaModelOntologyProvider metaOntologyProvider) throws NotFoundException {
 		this.repositoryURI = repositoryURI;
+		this.metaOntologyProvider = metaOntologyProvider;
 		Optional<Dataset> datasetOpt = datasetLoader.loadDataset(repositoryURI);
 		if (datasetOpt.isEmpty()) {
 			throw new NotFoundException("Could not find repository for: "+repositoryURI);
@@ -84,7 +88,10 @@ public class BranchRepository {
 		var builder = new RegisteringBranchBuilder(repositoryURI, repoDataset, repoModel);
 		builder.setBranchLocalName(branchName)
 				.setStateKeeper(stateKeeperFactory.createStateKeeperFor(uri))
-				.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF); // we set the default inference model here statically, can be overridden if necessary
+				.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF)
+				.setMetaModelOntologyProvider(metaOntologyProvider)
+				; // we set the default inference model here statically, can be overridden if necessary
+				
 		var optDataset = datasetLoader.loadDataset(uri);
 		if (optDataset.isPresent()) {
 			builder.setDataset(optDataset.get());
@@ -92,13 +99,13 @@ public class BranchRepository {
 		return builder;
 	}
 	
-	public Set<Resource> getAllBranches() {
-		var branchSet = new HashSet<Resource>();
+	public Map<String, Resource> getAllBranches() {
+		var branchSet = new HashMap<String, Resource>();
 		repoDataset.begin(ReadWrite.READ);
 		var iter = repoModel.listResourcesWithProperty(AES.partOfRepository, repoRes);
 		while (iter.hasNext()) {
 			var branchRes = iter.next();
-			branchSet.add(branchRes);
+			branchSet.put(branchRes.getURI(), branchRes);
 		}
 		repoDataset.end();
 		return branchSet;
@@ -131,11 +138,21 @@ public class BranchRepository {
 						.setDataset(datasetOpt.get())
 						.setBranchLocalName(BranchBuilder.getBranchNameFromURI(branchURI))
 						.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF) // DEFER: technical debt - we set the inference model here statically, not as part of the configuration. For now we assume all use cases will require this anyway.
+						.setMetaModelOntologyProvider(metaOntologyProvider)
 						.setStateKeeper(stateKeeper)
 						.build();
 				Commit prelimUnfinishedCommit = stateKeeper.loadState();
 				registerBranch(branch); // now branch can be found and referenced by other branches
+				
+				boolean doTX = !repoDataset.isInTransaction();
+				if (doTX) { 
+					repoDataset.begin(ReadWrite.WRITE);		
+				}
 				initializeBranch(branch); // reload incoming, local, outgoing commit handlers
+				if (doTX) {
+					repoDataset.commit();
+					repoDataset.end();
+				}
 				branch.startCommitHandlers(prelimUnfinishedCommit);
 				return branch;
 			}

@@ -11,7 +11,7 @@ import org.apache.jena.tdb2.TDB2Factory;
 
 import at.jku.isse.artifacteventstreaming.api.DatasetRepository;
 
-public class InMemoryDatasetLoader implements DatasetRepository {
+public class InMemoryAutoTxDatasetLoader implements DatasetRepository {
 
 	private final Map<URI, Dataset> repo = new HashMap<>();
 	
@@ -20,8 +20,7 @@ public class InMemoryDatasetLoader implements DatasetRepository {
 		if (repo.containsKey(uri)) {
 			return Optional.of(repo.get(uri));
 		} else {
-			//Dataset dataset = DatasetFactory.createTxnMem();
-			Dataset dataset = TDB2Factory.createDataset();
+			Dataset dataset = DatasetFactory.createTxnMem();
 			repo.put(uri, dataset);
 			return Optional.of(dataset);
 		}

@@ -31,8 +31,10 @@ import at.jku.isse.artifacteventstreaming.api.TimeStampProvider;
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.CrossBranchStreamer;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -56,6 +58,8 @@ public class BranchImpl  implements Branch, Runnable {
 	@Getter private final BlockingQueue<Commit> outQueue;
 	private final CrossBranchStreamer crossBranchStreamer;
 	private AtomicBoolean isReady = new AtomicBoolean(false);
+	
+	@Getter @Setter MetaModelSchemaTypes schemaUtils;
 	
 	public BranchImpl(@NonNull Dataset dataset
 			, @NonNull OntModel model

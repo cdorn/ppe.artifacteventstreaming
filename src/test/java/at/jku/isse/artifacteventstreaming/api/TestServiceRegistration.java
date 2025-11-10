@@ -17,6 +17,7 @@ import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.branch.BranchRepository;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryDatasetLoader;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryStateKeeperFactory;
+import at.jku.isse.artifacteventstreaming.schemasupport.DefaultInMemoryMetaModelOntologyProvider;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.LongRunningNoOpLocalService;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
 
@@ -28,7 +29,7 @@ class TestServiceRegistration {
 	
 	@Test
 	void testUnregisterInternalService() throws Exception {						
-		BranchRepository repo = new BranchRepository(repoURI, new InMemoryDatasetLoader(), new InMemoryStateKeeperFactory(), new ServiceFactoryRegistry());
+		BranchRepository repo = new BranchRepository(repoURI, new InMemoryDatasetLoader(), new InMemoryStateKeeperFactory(), new ServiceFactoryRegistry(), new DefaultInMemoryMetaModelOntologyProvider());
 		
 		OntModel repoModel = repo.getRepositoryModel(); //OntModelFactory.createModel();
 		// add two services, ensure both get a commit

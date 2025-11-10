@@ -12,6 +12,7 @@ import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import com.eventstore.dbclient.DeleteStreamOptions;
@@ -23,6 +24,7 @@ import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 
+@Disabled
 class TestEventPayloadsize {
 
 	public static URI NS = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/repopayload");

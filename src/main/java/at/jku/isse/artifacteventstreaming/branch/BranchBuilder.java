@@ -29,11 +29,13 @@ import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
+import at.jku.isse.artifacteventstreaming.api.MetaModelOntologyProvider;
 import at.jku.isse.artifacteventstreaming.api.TimeStampProvider;
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryEventStore;
 import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
@@ -55,7 +57,7 @@ public class BranchBuilder {
 	private TimeStampProvider timeStampProvider;
 	private String owner;
 	private static UrlValidator validator = new UrlValidator();
-	
+	private MetaModelOntologyProvider metaOntologyProvider;
 	
 	public BranchBuilder(@NonNull URI repositoryURI, @NonNull Dataset repoDataset, @NonNull OntModel repoModel) {
 		this.repositoryRes = ResourceFactory.createResource(repositoryURI.toString());
@@ -160,6 +162,11 @@ public class BranchBuilder {
 	}
 	
 	
+	public BranchBuilder setMetaModelOntologyProvider(MetaModelOntologyProvider metaOntologyProvider) {
+		this.metaOntologyProvider = metaOntologyProvider;
+		return this;
+	}
+	
 	private static String generateNonValidatedBranchURI(Resource repositoryRes, String branchName) {
 		var baseURI = repositoryRes.getNameSpace();
 		var localNamePart = repositoryRes.getLocalName() != null ? "/"+repositoryRes.getLocalName() : "";
@@ -193,6 +200,9 @@ public class BranchBuilder {
 			timeStampProvider = new SystemTimeStampProvider();
 		}
 		BranchImpl branch = new BranchImpl(branchDataset, model, branchResource, stateKeeper, inQueue, outQueue, timeStampProvider);
+		if (metaOntologyProvider != null) {
+			branch.setSchemaUtils(new MetaModelSchemaTypes(model, metaOntologyProvider.getMetaModelOntology()));
+		}
 		addCommitHandlers(branch);
 		branchDataset.commit();
 		branchDataset.end();
@@ -202,7 +212,11 @@ public class BranchBuilder {
 	private OntIndividual prepareBranch(@NonNull URI branchURI, String owner) {
 		Resource branchRes = ResourceFactory.createResource(branchURI.toString());
 		OntIndividual branchResource = null;
-		repoDataset.begin(ReadWrite.WRITE);
+		
+		boolean doTX = !repoDataset.isInTransaction();
+		if (doTX) { 
+			repoDataset.begin(ReadWrite.WRITE);		
+		}
 		if (repoModel == null)
 			repoModel = OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		if (repoModel.contains(branchRes, AES.partOfRepository, repositoryRes)) {
@@ -214,8 +228,10 @@ public class BranchBuilder {
 				branchResource.addLiteral(AES.ownedBy, owner);
 			}
 		}	
-		repoDataset.commit();
-		repoDataset.end();
+		if (doTX) {
+			repoDataset.commit();
+			repoDataset.end();
+		}
 		return branchResource;
 	}
 	
