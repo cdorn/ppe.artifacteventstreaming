@@ -1,9 +1,5 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
 import java.net.URI;
 
 import org.apache.jena.ontapi.OntModelFactory;

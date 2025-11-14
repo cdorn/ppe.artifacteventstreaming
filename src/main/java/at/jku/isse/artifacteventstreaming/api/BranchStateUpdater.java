@@ -1,9 +1,9 @@
 package at.jku.isse.artifacteventstreaming.api;
 
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
+
 import java.util.List;
 import java.util.Optional;
-
-import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 
 /**
  * @author Christoph Mayr-Dorn

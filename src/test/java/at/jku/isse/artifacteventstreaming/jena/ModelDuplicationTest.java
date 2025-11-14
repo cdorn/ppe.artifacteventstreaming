@@ -1,12 +1,8 @@
 package at.jku.isse.artifacteventstreaming.jena;
 
 import static at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType.MAP_NS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+
 
 import java.util.Map;
 

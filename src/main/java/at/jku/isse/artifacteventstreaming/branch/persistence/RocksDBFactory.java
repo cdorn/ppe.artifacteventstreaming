@@ -1,12 +1,11 @@
 package at.jku.isse.artifacteventstreaming.branch.persistence;
 
-import org.rocksdb.Options;
-import org.rocksdb.RocksDB;
-import org.rocksdb.RocksDBException;
-
 import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import lombok.RequiredArgsConstructor;
+import org.rocksdb.Options;
+import org.rocksdb.RocksDB;
+import org.rocksdb.RocksDBException;
 
 public class RocksDBFactory {
 

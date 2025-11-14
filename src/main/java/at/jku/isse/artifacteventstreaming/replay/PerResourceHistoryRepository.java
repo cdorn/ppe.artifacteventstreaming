@@ -1,9 +1,9 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
+
 import java.util.Set;
 import java.util.stream.Stream;
-
-import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 
 public interface PerResourceHistoryRepository {
 	

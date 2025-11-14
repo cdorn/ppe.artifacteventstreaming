@@ -1,15 +1,10 @@
 package at.jku.isse.artifacteventstreaming.branch.incoming;
 
+import at.jku.isse.artifacteventstreaming.api.*;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDFS;
-
-import at.jku.isse.artifacteventstreaming.api.AbstractHandlerBase;
-import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.api.Commit;
-import at.jku.isse.artifacteventstreaming.api.CommitHandler;
-import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 

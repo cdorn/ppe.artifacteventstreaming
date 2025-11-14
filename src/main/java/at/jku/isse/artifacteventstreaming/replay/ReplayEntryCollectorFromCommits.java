@@ -1,19 +1,13 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
+import at.jku.isse.artifacteventstreaming.api.AES;
+import at.jku.isse.artifacteventstreaming.api.Commit;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 
-import at.jku.isse.artifacteventstreaming.api.AES;
-import at.jku.isse.artifacteventstreaming.api.Commit;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ReplayEntryCollectorFromCommits implements ReplayEntryCollector {
 

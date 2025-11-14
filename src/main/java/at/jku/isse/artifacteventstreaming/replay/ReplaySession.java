@@ -1,18 +1,11 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
+import lombok.RequiredArgsConstructor;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 
-import lombok.RequiredArgsConstructor;
+import java.util.*;
 
 @RequiredArgsConstructor
 public class ReplaySession {

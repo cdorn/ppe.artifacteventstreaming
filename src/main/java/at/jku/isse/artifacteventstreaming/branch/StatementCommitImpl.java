@@ -1,20 +1,14 @@
 package at.jku.isse.artifacteventstreaming.branch;
 
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import org.apache.jena.rdf.model.Statement;
-
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
+import org.apache.jena.rdf.model.Statement;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 @JsonIgnoreProperties(value = { "additionCount", "removalCount", "empty", "addedStatementsAsSet", "removedStatementsAsSet" })
 public class StatementCommitImpl implements Commit {

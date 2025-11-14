@@ -1,13 +1,12 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
-import java.util.Comparator;
-
-import org.apache.jena.rdf.model.Model;
-
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.apache.jena.rdf.model.Model;
+
+import java.util.Comparator;
 
 @RequiredArgsConstructor
 public class ReplayEntry {

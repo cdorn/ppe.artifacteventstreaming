@@ -1,15 +1,13 @@
 package at.jku.isse.artifacteventstreaming.branch.persistence;
 
+import at.jku.isse.artifacteventstreaming.api.DatasetRepository;
+import org.apache.jena.query.Dataset;
+import org.apache.jena.query.DatasetFactory;
+
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-
-import org.apache.jena.query.Dataset;
-import org.apache.jena.query.DatasetFactory;
-import org.apache.jena.tdb2.TDB2Factory;
-
-import at.jku.isse.artifacteventstreaming.api.DatasetRepository;
 
 public class InMemoryAutoTxDatasetLoader implements DatasetRepository {
 

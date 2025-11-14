@@ -1,9 +1,5 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-
 import java.net.URI;
 
 import org.apache.jena.ontapi.OntModelFactory;
@@ -16,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import at.jku.isse.artifacteventstreaming.branch.persistence.FilebasedDatasetLoader;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestRDFMapWrapperOntologyPersistence  {
 

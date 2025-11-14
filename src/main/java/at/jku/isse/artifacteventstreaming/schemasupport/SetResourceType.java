@@ -1,13 +1,12 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
-import java.util.List;
-
+import lombok.NonNull;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
 import org.apache.jena.ontapi.model.OntDataRange;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 
-import lombok.NonNull;
+import java.util.List;
 
 public class SetResourceType {
 

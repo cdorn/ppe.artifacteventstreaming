@@ -1,20 +1,10 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
-import org.apache.jena.graph.Triple;
-import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.rdf.model.Alt;
-import org.apache.jena.rdf.model.Bag;
-import org.apache.jena.rdf.model.Literal;
-import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.Property;
-import org.apache.jena.rdf.model.RDFList;
-import org.apache.jena.rdf.model.RDFNode;
-import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.rdf.model.Seq;
-import org.apache.jena.rdf.model.Statement;
-
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import lombok.NonNull;
+import org.apache.jena.graph.Triple;
+import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.rdf.model.*;
 
 public class ContainedStatementImpl implements ContainedStatement {
 

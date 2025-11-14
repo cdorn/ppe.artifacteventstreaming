@@ -1,21 +1,11 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
-import org.apache.jena.ontapi.model.OntIndividual;
-import org.apache.jena.ontapi.model.OntModel;
-
-import at.jku.isse.artifacteventstreaming.api.AbstractHandlerBase;
-import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
-import at.jku.isse.artifacteventstreaming.api.Commit;
-import at.jku.isse.artifacteventstreaming.api.CommitHandler;
-import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
-import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
-import at.jku.isse.artifacteventstreaming.api.ServiceFactoryRegistry;
-import at.jku.isse.artifacteventstreaming.branch.outgoing.CommitToHistoryHandler;
-import at.jku.isse.artifacteventstreaming.branch.outgoing.CommitToHistoryHandler.DefaultServiceFactory;
+import at.jku.isse.artifacteventstreaming.api.*;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.apache.jena.ontapi.model.OntIndividual;
+import org.apache.jena.ontapi.model.OntModel;
 
 public class CommitContainmentAugmenter extends AbstractHandlerBase implements IncrementalCommitHandler {
 

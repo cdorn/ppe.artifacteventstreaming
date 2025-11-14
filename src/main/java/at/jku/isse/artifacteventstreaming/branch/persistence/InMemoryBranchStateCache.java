@@ -1,11 +1,11 @@
 package at.jku.isse.artifacteventstreaming.branch.persistence;
 
+import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
-import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
-import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 
 public class InMemoryBranchStateCache implements BranchStateCache {
 

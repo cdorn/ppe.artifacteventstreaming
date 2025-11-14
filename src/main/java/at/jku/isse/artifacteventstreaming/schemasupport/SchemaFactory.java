@@ -1,8 +1,6 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-
+import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntModel;
@@ -10,7 +8,8 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 
-import lombok.extern.slf4j.Slf4j;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 
 @Slf4j
 public class SchemaFactory {

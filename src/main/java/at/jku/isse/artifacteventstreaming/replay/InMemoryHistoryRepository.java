@@ -1,16 +1,12 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Stream;
-
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.api.AES.OPTYPE;
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
+
+import java.util.*;
+import java.util.stream.Stream;
 
 public class InMemoryHistoryRepository implements PerResourceHistoryRepository {
 

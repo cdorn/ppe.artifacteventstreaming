@@ -1,11 +1,7 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
 import org.apache.jena.datatypes.RDFDatatype;
-import org.apache.jena.ontapi.model.OntClass;
-import org.apache.jena.ontapi.model.OntDataRange;
-import org.apache.jena.ontapi.model.OntIndividual;
-import org.apache.jena.ontapi.model.OntObject;
-import org.apache.jena.ontapi.model.OntObjectProperty;
+import org.apache.jena.ontapi.model.*;
 import org.apache.jena.rdf.model.RDFNode;
 
 public class TypedMapWrapper extends UntypedMapResource {

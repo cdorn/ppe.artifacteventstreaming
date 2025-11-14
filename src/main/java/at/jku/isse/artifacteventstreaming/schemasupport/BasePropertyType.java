@@ -1,18 +1,12 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
+import lombok.NonNull;
+import org.apache.jena.ontapi.model.*;
+import org.apache.jena.vocabulary.RDF;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import org.apache.jena.ontapi.model.OntClass;
-import org.apache.jena.ontapi.model.OntDataProperty;
-import org.apache.jena.ontapi.model.OntDataRange;
-import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.ontapi.model.OntObjectProperty;
-import org.apache.jena.ontapi.model.OntProperty;
-import org.apache.jena.vocabulary.RDF;
-
-import lombok.NonNull;
 
 public class BasePropertyType {
 	public final Set<String> propertyCache = new HashSet<>();

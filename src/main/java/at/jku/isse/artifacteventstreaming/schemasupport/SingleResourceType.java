@@ -1,17 +1,9 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
+import lombok.Getter;
+import lombok.NonNull;
 import org.apache.jena.datatypes.xsd.XSDDatatype;
-import org.apache.jena.ontapi.model.OntClass;
-import org.apache.jena.ontapi.model.OntDataProperty;
-import org.apache.jena.ontapi.model.OntDataRange;
-import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.ontapi.model.OntObject;
-import org.apache.jena.ontapi.model.OntObjectProperty;
-import org.apache.jena.ontapi.model.OntProperty;
+import org.apache.jena.ontapi.model.*;
 import org.apache.jena.rdf.model.AnonId;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
@@ -20,8 +12,9 @@ import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 
-import lombok.Getter;
-import lombok.NonNull;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class SingleResourceType {
 	public static final String SINGLE_NS = "http://at.jku.isse.single#";

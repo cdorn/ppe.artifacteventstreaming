@@ -1,16 +1,14 @@
 package at.jku.isse.artifacteventstreaming.branch;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import at.jku.isse.artifacteventstreaming.api.*;
+import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
+import at.jku.isse.artifacteventstreaming.branch.outgoing.CrossBranchStreamer;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
@@ -21,21 +19,11 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Seq;
 import org.apache.jena.shared.Lock;
 
-import at.jku.isse.artifacteventstreaming.api.AES;
-import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
-import at.jku.isse.artifacteventstreaming.api.Commit;
-import at.jku.isse.artifacteventstreaming.api.CommitHandler;
-import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
-import at.jku.isse.artifacteventstreaming.api.TimeStampProvider;
-import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
-import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
-import at.jku.isse.artifacteventstreaming.branch.outgoing.CrossBranchStreamer;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
+import java.util.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 public class BranchImpl  implements Branch, Runnable {
@@ -160,7 +148,12 @@ public class BranchImpl  implements Branch, Runnable {
 	}
 	
 	// incoming commit handling -------------------------------------------------------------------------
-	
+
+    @Override
+    public Set<IncrementalCommitHandler> getRegisteredLocalCommitHandlers() {
+        return new HashSet<>(services);
+    }
+
 	@Override
 	public List<OntIndividual> getIncomingCommitHandlerConfig() {
 		Seq list = createOrGetListResource(AES.incomingCommitMerger);
@@ -198,8 +191,8 @@ public class BranchImpl  implements Branch, Runnable {
 		}
 		
 	}
-    
-	@Override
+
+    @Override
 	public void enqueueIncomingCommit(Commit commit) throws BranchConfigurationException, PersistenceException {
 		// if we have processed this commit before, then wont do it again to avoid loops		
 		if (!stateKeeper.hasSeenCommit(commit) && !inQueue.contains(commit)) {									

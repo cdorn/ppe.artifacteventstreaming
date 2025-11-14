@@ -1,9 +1,8 @@
 package at.jku.isse.artifacteventstreaming.branch;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.stream.Collectors;
-
+import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
+import at.jku.isse.artifacteventstreaming.replay.ContainedStatementImpl;
+import lombok.RequiredArgsConstructor;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.ontapi.UnionGraph;
 import org.apache.jena.ontapi.model.OntModel;
@@ -12,9 +11,9 @@ import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.rdf.model.impl.ModelCom;
 import org.apache.jena.reasoner.InfGraph;
 
-import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
-import at.jku.isse.artifacteventstreaming.replay.ContainedStatementImpl;
-import lombok.RequiredArgsConstructor;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 public class StatementAggregator extends StatementListener {

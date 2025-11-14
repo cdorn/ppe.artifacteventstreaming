@@ -1,24 +1,16 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
-
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.apache.jena.ontapi.model.OntObject;
-import org.apache.jena.ontapi.model.OntObjectProperty.Named;
 import org.apache.jena.ontapi.model.OntRelationalProperty;
 import org.apache.jena.rdf.model.NodeIterator;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Seq;
 
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import java.util.*;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public class UntypedListWrapper implements List<RDFNode> {
 

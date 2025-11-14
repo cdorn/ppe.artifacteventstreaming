@@ -1,7 +1,5 @@
 package at.jku.isse.artifacteventstreaming.jena;
 
-import static org.junit.Assert.assertTrue;
-
 import java.util.stream.Stream;
 
 import org.apache.jena.ontapi.OntModelFactory;
@@ -32,6 +30,8 @@ import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.ChangeListener;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OntologyModelTest {
 

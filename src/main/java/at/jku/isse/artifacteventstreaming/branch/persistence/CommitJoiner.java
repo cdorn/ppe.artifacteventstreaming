@@ -1,12 +1,12 @@
 package at.jku.isse.artifacteventstreaming.branch.persistence;
 
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
+
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
 
 public class CommitJoiner {
 

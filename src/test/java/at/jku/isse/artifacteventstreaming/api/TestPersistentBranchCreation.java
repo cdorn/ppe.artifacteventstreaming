@@ -1,10 +1,5 @@
 package at.jku.isse.artifacteventstreaming.api;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -21,6 +16,8 @@ import org.junit.jupiter.api.Test;
 
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class TestPersistentBranchCreation {
 

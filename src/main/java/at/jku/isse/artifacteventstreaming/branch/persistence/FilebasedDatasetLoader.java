@@ -1,16 +1,15 @@
 package at.jku.isse.artifacteventstreaming.branch.persistence;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-import java.util.Optional;
-
+import at.jku.isse.artifacteventstreaming.api.DatasetRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.tdb2.TDB2Factory;
 
-import at.jku.isse.artifacteventstreaming.api.DatasetRepository;
-import lombok.extern.slf4j.Slf4j;
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.util.Optional;
 
 @Slf4j
 public class FilebasedDatasetLoader implements DatasetRepository {

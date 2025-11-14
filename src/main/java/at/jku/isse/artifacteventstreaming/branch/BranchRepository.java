@@ -1,12 +1,11 @@
 package at.jku.isse.artifacteventstreaming.branch;
 
-import java.net.URI;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-
+import at.jku.isse.artifacteventstreaming.api.*;
+import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
+import at.jku.isse.artifacteventstreaming.api.exceptions.NotFoundException;
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntIndividual;
@@ -17,22 +16,8 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
 
-import at.jku.isse.artifacteventstreaming.api.AES;
-import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
-import at.jku.isse.artifacteventstreaming.api.Commit;
-import at.jku.isse.artifacteventstreaming.api.CommitHandler;
-import at.jku.isse.artifacteventstreaming.api.DatasetRepository;
-import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
-import at.jku.isse.artifacteventstreaming.api.MetaModelOntologyProvider;
-import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
-import at.jku.isse.artifacteventstreaming.api.ServiceFactoryRegistry;
-import at.jku.isse.artifacteventstreaming.api.StateKeeperFactory;
-import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
-import at.jku.isse.artifacteventstreaming.api.exceptions.NotFoundException;
-import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
-import lombok.NonNull;
-import lombok.extern.slf4j.Slf4j;
+import java.net.URI;
+import java.util.*;
 
 @Slf4j
 public class BranchRepository {

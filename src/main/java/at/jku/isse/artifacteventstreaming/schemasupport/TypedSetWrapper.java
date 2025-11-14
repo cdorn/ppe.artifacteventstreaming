@@ -1,13 +1,9 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
-import org.apache.jena.datatypes.RDFDatatype;
-import org.apache.jena.ontapi.model.OntClass;
-import org.apache.jena.ontapi.model.OntDataRange;
-import org.apache.jena.ontapi.model.OntIndividual;
-import org.apache.jena.ontapi.model.OntObject;
-import org.apache.jena.ontapi.model.OntRelationalProperty;
-import org.apache.jena.rdf.model.RDFNode;
 import lombok.NonNull;
+import org.apache.jena.datatypes.RDFDatatype;
+import org.apache.jena.ontapi.model.*;
+import org.apache.jena.rdf.model.RDFNode;
 
 public class TypedSetWrapper extends UntypedSetWrapper {
 

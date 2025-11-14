@@ -1,14 +1,7 @@
 package at.jku.isse.artifacteventstreaming.branch.serialization;
 
-import java.io.IOException;
-
-import org.apache.jena.rdf.model.AnonId;
-import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.rdf.model.Property;
-import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.rdf.model.Statement;
-
+import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
+import at.jku.isse.artifacteventstreaming.replay.ContainedStatementImpl;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -16,10 +9,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
-import at.jku.isse.artifacteventstreaming.replay.ContainedStatementImpl;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.jena.rdf.model.*;
+
+import java.io.IOException;
 
 @Slf4j
 public class StatementJsonDeserializer extends StdDeserializer<ContainedStatement> {

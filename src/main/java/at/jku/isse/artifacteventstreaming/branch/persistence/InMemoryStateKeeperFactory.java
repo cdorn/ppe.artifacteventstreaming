@@ -1,12 +1,12 @@
 package at.jku.isse.artifacteventstreaming.branch.persistence;
 
-import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
-
 import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
 import at.jku.isse.artifacteventstreaming.api.StateKeeperFactory;
 import lombok.extern.slf4j.Slf4j;
+
+import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 public class InMemoryStateKeeperFactory implements StateKeeperFactory {

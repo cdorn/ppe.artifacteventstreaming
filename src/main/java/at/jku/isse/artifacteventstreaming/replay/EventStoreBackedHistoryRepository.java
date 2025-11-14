@@ -1,5 +1,14 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
+import at.jku.isse.artifacteventstreaming.api.AES.OPTYPE;
+import at.jku.isse.artifacteventstreaming.api.Commit;
+import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
+import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
+import com.eventstore.dbclient.*;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -7,23 +16,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
-
-import com.eventstore.dbclient.CreateProjectionOptions;
-import com.eventstore.dbclient.EventStoreDBClient;
-import com.eventstore.dbclient.EventStoreDBProjectionManagementClient;
-import com.eventstore.dbclient.ReadResult;
-import com.eventstore.dbclient.ReadStreamOptions;
-import com.eventstore.dbclient.RecordedEvent;
-import com.eventstore.dbclient.ResolvedEvent;
-import com.eventstore.dbclient.StreamNotFoundException;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-
-import at.jku.isse.artifacteventstreaming.api.AES.OPTYPE;
-import at.jku.isse.artifacteventstreaming.api.Commit;
-import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
-import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
-import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
-import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j

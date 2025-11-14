@@ -1,9 +1,9 @@
 package at.jku.isse.artifacteventstreaming.api;
 
-import java.util.List;
-
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import lombok.NonNull;
+
+import java.util.List;
 
 public interface PerBranchEventStore {
 

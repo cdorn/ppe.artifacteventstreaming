@@ -1,11 +1,11 @@
 package at.jku.isse.artifacteventstreaming.branch;
 
+import at.jku.isse.artifacteventstreaming.api.Commit;
+import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-
-import at.jku.isse.artifacteventstreaming.api.Commit;
-import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 
 public class PoisonPillCommit implements Commit {
 

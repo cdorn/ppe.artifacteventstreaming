@@ -1,12 +1,12 @@
 package at.jku.isse.artifacteventstreaming.branch.persistence;
 
-import java.util.LinkedList;
-import java.util.List;
-
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitDeliveryEvent;
 import at.jku.isse.artifacteventstreaming.api.PerBranchEventStore;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
+
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * @author Christoph Mayr-Dorn

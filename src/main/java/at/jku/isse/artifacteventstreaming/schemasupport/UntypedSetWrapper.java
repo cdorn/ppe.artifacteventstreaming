@@ -1,5 +1,12 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
+import org.apache.jena.ontapi.model.OntObject;
+import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.StmtIterator;
+
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
@@ -9,14 +16,6 @@ import java.util.function.IntFunction;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-
-import org.apache.jena.ontapi.model.OntObject;
-import org.apache.jena.rdf.model.Property;
-import org.apache.jena.rdf.model.RDFNode;
-import org.apache.jena.rdf.model.StmtIterator;
-
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 
 public class UntypedSetWrapper implements Set<RDFNode> {
 

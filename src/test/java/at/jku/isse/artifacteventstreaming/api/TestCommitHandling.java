@@ -1,11 +1,5 @@
 package at.jku.isse.artifacteventstreaming.api;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.util.Collections;
@@ -34,16 +28,18 @@ import at.jku.isse.passiveprocessengine.rdf.trialcode.MockLazyLoadingService;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SimpleService;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 class TestCommitHandling {
 
 	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/repo1");
 		
 	@Test
-	void testCreateBranch() throws Exception {
+	void testCreateBranch() {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
 				.build();
 		System.out.println(branch.toString());
-		assertEquals(branch.getBranchName(), "main");
+		assertEquals("main", branch.getBranchName());
 		assertEquals(branch.getRepositoryURI(), repoURI.toString());		
 	}
 	

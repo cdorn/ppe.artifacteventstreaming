@@ -1,9 +1,6 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.stream.Stream;
-
+import lombok.Getter;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntClass;
@@ -16,7 +13,9 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.tdb2.TDB2Factory;
 import org.apache.jena.vocabulary.RDFS;
 
-import lombok.Getter;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.stream.Stream;
 
 public class MetaModelSchemaTypes {
 

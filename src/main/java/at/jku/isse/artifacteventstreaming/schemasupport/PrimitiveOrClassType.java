@@ -1,13 +1,12 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
-import java.util.Objects;
-
+import lombok.Getter;
+import lombok.NonNull;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataRange;
 import org.apache.jena.ontapi.model.OntObject;
 
-import lombok.Getter;
-import lombok.NonNull;
+import java.util.Objects;
 
 public class PrimitiveOrClassType{
 	

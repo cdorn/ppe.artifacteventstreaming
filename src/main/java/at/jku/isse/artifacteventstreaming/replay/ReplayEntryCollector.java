@@ -1,11 +1,11 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
+import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.Resource;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.apache.jena.rdf.model.Property;
-import org.apache.jena.rdf.model.Resource;
 
 /**
  * @author Christoph Mayr-Dorn

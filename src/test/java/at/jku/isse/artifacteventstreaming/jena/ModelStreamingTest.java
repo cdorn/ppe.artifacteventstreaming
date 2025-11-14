@@ -1,7 +1,5 @@
 package at.jku.isse.artifacteventstreaming.jena;
 
-import static org.junit.Assert.assertTrue;
-
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntClass;
@@ -14,6 +12,8 @@ import org.junit.jupiter.api.Test;
 
 import at.jku.isse.passiveprocessengine.rdf.trialcode.ImmediateChangeApplyer;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.TransactionalChangeApplyer;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ModelStreamingTest {
 

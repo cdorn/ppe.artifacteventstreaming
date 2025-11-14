@@ -1,15 +1,14 @@
 package at.jku.isse.artifacteventstreaming.branch.serialization;
 
-import java.io.IOException;
-
+import at.jku.isse.artifacteventstreaming.api.AES;
+import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
-import at.jku.isse.artifacteventstreaming.api.AES;
-import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
+import java.io.IOException;
 
 public class StatementJsonSerializer extends StdSerializer<ContainedStatement> {
 

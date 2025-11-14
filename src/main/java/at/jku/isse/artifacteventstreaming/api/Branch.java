@@ -1,16 +1,16 @@
 package at.jku.isse.artifacteventstreaming.api;
 
-import java.util.List;
-
+import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import lombok.NonNull;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.shared.Lock;
 
-import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
-import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
-import lombok.NonNull;
+import java.util.List;
+import java.util.Set;
 
 
 public interface Branch {
@@ -101,10 +101,10 @@ public interface Branch {
 	 */
 	public void removeIncomingCommitMerger(CommitHandler handler);
 	
-	
+	public Set<IncrementalCommitHandler> getRegisteredLocalCommitHandlers();
 	
 	/**
-	 * @param services
+	 * @param service
 	 * adds this service to the end of the chain of services that process local changes.
 	 * If this service is already in the list, then it moves that service to the current end of the chain
 	 */
