@@ -6,32 +6,47 @@ import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 
-@RequiredArgsConstructor
 @Slf4j
 public abstract class AbstractHandlerBase implements CommitHandler {
 	
 	protected final String serviceName;
+    protected String uri;
 	protected final OntModel repoModel;
 	protected OntIndividual config;
-	
-	protected abstract String getServiceTypeURI();
-	
+
+    protected AbstractHandlerBase(String serviceName, OntModel repoModel) {
+        this.serviceName = serviceName;
+        this.repoModel = repoModel;
+        var ns = AES.getURI().substring(0, AES.getURI().length()-1);
+        uri = ns+"/"+this.getClass().getSimpleName()+"#"+serviceName;
+    }
+
+    protected abstract String getServiceTypeURI();
+
+
+
+
 	/**
 	 * provides a default configuration resource describing the service type and having a label set to the service name
 	 */
 	@Override
 	public OntIndividual getConfigResource() {
-		if (config == null) {
+
+        if (config == null) {
 			OntClass.Named handlerConfig = repoModel.getOntClass(AES.commitHandlerConfigType);
-			var ns = AES.getURI().substring(0, AES.getURI().length()-1);
-			config = handlerConfig.createIndividual(ns+"/"+this.getClass().getSimpleName()+"#"+serviceName);
+            config = handlerConfig.createIndividual(uri);
 			config.addProperty(AES.isConfigForHandlerType, repoModel.createResource(getServiceTypeURI()));
 			config.addLabel(serviceName);
 		}
 		return config;
 	}
-	
-	@Override
+
+    @Override
+    public String getURI() {
+        return uri;
+    }
+
+    @Override
 	public String toString() {
 		return this.getClass().getSimpleName()+" [name=" + serviceName + "]";
 	}
@@ -43,6 +58,6 @@ public abstract class AbstractHandlerBase implements CommitHandler {
 	public void logIncomingCommit(Commit commit, int indexOfNewAddition, int indexOfNewRemoval) {
 		var addDiff = commit.getAdditionCount() - indexOfNewAddition;
 		var removeDiff = commit.getRemovalCount() - indexOfNewRemoval;		
-		log.debug(String.format("%s called for %s with offsets %s (+%s) and %s (+%s) ", serviceName, commit.getCommitMessage(), indexOfNewAddition, addDiff, indexOfNewRemoval, removeDiff));
+		log.debug("{} called for {} with offsets {} (+{}) and {} (+{}) ", serviceName, commit.getCommitMessage(), indexOfNewAddition, addDiff, indexOfNewRemoval, removeDiff);
 	}
 }

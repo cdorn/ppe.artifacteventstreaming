@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryAutoTxDatasetLoader;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Resource;
@@ -43,7 +44,7 @@ class TestBranchRepository {
 	@Test
 	void testCreateRepo() throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
-		DatasetRepository dataLoader = new InMemoryDatasetLoader();
+		DatasetRepository dataLoader = new InMemoryAutoTxDatasetLoader();
 		ServiceFactoryRegistry factoryRegistry = new ServiceFactoryRegistry(); // not used for the first repo
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory(); 
 		
@@ -138,7 +139,7 @@ class TestBranchRepository {
 	@Test
 	void testMissingFactories() throws Exception {
 		
-		DatasetRepository dataLoader = new InMemoryDatasetLoader();
+		DatasetRepository dataLoader = new InMemoryAutoTxDatasetLoader();
 		ServiceFactoryRegistry factoryRegistry = new ServiceFactoryRegistry(); // not used for the first repo
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
 		

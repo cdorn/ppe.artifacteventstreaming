@@ -4,29 +4,27 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import at.jku.isse.artifacteventstreaming.api.*;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.rdf.model.Statement;
 
-import at.jku.isse.artifacteventstreaming.api.AES;
-import at.jku.isse.artifacteventstreaming.api.Commit;
-import at.jku.isse.artifacteventstreaming.api.CommitHandler;
-import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@RequiredArgsConstructor
 @Slf4j
-public class AllUndoService implements IncrementalCommitHandler {
+public class AllUndoService extends AbstractHandlerBase implements IncrementalCommitHandler {
 	
 	public static final String SERVICE_TYPE_URI = CommitHandler.serviceTypeBaseURI+AllUndoService.class.getSimpleName();
-	
-	
-	final String serviceName;
+
 	Set<Statement> seenStatements = new HashSet<>();
-	final OntModel model;
-	
-	@Override
+
+    public AllUndoService(String serviceName, OntModel repoModel) {
+        super(serviceName, repoModel);
+    }
+
+
+    @Override
 	public void handleCommit(Commit commit) {
 		handleCommitFromOffset(commit, 0, 0);
 	}
@@ -67,12 +65,12 @@ public class AllUndoService implements IncrementalCommitHandler {
 		return "AllUndoService [serviceName=" + serviceName + "]";
 	}
 
-	@Override
-	public OntIndividual getConfigResource() {
-		OntIndividual config =  model.createIndividual(AES.getURI()+this.getClass().getSimpleName());
-		config.addProperty(AES.isConfigForHandlerType, model.createResource(SERVICE_TYPE_URI));
-		return config;
-	}
+    @Override
+    protected String getServiceTypeURI() {
+        return SERVICE_TYPE_URI;
+    }
+
+
 	
 	
 

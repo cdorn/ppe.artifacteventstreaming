@@ -275,7 +275,7 @@ class TestCommitHandling {
 	void testUndoServiceStatements() throws Exception {
 		OntModel repoModel = OntModelFactory.createModel();
 		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
-				.addBranchInternalCommitService(new AllUndoService("UndoService1", repoModel))
+				.addBranchInternalCommitService(new AllUndoService("UndoService1", repoModel ))
 				.build();
 		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();

@@ -9,5 +9,6 @@ public interface CommitHandler {
 	public void handleCommit(Commit commit);
 	
 	public OntIndividual getConfigResource();
-	
+
+    public String getURI();
 }

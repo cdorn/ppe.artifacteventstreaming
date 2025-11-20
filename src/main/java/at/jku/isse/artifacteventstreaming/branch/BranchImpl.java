@@ -37,15 +37,15 @@ public class BranchImpl  implements Branch, Runnable {
 	private final TimeStampProvider timeStampProvider;
 	
 	@Getter private final BlockingQueue<Commit> inQueue;
-	private final List<CommitHandler> handlers = Collections.synchronizedList(new LinkedList<>());
+	private final Map<String, CommitHandler> handlers = Collections.synchronizedMap(new LinkedHashMap<>());
 	private final ExecutorService inExecutor = Executors.newSingleThreadExecutor();
 	private final ExecutorService outExecutor = Executors.newSingleThreadExecutor();
 	
-	private StatementAggregator stmtAggregator = new StatementAggregator();
-	private final List<IncrementalCommitHandler> services = Collections.synchronizedList(new LinkedList<>());
+	private final StatementAggregator stmtAggregator = new StatementAggregator();
+	private final Map<String, IncrementalCommitHandler> services = Collections.synchronizedMap(new LinkedHashMap<>());
 	@Getter private final BlockingQueue<Commit> outQueue;
 	private final CrossBranchStreamer crossBranchStreamer;
-	private AtomicBoolean isReady = new AtomicBoolean(false);
+	private final AtomicBoolean isReady = new AtomicBoolean(false);
 	
 	@Getter @Setter MetaModelSchemaTypes schemaUtils;
 	
@@ -149,11 +149,6 @@ public class BranchImpl  implements Branch, Runnable {
 	
 	// incoming commit handling -------------------------------------------------------------------------
 
-    @Override
-    public Set<IncrementalCommitHandler> getRegisteredLocalCommitHandlers() {
-        return new HashSet<>(services);
-    }
-
 	@Override
 	public List<OntIndividual> getIncomingCommitHandlerConfig() {
 		Seq list = createOrGetListResource(AES.incomingCommitMerger);
@@ -163,13 +158,17 @@ public class BranchImpl  implements Branch, Runnable {
 	@Override
 	public void appendIncomingCommitMerger(@NonNull CommitHandler handler) {
 		Seq configs = this.createOrGetListResource(AES.incomingCommitMerger);
-		int pos = handlers.indexOf(handler);
-		if (pos >= 0) {
-			handlers.remove(handler);
-			configs.remove(pos+1);
+		if (handlers.containsKey(handler.getURI())) {
+            var handlerKeys = handlers.keySet().stream().toList();
+            int pos = handlerKeys.indexOf(handler.getURI());
+			configs.remove(pos+1); // RDF are 1-indexed!
 		}
-		handlers.add(handler);
-		configs.add(handler.getConfigResource());
+		handlers.put(handler.getURI(), handler);
+        // ensure we only add if there is no such handler yet
+		var configNode = handler.getConfigResource();
+        if (configs.indexOf(configNode) <= 0) { // RDF lists are 1-indexed
+            configs.add(configNode);
+        }
 		if (isShutdown) {
 			isShutdown = false;
 			inExecutor.execute(this);	
@@ -179,11 +178,12 @@ public class BranchImpl  implements Branch, Runnable {
 	@Override
 	public void removeIncomingCommitMerger(@NonNull CommitHandler handler) {
 		Seq configs = this.createOrGetListResource(AES.incomingCommitMerger);
-		int pos = handlers.indexOf(handler);
-		if (pos >= 0) {
-			handlers.remove(handler);
-			configs.remove(pos+1); //RDF lists are 1-indexed!
-		}				
+        if (handlers.containsKey(handler.getURI())) {
+            var handlerKeys = handlers.keySet().stream().toList();
+            int pos = handlerKeys.indexOf(handler.getURI());
+            configs.remove(pos+1); // RDF are 1-indexed!
+            handlers.remove(handler.getURI());
+        }
 		if (handlers.isEmpty() && !isShutdown) { 
 			log.debug(String.format("Shutting down inQueue thread for branch: %s", this.getBranchName()));
 			inQueue.add(PoisonPillCommit.POISONPILL);
@@ -242,7 +242,7 @@ public class BranchImpl  implements Branch, Runnable {
 	//		dataset.abort();
 		//TODO: obtain a write lock here, otherwise we might interfer with regular commit operation
 		dataset.begin(ReadWrite.WRITE);
-		handlers.stream().forEach(handler -> handler.handleCommit(commit));
+		handlers.values().stream().forEach(handler -> handler.handleCommit(commit));
 //		dataset.commit(); this is done by internal commit handler
 //		dataset.end();
 		// now we signal the internal commit router that these changes were due to a commit merge 
@@ -257,27 +257,37 @@ public class BranchImpl  implements Branch, Runnable {
 	
 	
 	// local changes handling ---------------------------------------------------------------
-	
-	@Override
+
+    @Override
+    public Set<IncrementalCommitHandler> getRegisteredLocalCommitHandlers() {
+        return new HashSet<>(services.values());
+    }
+
+    @Override
 	public void appendBranchInternalCommitService(@NonNull IncrementalCommitHandler service) {
 		Seq configs = this.createOrGetListResource(AES.localCommitService);
-		int pos = services.indexOf(service);
-		if (pos >= 0) {
-			services.remove(service);
-			configs.remove(pos+1);
-		}
-		services.add(service);
-		configs.add(service.getConfigResource());
+        if (services.containsKey(service.getURI())) {
+            var serviceKeys = services.keySet().stream().toList();
+            int pos = serviceKeys.indexOf(service.getURI());
+            configs.remove(pos+1); // RDF are 1-indexed!
+        }
+        services.put(service.getURI(), service);
+        // ensure we only add if there is no such handler yet
+        var configNode = service.getConfigResource();
+        if (configs.indexOf(configNode) <= 0) { // RDF lists are 1-indexed
+            configs.add(configNode);
+        }
 	}
 	
 	@Override
 	public void removeBranchInternalCommitService(@NonNull IncrementalCommitHandler service) {
 		Seq configs = this.createOrGetListResource(AES.localCommitService);
-		int pos = services.indexOf(service);
-		if (pos >= 0) {
-			services.remove(service);
-			configs.remove(pos+1); // RDF lists are 1-indexed
-		}				
+        if (services.containsKey(service.getURI())) {
+            var serviceKeys = services.keySet().stream().toList();
+            int pos = serviceKeys.indexOf(service.getURI());
+            configs.remove(pos+1); // RDF are 1-indexed!
+            services.remove(service.getURI());
+        }
 	}
 	
 	@Override
@@ -421,7 +431,7 @@ public class BranchImpl  implements Branch, Runnable {
 		do {
 			perIterationAdds = 0;
 			perIterationsRemovals = 0;
-			for (IncrementalCommitHandler service : services) {
+			for (IncrementalCommitHandler service : services.values()) {
 				service.handleCommitFromOffset(commit, offsetAdds.get(service), offsetRemoves.get(service));
 				// any changes by a service are now in the statement lists
 
@@ -458,7 +468,7 @@ public class BranchImpl  implements Branch, Runnable {
 	
 	private Map<IncrementalCommitHandler, Integer> initServiceOffsets() {
 		Map<IncrementalCommitHandler, Integer> offsets = new HashMap<>();
-		services.stream().forEach(service -> offsets.put(service, 0));
+		services.values().stream().forEach(service -> offsets.put(service, 0));
 		return offsets;
 	}
 
