@@ -157,7 +157,7 @@ public class BranchBuilder {
 	private static String generateNonValidatedBranchURI(Resource repositoryRes, String branchName) {
 		var baseURI = repositoryRes.getNameSpace();
 		var localNamePart = repositoryRes.getLocalName() != null ? "/"+repositoryRes.getLocalName() : "";
-		return baseURI.substring(0, baseURI.length()-1) +localNamePart+"#"+branchName;
+		return baseURI.substring(0, baseURI.length()-1) +localNamePart+ "/"+branchName+"#"+branchName;
 	}
 	
 	
