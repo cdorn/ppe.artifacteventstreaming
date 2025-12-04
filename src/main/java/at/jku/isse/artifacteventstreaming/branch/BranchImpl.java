@@ -309,10 +309,10 @@ public class BranchImpl  implements Branch, Runnable {
 	
 	@Override
 	public Lock startWriteTransaction() {
-		dataset.begin(ReadWrite.WRITE);		
 		var writeLock = dataset.getLock();
-		writeLock.enterCriticalSection(false);		
-		return writeLock;
+		writeLock.enterCriticalSection(false);
+        dataset.begin(ReadWrite.WRITE);
+        return writeLock;
 	}
 	
 	@Override
