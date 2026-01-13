@@ -24,6 +24,7 @@ public class StateKeeperImpl implements BranchStateUpdater {
 	public static final String LAST_FORWARDED_COMMIT = "LAST_FORWARDED_COMMIT";
 
 
+    //TODO this cache must be size restricted or persisted differently if branches have very long histories
 	private final LinkedHashMap<String, Commit> producedCommits = new LinkedHashMap<>();
 	private final Set<String> seenCommitIds = new LinkedHashSet<>();
 	private Commit lastCommit = null;

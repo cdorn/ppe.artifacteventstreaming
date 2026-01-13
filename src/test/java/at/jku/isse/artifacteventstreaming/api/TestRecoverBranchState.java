@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -13,6 +12,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntModel;
@@ -62,7 +62,7 @@ class TestRecoverBranchState {
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
 		URI branchURI = BranchBuilder.generateBranchURI(repoRes, "main");
 		BranchStateUpdater stateKeeper = stateFactory.createStateKeeperFor(branchURI);
-		Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel)
+		Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper)				
 				.addBranchInternalCommitService(new LongRunningNoOpLocalService(repoModel, 2000))
 				.build();		
@@ -105,7 +105,7 @@ class TestRecoverBranchState {
 		Dataset repoDataset2 = DatasetFactory.createTxnMem();
 		OntModel repoModel2 =  OntModelFactory.createModel(repoDataset2.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		BranchStateUpdater stateKeeper2 = stateFactory.createStateKeeperFor(branchURI);
-		Branch branch2 = new BranchBuilder(repoURI, repoDataset2, repoModel2)
+		Branch branch2 = new BranchBuilder(repoURI, repoDataset2, repoModel2, ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper2)				
 				.addBranchInternalCommitService(new LongRunningNoOpLocalService(repoModel2, 2000))
 				.addOutgoingCommitDistributer(new SyncForTestingService("Out1", latch, repoModel2))
@@ -129,7 +129,7 @@ class TestRecoverBranchState {
 		BranchStateUpdater stateKeeper = stateFactory.createStateKeeperFor(branchURI);
 		CountDownLatch latch = new CountDownLatch(1);
 		SyncForTestingService service1 = new SyncForTestingService("Out1", latch, repoModel);
-		Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel)
+		Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper)				
 				.addIncomingCommitMerger(new LongRunningNoOpLocalService(repoModel, 2000))
 				.addOutgoingCommitDistributer(service1)
@@ -162,7 +162,7 @@ class TestRecoverBranchState {
 		OntModel repoModel2 =  OntModelFactory.createModel(repoDataset2.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		SyncForTestingService service2 = new SyncForTestingService("Out2", latch2, repoModel2);
 		BranchStateUpdater stateKeeper2 = stateFactory.createStateKeeperFor(branchURI);
-		Branch branch2 = new BranchBuilder(repoURI, repoDataset2, repoModel2)
+		Branch branch2 = new BranchBuilder(repoURI, repoDataset2, repoModel2, ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper2)		
 				.addIncomingCommitMerger(new LongRunningNoOpLocalService(repoModel2, 500))		
 				.addOutgoingCommitDistributer(service2)
@@ -185,14 +185,14 @@ class TestRecoverBranchState {
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
 		
 		BranchStateUpdater stateKeeper = stateFactory.createStateKeeperFor(branchURI);
-		Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel)
+		Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
 				.setBranchLocalName(SOURCE)
 				.setStateKeeper(stateKeeper)				
 				.build();		
 		stateKeeper.loadState();
 		
 		BranchStateUpdater stateKeeper2 = stateFactory.createStateKeeperFor(branchURI2);
-		Branch branch2 = new BranchBuilder(repoURI, repoDataset, repoModel)
+		Branch branch2 = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper2)	
 				.setBranchLocalName(DEST)
 				.build();		
@@ -228,14 +228,14 @@ class TestRecoverBranchState {
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
 		BranchStateUpdater stateKeeper = stateFactory.createStateKeeperFor(branchURI);
-		Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel)
+		Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
 				.setBranchLocalName(SOURCE)
 				.setStateKeeper(stateKeeper)				
 				.build();		
 		stateKeeper.loadState();
 		
 		BranchStateUpdater stateKeeper2 = stateFactory.createStateKeeperFor(branchURI2);		
-		Branch branch2 = new BranchBuilder(repoURI, repoDataset, repoModel)
+		Branch branch2 = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper2)				
 				.setBranchLocalName(DEST)
 				.build();		
@@ -278,14 +278,14 @@ class TestRecoverBranchState {
 				OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 				StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
 				BranchStateUpdater stateKeeper = stateFactory.createStateKeeperFor(branchURI);
-				Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel)
+				Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
 						.setBranchLocalName(SOURCE)
 						.setStateKeeper(stateKeeper)				
 						.build();		
 				stateKeeper.loadState();
 				
 				BranchStateUpdater stateKeeper2 = stateFactory.createStateKeeperFor(branchURI2);		
-				Branch branch2 = new BranchBuilder(repoURI, repoDataset, repoModel)
+				Branch branch2 = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
 						.setStateKeeper(stateKeeper2)				
 						.setBranchLocalName(DEST)
 						.build();		
@@ -323,7 +323,7 @@ class TestRecoverBranchState {
 	private void ensureForwarded(StateKeeperFactory stateFactory, Dataset repoDataset, OntModel repoModel, BranchStateCache cache, int expCountReceived) throws Exception {
 		// now we recreate branches		
 		BranchStateUpdater stateKeeperNew = stateFactory.createStateKeeperFor(branchURI);
-		Branch branchNew = new BranchBuilder(repoURI, repoDataset, repoModel)
+		Branch branchNew = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
 				.setBranchLocalName(SOURCE)
 				.setStateKeeper(stateKeeperNew)				
 				.build();		
@@ -333,7 +333,7 @@ class TestRecoverBranchState {
 		SyncForTestingService service1 = new SyncForTestingService("InNew", latch, repoModel);
 		SyncForTestingService service2 = new SyncForTestingService("Out2New", latch, repoModel);
 		BranchStateUpdater stateKeeperNew2 = stateFactory.createStateKeeperFor(branchURI2);
-		Branch branchNew2 = new BranchBuilder(repoURI, repoDataset, repoModel)
+		Branch branchNew2 = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeperNew2)	
 				.setBranchLocalName(DEST)
 				.addIncomingCommitMerger(service1)

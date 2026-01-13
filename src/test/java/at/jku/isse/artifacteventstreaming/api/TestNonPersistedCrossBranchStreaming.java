@@ -7,6 +7,7 @@ import java.net.URI;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntModel;
@@ -41,20 +42,20 @@ class TestNonPersistedCrossBranchStreaming {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 				
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI1, repoDataset, repoModel )	
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI1, repoDataset, repoModel, ObservationRegistry.NOOP)
 				.setBranchLocalName("branch1")
 				.build();		
 		OntModel model = branch.getModel();
 		
 		var branch2signaller = new SyncForTestingService("Branch2Signaller", latch, repoModel);
-		BranchImpl branch2 = (BranchImpl) new BranchBuilder(repoURI2, DatasetFactory.createTxnMem())
+		BranchImpl branch2 = (BranchImpl) new BranchBuilder(repoURI2, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setBranchLocalName("branch2")
 				.addBranchInternalCommitService(branch2signaller)
 				.build();		
 		var merger2 = new CompleteCommitMerger(branch2);
 		branch2.appendIncomingCommitMerger(merger2);
 
-		Branch branch3 = new BranchBuilder(repoURI3, DatasetFactory.createTxnMem())
+		Branch branch3 = new BranchBuilder(repoURI3, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setBranchLocalName("branch3")
 				.addBranchInternalCommitService(new SyncForTestingService("Branch3Signaller", latch, repoModel))
 				.build();				

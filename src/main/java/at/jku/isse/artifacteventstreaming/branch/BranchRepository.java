@@ -4,6 +4,7 @@ import at.jku.isse.artifacteventstreaming.api.*;
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.NotFoundException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
+import io.micrometer.observation.ObservationRegistry;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.ontapi.OntModelFactory;
@@ -31,14 +32,17 @@ public class BranchRepository {
 	private final ServiceFactoryRegistry factoryRegistry;
 	private final Map<String, Branch> branches = new HashMap<>();
 	private final MetaModelOntologyProvider metaOntologyProvider;
+    private final ObservationRegistry observationRegistry;
 
 	public BranchRepository(@NonNull URI repositoryURI
 			, @NonNull DatasetRepository datasetLoader
 			, @NonNull StateKeeperFactory stateKeeperFactory
 			, @NonNull ServiceFactoryRegistry factoryRegistry
-			, @NonNull MetaModelOntologyProvider metaOntologyProvider) throws NotFoundException {
+			, @NonNull MetaModelOntologyProvider metaOntologyProvider
+            , @NonNull ObservationRegistry observationRegistry) throws NotFoundException {
 		this.repositoryURI = repositoryURI;
 		this.metaOntologyProvider = metaOntologyProvider;
+        this.observationRegistry = observationRegistry;
 		Optional<Dataset> datasetOpt = datasetLoader.loadDataset(repositoryURI);
 		if (datasetOpt.isEmpty()) {
 			throw new NotFoundException("Could not find repository for: "+repositoryURI);
@@ -70,7 +74,7 @@ public class BranchRepository {
 			log.warn(msg);
 			throw new BranchConfigurationException(msg);
 		}
-		var builder = new RegisteringBranchBuilder(repositoryURI, repoDataset, repoModel);
+		var builder = new RegisteringBranchBuilder(repositoryURI, repoDataset, repoModel, observationRegistry);
 		builder.setBranchLocalName(branchName)
 				.setStateKeeper(stateKeeperFactory.createStateKeeperFor(uri))
 				.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF)
@@ -78,9 +82,7 @@ public class BranchRepository {
 				; // we set the default inference model here statically, can be overridden if necessary
 				
 		var optDataset = datasetLoader.loadDataset(uri);
-		if (optDataset.isPresent()) {
-			builder.setDataset(optDataset.get());
-		}
+        optDataset.ifPresent(builder::setDataset);
 		return builder;
 	}
 	
@@ -119,7 +121,7 @@ public class BranchRepository {
 				return null;
 			} else {
 				BranchStateUpdater stateKeeper = stateKeeperFactory.createStateKeeperFor(branchURI);
-				branch = new BranchBuilder(repositoryURI, repoDataset, repoModel)
+				branch = new BranchBuilder(repositoryURI, repoDataset, repoModel, observationRegistry)
 						.setDataset(datasetOpt.get())
 						.setBranchLocalName(BranchBuilder.getBranchNameFromURI(branchURI))
 						.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF) // DEFER: technical debt - we set the inference model here statically, not as part of the configuration. For now we assume all use cases will require this anyway.
@@ -220,8 +222,8 @@ public class BranchRepository {
 	
 	public class RegisteringBranchBuilder extends BranchBuilder{
 
- 		public RegisteringBranchBuilder(@NonNull URI repositoryURI, @NonNull Dataset repoDataset, @NonNull OntModel repoModel) {
-			super(repositoryURI, repoDataset, repoModel);
+ 		public RegisteringBranchBuilder(@NonNull URI repositoryURI, @NonNull Dataset repoDataset, @NonNull OntModel repoModel, @NonNull ObservationRegistry observationRegistry) {
+			super(repositoryURI, repoDataset, repoModel, observationRegistry);
 		}
 		
 		@Override

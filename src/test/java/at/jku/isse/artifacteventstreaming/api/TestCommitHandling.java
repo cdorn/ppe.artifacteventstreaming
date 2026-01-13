@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntModel;
@@ -36,7 +37,7 @@ class TestCommitHandling {
 		
 	@Test
 	void testCreateBranch() {
-		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.build();
 		System.out.println(branch.toString());
 		assertEquals("main", branch.getBranchName());
@@ -49,7 +50,7 @@ class TestCommitHandling {
 	void testTwoServicesBranch() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
 				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
 				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
 				.build();
@@ -69,7 +70,7 @@ class TestCommitHandling {
 	void testAbortCommit() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
 				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
 				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
 				.build();
@@ -98,7 +99,7 @@ class TestCommitHandling {
 	void testLoopControl() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
 				.build();
 		OntModel model = branch.getModel();
 		branch.appendBranchInternalCommitService(new MockLazyLoadingService("Loader", true, repoModel, model, 3));
@@ -121,7 +122,7 @@ class TestCommitHandling {
 	void testTrueChanges() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
 				.build();
 		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();
@@ -154,7 +155,7 @@ class TestCommitHandling {
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		CountDownLatch latch = new CountDownLatch(1);
 		var service = new SyncForTestingService("Out1", latch, repoModel);
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
 				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
 				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
 				.addOutgoingCommitDistributer(service)
@@ -188,12 +189,11 @@ class TestCommitHandling {
 		CountDownLatch latch = new CountDownLatch(2);
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel)
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
 				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
 				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
 				.addOutgoingCommitDistributer(new SyncForTestingService("Out1", latch, repoModel))
 				.build();
-		Dataset dataset = branch.getDataset();
 		CommitHandler merger = new CompleteCommitMerger(branch);
 		branch.appendIncomingCommitMerger(merger);
 		branch.startCommitHandlers(null);
@@ -201,22 +201,11 @@ class TestCommitHandling {
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("TestCommit");
-		
-		
+
 		Commit again = new StatementCommitImpl("blabl", "commitcopy", "", 0
 				, new HashSet<>(commit.getAddedStatements())
 				, new HashSet<>(commit.getRemovedStatements()));
 		branch.enqueueIncomingCommit(again);
-		//branch.enqueueIncomingCommit(commit); lets go around async queue
-//		if (dataset.isInTransaction())
-//			dataset.abort();
-//		dataset.begin(ReadWrite.WRITE);
-//		merger.handleCommit(commit);
-//		// we need to mimick transaction management 
-//		dataset.commit();
-//		dataset.end();
-//		dataset.begin();
-//		branch.commitMergeOf(commit);
 		boolean success = latch.await(5, TimeUnit.SECONDS);
 		assert(success);
 		assertEquals(0, branch.getOutQueue().size()); // queue gets emptied right away
@@ -224,7 +213,7 @@ class TestCommitHandling {
 	
 	@Test
 	void testCancelingOutLiteralStatements() throws Exception {
-		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())				
+		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.build();
 		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();
@@ -239,7 +228,7 @@ class TestCommitHandling {
 	
 	@Test
 	void testCancelingOutResourceStatements() throws Exception {
-		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())				
+		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.build();
 		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();
@@ -255,7 +244,7 @@ class TestCommitHandling {
 	
 	@Test
 	void testNonCancelingOutLiteralStatements() throws Exception {
-		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())				
+		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.build();
 		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();
@@ -274,7 +263,7 @@ class TestCommitHandling {
 	@Test
 	void testUndoServiceStatements() throws Exception {
 		OntModel repoModel = OntModelFactory.createModel();
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), repoModel, ObservationRegistry.NOOP)
 				.addBranchInternalCommitService(new AllUndoService("UndoService1", repoModel ))
 				.build();
 		branch.startCommitHandlers(null);

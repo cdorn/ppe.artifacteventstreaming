@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Resource;
@@ -58,7 +59,7 @@ class TestEventPerformance {
 	void test10KEvents10CommitPersistence() throws Exception {	
 		PerBranchEventStore client = factory.getEventStore(repoURI.toString());
 		BranchStateUpdater stateKeeper = new StateKeeperImpl(repoURI, branchCache, client);
-		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper)				
 				.build();		
 		OntModel model = branch.getModel();
@@ -78,7 +79,7 @@ class TestEventPerformance {
 		long middle = System.currentTimeMillis();
 		
 		BranchStateUpdater stateKeeper2 = new StateKeeperImpl(repoURI, branchCache, client);
-		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper2)				
 				.build();		
 		OntModel model2 = branch2.getModel();
@@ -107,7 +108,7 @@ class TestEventPerformance {
 	void test1KCommitPersistence() throws Exception {	
 		PerBranchEventStore client = factory.getEventStore(repoURI.toString());
 		BranchStateUpdater stateKeeper = new StateKeeperImpl(repoURI, branchCache, client);
-		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper)				
 				.build();				
 		branch.startCommitHandlers(null);
@@ -125,7 +126,7 @@ class TestEventPerformance {
 		System.out.println("Now replaying after: "+(midway-start));
 		
 		BranchStateUpdater stateKeeper2 = new StateKeeperImpl(repoURI, branchCache, client);
-		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper2)				
 				.build();		
 		OntModel model2 = branch2.getModel();

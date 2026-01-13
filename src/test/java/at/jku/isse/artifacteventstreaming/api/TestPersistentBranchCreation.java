@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.io.FileUtils;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
@@ -29,7 +30,7 @@ class TestPersistentBranchCreation {
 		removeDataset(repoURI);
 		String directory = "repos/"+repoURI.getPath() ;
 		Dataset repoDataset = TDB2Factory.connectDataset(directory) ;		
-		Branch branch = new BranchBuilder(repoURI, repoDataset)				
+		Branch branch = new BranchBuilder(repoURI, repoDataset, ObservationRegistry.NOOP)
 				.build();
 		repoDataset.begin();
 		assertEquals("main", branch.getBranchName());
@@ -55,7 +56,7 @@ class TestPersistentBranchCreation {
 	@Test
 	void testEmptyBranchName() {
 		try {
-		new BranchBuilder(repoURI, DatasetFactory.createTxnMem())		
+		new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setBranchLocalName("")
 				.build();
 			assert(false);
@@ -64,7 +65,7 @@ class TestPersistentBranchCreation {
 		}
 		
 		try {
-		new BranchBuilder(repoURI, DatasetFactory.createTxnMem())		
+		new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setBranchLocalName(null)
 				.build();
 			assert(false);

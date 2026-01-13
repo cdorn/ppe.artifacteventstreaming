@@ -6,6 +6,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
@@ -27,7 +28,7 @@ class MultipleWriterTest {
 	
 	@Test
 	void testMultipleThreadsWritingToDifferentArt() throws Exception {
-		Branch branch = new BranchBuilder(repoURI1, DatasetFactory.createTxnMem())				
+		Branch branch = new BranchBuilder(repoURI1, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setBranchLocalName("branch1")
 				.build();		
 		OntModel model = branch.getModel();

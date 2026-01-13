@@ -7,6 +7,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Set;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.DatasetFactory;
@@ -98,7 +99,7 @@ class TestEventsPersistanceOnlyBranchServices {
 	@Test
 	void testSimpleCommitPersistence() throws Exception {	
 		BranchStateUpdater stateKeeper = new StateKeeperImpl(repoURI, branchCache, factory.getEventStore(repoURI.toString()));
-		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper)				
 				.build();		
 		branch.startCommitHandlers(null);
@@ -118,7 +119,7 @@ class TestEventsPersistanceOnlyBranchServices {
 	@Test
 	void testReadAndApplyCommits() throws Exception {
 		BranchStateUpdater stateKeeper = new StateKeeperImpl(repoURI, branchCache, factory.getEventStore(repoURI.toString()));
-		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper)				
 				.build();		
 		branch.startCommitHandlers(null);
@@ -130,7 +131,7 @@ class TestEventsPersistanceOnlyBranchServices {
 		Commit commit = branch.commitChanges("TestCommit");
 		
 		BranchStateUpdater stateKeeper2 = new StateKeeperImpl(repoURI, branchCache, factory.getEventStore(repoURI.toString()));
-		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper2)				
 				.build();		
 		OntModel model2 = branch2.getModel();
@@ -141,7 +142,7 @@ class TestEventsPersistanceOnlyBranchServices {
 	
 	@Test
 	void testReplayViaEvents() throws Exception {	
-		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setStateKeeper(new StateKeeperImpl(repoURI, branchCache, factory.getEventStore(repoURI.toString())))				
 				.build();
 		branch.startCommitHandlers(null);
@@ -163,7 +164,7 @@ class TestEventsPersistanceOnlyBranchServices {
 		assertEquals(1, commit.getAddedStatements().size());				
 		
 		BranchStateUpdater stateKeeper2 = new StateKeeperImpl(repoURI, branchCache, factory.getEventStore(repoURI.toString()));
-		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem())
+		Branch branch2 = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper2)				
 				.build();		
 		OntModel model2 = branch2.getModel();

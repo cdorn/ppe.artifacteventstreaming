@@ -6,7 +6,9 @@ import java.net.URI;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
@@ -29,13 +31,14 @@ class TestServiceRegistration {
 	
 	@Test
 	void testUnregisterInternalService() throws Exception {						
-		BranchRepository repo = new BranchRepository(repoURI, new InMemoryDatasetLoader(), new InMemoryStateKeeperFactory(), new ServiceFactoryRegistry(), new DefaultInMemoryMetaModelOntologyProvider());
+		BranchRepository repo = new BranchRepository(repoURI, new InMemoryDatasetLoader(), new InMemoryStateKeeperFactory(), new ServiceFactoryRegistry(), new DefaultInMemoryMetaModelOntologyProvider(), ObservationRegistry.NOOP);
 		
 		OntModel repoModel = repo.getRepositoryModel(); //OntModelFactory.createModel();
 		// add two services, ensure both get a commit
 		// remove first service, ensure only later one gets commit
-		
-		CountDownLatch latch = new CountDownLatch(1);
+        var repoDataset = repo.getRepositoryDataset();
+        repoDataset.begin(ReadWrite.WRITE);
+        CountDownLatch latch = new CountDownLatch(1);
 		var outService = new SyncForTestingService("Out1", latch, repoModel);
 		var localService1 = new LongRunningNoOpLocalService("Local1", repoModel, 500);
 		var localService2 = new LongRunningNoOpLocalService("Local2", repoModel, 500);
@@ -44,30 +47,36 @@ class TestServiceRegistration {
 				.addBranchInternalCommitService(localService2)
 				.addOutgoingCommitDistributer(outService)
 				.build();
+        repoDataset.commit();
+        repoDataset.end();
 		branch.startCommitHandlers(null);
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
-		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
-		Commit commit = branch.commitChanges("TestCommit1");
+		var lock = branch.startWriteTransaction();
+        model.add(testResource, RDFS.label, model.createTypedLiteral(1));
+		Commit commit = branch.concludeTransaction(lock,"TestCommit1");
 		boolean success = latch.await(5, TimeUnit.SECONDS);
 		assert(success);
 		assertEquals(1, localService1.getReceivedCommits().size());
 		assertEquals(1, localService2.getReceivedCommits().size());
 		assertEquals(1, outService.getReceivedCommits().size());
 				
-		RDFDataMgr.write(System.out, branch.getBranchResource().getModel(), Lang.TURTLE) ;
+		//RDFDataMgr.write(System.out, branch.getBranchResource().getModel(), Lang.TURTLE) ;
 		
 		latch = new CountDownLatch(1);
 		var outService2 = new SyncForTestingService("Out2", latch, repoModel);
-		branch.removeBranchInternalCommitService(localService1);
+        repoDataset.begin(ReadWrite.WRITE);
+        branch.removeBranchInternalCommitService(localService1);
 		branch.removeOutgoingCommitDistributer(outService);
 		branch.appendOutgoingCommitDistributer(outService2);
-				
+        repoDataset.commit();
+        repoDataset.end();
+        lock = branch.startWriteTransaction();
 		model.add(testResource, RDFS.label, model.createTypedLiteral(2));
-		Commit commit2 = branch.commitChanges("TestCommit2");
+		Commit commit2 = branch.concludeTransaction(lock,"TestCommit2");
 		boolean success2 = latch.await(5, TimeUnit.SECONDS);
 		
-		RDFDataMgr.write(System.out, branch.getBranchResource().getModel(), Lang.TURTLE) ;
+		//RDFDataMgr.write(System.out, branch.getBranchResource().getModel(), Lang.TURTLE) ;
 		assert(success2);
 		assertEquals(1, localService1.getReceivedCommits().size());
 		assertEquals(2, localService2.getReceivedCommits().size());

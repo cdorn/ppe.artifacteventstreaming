@@ -5,6 +5,8 @@ import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationExce
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.CrossBranchStreamer;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
@@ -35,6 +37,7 @@ public class BranchImpl  implements Branch, Runnable {
 	private final String branchResourceLabel;
 	@Getter private final BranchStateUpdater stateKeeper;
 	private final TimeStampProvider timeStampProvider;
+    private final ObservationRegistry observationRegistry;
 	
 	@Getter private final BlockingQueue<Commit> inQueue;
 	private final Map<String, CommitHandler> handlers = Collections.synchronizedMap(new LinkedHashMap<>());
@@ -56,8 +59,9 @@ public class BranchImpl  implements Branch, Runnable {
 			, @NonNull BlockingQueue<Commit> inQueue
 			, @NonNull BlockingQueue<Commit> outQueue
 			, @NonNull TimeStampProvider timeStampProvider
-			) {
+            , @NonNull ObservationRegistry observationRegistry) {
 		super();
+        this.observationRegistry = observationRegistry;
 		this.dataset = dataset;
 		this.model = model;
 		this.branchResource = branchResource;
@@ -299,46 +303,62 @@ public class BranchImpl  implements Branch, Runnable {
 	// Transaction handling
 	@Override
 	public void startReadTransaction() {
-		dataset.begin(ReadWrite.READ); 
+		Observation.createNotStarted("rdfbackend.transaction.readstart", observationRegistry)
+                .highCardinalityKeyValue("branch.id", getBranchId())
+                .observe(() -> dataset.begin(ReadWrite.READ));
 	}
 
 	@Override
 	public void completeReadTransaction() {
-		dataset.end();
+        Observation.createNotStarted("rdfbackend.transaction.readend", observationRegistry)
+                .highCardinalityKeyValue("branch.id", getBranchId())
+                .observe(dataset::end);
 	}
 	
 	@Override
 	public Lock startWriteTransaction() {
-		var writeLock = dataset.getLock();
-		writeLock.enterCriticalSection(false);
-        dataset.begin(ReadWrite.WRITE);
-        return writeLock;
+        return Observation.createNotStarted("rdfbackend.transaction.writestart", observationRegistry)
+                .highCardinalityKeyValue("branch.id", getBranchId())
+                .observe(() -> {
+                    var writeLock = dataset.getLock();
+                    writeLock.enterCriticalSection(false);
+                    dataset.begin(ReadWrite.WRITE);
+                    return writeLock;
+                });
 	}
 	
 	@Override
 	public void abortWriteTransaction(@NonNull Lock lock) {
-		dataset.abort();
-		dataset.end();
-		lock.leaveCriticalSection();
+        Observation.createNotStarted("rdfbackend.transaction.writeabort", observationRegistry)
+                .highCardinalityKeyValue("branch.id", getBranchId())
+                .observe(() -> {
+                    dataset.abort();
+                    dataset.end();
+                    lock.leaveCriticalSection();
+                });
 	}
 	
 	@Override
 	public Commit concludeTransaction(@NonNull Lock writeLock, String commitMsg) {
-		Commit commit = null;
-		if (dataset.transactionMode() != null && dataset.transactionMode().equals(ReadWrite.WRITE)) {			
-			try {
-				commit = this.commitChanges(commitMsg);
-				// dataset write transaction end set by commitChanges() logic
-			} catch (PersistenceException | BranchConfigurationException e) {			
-				log.error("Failed to persist commit: "+commitMsg, e);
-			} finally {
-				writeLock.leaveCriticalSection();
-			}
-		} else {
-			dataset.end();
-			
-		}
-		return commit;
+        return Observation.createNotStarted("rdfbackend.transaction.writecommit", observationRegistry)
+                .highCardinalityKeyValue("branch.id", getBranchId())
+                .observe(() -> {
+                    Commit commit = null;
+                    if (dataset.transactionMode() != null && dataset.transactionMode().equals(ReadWrite.WRITE)) {
+                        try {
+                            commit = this.commitChanges(commitMsg);
+                            // dataset write transaction end set by commitChanges() logic
+                        } catch (PersistenceException | BranchConfigurationException e) {
+                            log.error("Failed to persist commit: " + commitMsg, e);
+                        } finally {
+                            writeLock.leaveCriticalSection();
+                        }
+                    } else {
+                        dataset.end();
+
+                    }
+                    return commit;
+                });
 	}
 	
 	/**
@@ -372,7 +392,7 @@ public class BranchImpl  implements Branch, Runnable {
 		//we always create a local commit upon a merge to signal that we received and processed that commit
 		var commit = new StatementCommitImpl( branchResourceURI , mergedCommit.getCommitId(), mergedCommit.getCommitMessage(), getLastCommitId(), timeStampProvider.getCurrentTimeStamp(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());
 		if (commit.isEmpty()) {
-			log.info(String.format("MergeCommit %s merged into branch %s has no changes after incoming processing",commit.getCommitId(), this.branchResource.getURI()));
+			log.info("MergeCommit {} merged into branch {} has no changes after incoming processing", commit.getCommitId(), this.branchResource.getURI());
 		}
 		handleCommitInternally(commit);
 		outQueue.add(commit); 
@@ -381,40 +401,51 @@ public class BranchImpl  implements Branch, Runnable {
 	}
 	
 	private void handleCommitInternally(Commit commit) throws PersistenceException {
-		log.debug(String.format("Handling commit %s in branch %s", commit.getCommitId(), branchResourceURI));
+		log.debug("Handling commit {} in branch {}", commit.getCommitId(), branchResourceURI);
 		// clear the changes
-		try {
+
+        try {
 			if (!services.isEmpty() && !commit.isEmpty()) {
 				executeServiceLoop(commit);
-			}		 
+			}
 		// persist augmented commit and  mark preliminary commit as processed
-			stateKeeper.afterServices(commit);
-			log.debug(String.format("Branch %s contains now %s statements", branchResourceLabel, model.size()));
-			dataset.commit(); // together with commit persistence			
+            Observation.createNotStarted("rdfbackend.transaction.postservicecommit", observationRegistry)
+                    .highCardinalityKeyValue("branch.id", getBranchId())
+                    .observeChecked(() -> {
+                        stateKeeper.afterServices(commit);
+                        log.debug("Branch {} contains now {} statements", branchResourceLabel, model.size());
+                        dataset.commit(); // together with commit persistence
+                    });
 		} catch (Exception e) {
-			log.warn(String.format("Failed to persist post-service commit %s %s with exception %s", commit.getCommitMessage(), commit.getCommitId(), e.getMessage()));
-			//SHOULD WE: rethrow e to signal that we cannot continue here as we would loose persisted commit history.
+			log.warn("Failed to persist post-service commit {} {} with exception {}", commit.getCommitMessage(), commit.getCommitId(), e.getMessage(), e);
+			//SHOULD WE: rethrow e to signal that we cannot continue here as we would lose persisted commit history.
 			undoNoncommitedChanges();
-			e.printStackTrace();
 			throw e; // if so, then we need to abort transaction before rethrowing
 		} finally {
 			dataset.end();
 		}
-		//dataset.begin(); // prepare for next round of transactions
 	}
 	
 	private void executeServiceLoop(Commit commit) {
-		try { // first persist initial commit
-			stateKeeper.beforeServices(commit);
-			dataset.commit(); // together with commit/events persistence, here persists state of model
-		} catch(Exception e) {
-			log.info(String.format("Failed to persist pre-service commit %s %s with exception %s", commit.getCommitMessage(),commit.getCommitId(), e.getMessage()));
-		} finally {
-			dataset.end();
-		}
-		dataset.begin(ReadWrite.WRITE);
-		// we now have the local changes persisted and have a restart point established
-		// next we iterated through services
+        Observation.createNotStarted("rdfbackend.transaction.preservicecommit", observationRegistry)
+                .highCardinalityKeyValue("branch.id", getBranchId())
+                .observe(() -> {
+                    try { // first persist initial commit
+                        stateKeeper.beforeServices(commit);
+                        dataset.commit(); // together with commit/events persistence, here persists state of model
+                    } catch (Exception e) {
+                        log.info(String.format("Failed to persist pre-service commit %s %s with exception %s", commit.getCommitMessage(), commit.getCommitId(), e.getMessage()));
+                    } finally {
+                        dataset.end();
+                    }
+                });
+        Observation.createNotStarted("rdfbackend.transaction.serviceprepare", observationRegistry)
+                .highCardinalityKeyValue("branch.id", getBranchId())
+                .observe(() -> {
+                    dataset.begin(ReadWrite.WRITE);
+                    // we now have the local changes persisted and have a restart point established
+                    // next we iterated through services
+                });
 
 		int baseAdds = commit.getAdditionCount();
 		int baseRemoves = commit.getRemovalCount();
@@ -432,23 +463,27 @@ public class BranchImpl  implements Branch, Runnable {
 			perIterationAdds = 0;
 			perIterationsRemovals = 0;
 			for (IncrementalCommitHandler service : services.values()) {
-				service.handleCommitFromOffset(commit, offsetAdds.get(service), offsetRemoves.get(service));
-				// any changes by a service are now in the statement lists
+                Observation.createNotStarted("rdfbackend.transaction.servicerun", observationRegistry)
+                        .highCardinalityKeyValue("branch.id", getBranchId())
+                        .highCardinalityKeyValue("service.id", service.getURI())
+                        .observe(() ->
+                                    service.handleCommitFromOffset(commit, offsetAdds.get(service), offsetRemoves.get(service))
+                                    // any changes by a service are now in the statement lists
+                                );
+                // provide changes immediately to next service:
+                commit.appendAddedStatements(stmtAggregator.retrieveAddedStatements());
+                newAdds = commit.getAdditionCount() - addsCount;
+                addsCount = commit.getAdditionCount();
+                perIterationAdds += newAdds;
 
-				// provide changes immediately to next service:					
-				commit.appendAddedStatements(stmtAggregator.retrieveAddedStatements());									
-				newAdds = commit.getAdditionCount() - addsCount;
-				addsCount = commit.getAdditionCount();
-				perIterationAdds += newAdds;
+                commit.appendRemovedStatement(stmtAggregator.retrieveRemovedStatements());
+                newRemoves = commit.getRemovalCount() - removesCount;
+                removesCount = commit.getRemovalCount();
+                perIterationsRemovals += newRemoves;
 
-				commit.appendRemovedStatement(stmtAggregator.retrieveRemovedStatements());					
-				newRemoves = commit.getRemovalCount() - removesCount;
-				removesCount = commit.getRemovalCount();
-				perIterationsRemovals += newRemoves;
-
-				// store these changes as seen by this service (and also consider those produced by this service)
-				offsetAdds.put(service, commit.getAdditionCount());
-				offsetRemoves.put(service,  commit.getRemovalCount());
+                // store these changes as seen by this service (and also consider those produced by this service)
+                offsetAdds.put(service, commit.getAdditionCount());
+                offsetRemoves.put(service, commit.getRemovalCount());
 
 			}
 			rounds++;
