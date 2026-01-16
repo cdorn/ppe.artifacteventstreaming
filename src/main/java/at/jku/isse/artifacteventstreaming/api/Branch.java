@@ -15,6 +15,8 @@ import java.util.Set;
 
 public interface Branch extends CoreBranch {
 
+	BranchStateKeeper getStateKeeper();
+	Commit getLastCommit();
 	/**
 	 * @param commit
 	 * routes the commit through any available filters and processors (statements within the commit are not changes, just the decision which ones are applied)

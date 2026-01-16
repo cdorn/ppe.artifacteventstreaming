@@ -3,38 +3,31 @@ package at.jku.isse.artifacteventstreaming.branch;
 import at.jku.isse.artifacteventstreaming.api.*;
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
-import at.jku.isse.artifacteventstreaming.branch.outgoing.CrossBranchStreamer;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
-import io.micrometer.observation.Observation;
+import at.jku.isse.artifacteventstreaming.branch.outgoing.RecoveringCrossBranchStreamer;
 import io.micrometer.observation.ObservationRegistry;
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.rdf.model.NodeIterator;
-import org.apache.jena.rdf.model.Property;
-import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Seq;
-import org.apache.jena.shared.Lock;
 
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 public class BranchImpl extends CoreBranchImpl implements Branch, Runnable {
 
 	private final ExecutorService inExecutor = Executors.newSingleThreadExecutor();
 	private final ExecutorService outExecutor = Executors.newSingleThreadExecutor();
-	private final CrossBranchStreamer crossBranchStreamer;
+	private final RecoveringCrossBranchStreamer crossBranchStreamer;
 	@Getter private final BlockingQueue<Commit> inQueue;
 	@Getter private final BlockingQueue<Commit> outQueue;
+	@Getter final BranchStateUpdater stateKeeper;
 
 	public BranchImpl(@NonNull Dataset dataset
 			, @NonNull OntModel model
@@ -44,12 +37,22 @@ public class BranchImpl extends CoreBranchImpl implements Branch, Runnable {
 			, @NonNull BlockingQueue<Commit> outQueue
 			, @NonNull TimeStampProvider timeStampProvider
             , @NonNull ObservationRegistry observationRegistry) {
-		super(dataset, model, branchResource, stateKeeper, inQueue, outQueue, timeStampProvider, observationRegistry);
+		super(dataset, model, branchResource, timeStampProvider, observationRegistry);
+		this.stateKeeper = stateKeeper;
 		this.inQueue = inQueue;
 		this.outQueue = outQueue;
-		this.crossBranchStreamer = new CrossBranchStreamer(branchResource.getURI(), stateKeeper, outQueue);
+		this.crossBranchStreamer = new RecoveringCrossBranchStreamer(outQueue, branchResource.getURI(), stateKeeper);
 	}
-	
+
+	@Override
+	public Commit getLastCommit() {
+		return stateKeeper.getLastCommit().orElse(null);
+	}
+
+	protected String getLastCommitId() {
+		return getLastCommit() != null ? getLastCommit().getCommitId() : "";
+	}
+
 	@Override
 	public void startCommitHandlers() throws BranchConfigurationException, PersistenceException {
 		super.startCommitHandlers();
@@ -231,6 +234,8 @@ public class BranchImpl extends CoreBranchImpl implements Branch, Runnable {
 	public Commit commitChanges(String commitMsg) throws PersistenceException, BranchConfigurationException {
 		var commit = super.commitChanges(commitMsg);
 		if (commit != null) {
+			stateKeeper.afterServices(commit);
+
 			outQueue.add(commit);
 		}
 		return commit;
