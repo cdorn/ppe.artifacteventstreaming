@@ -29,9 +29,9 @@ public class ReplayEntryCollectorFromHistory implements ReplayEntryCollector {
 		return replayScope.entrySet().stream()
 				.flatMap(entry -> 
 					getReplayEntriesOrEmpty(AES.resourceToId(entry.getKey()), branchURI) 
-						.filter(replEntry -> entry.getValue().contains(replEntry.getStatement().getContainmentPropertyOrPredicate()) )
+						.filter(replEntry -> entry.getValue().contains(replEntry.statement().getContainmentPropertyOrPredicate()) )
 				)
-				.filter(replEntry -> replEntry.getTimeStamp() >= fromTimeStampIncl)
+				.filter(replEntry -> replEntry.timeStamp() >= fromTimeStampIncl)
 				.sorted(new ReplayEntry.CompareByTimeStamp())
 				.collect(Collectors.toCollection(ArrayList::new));
 	}

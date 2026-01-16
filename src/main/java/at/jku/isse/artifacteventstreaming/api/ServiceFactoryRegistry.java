@@ -6,7 +6,7 @@ import java.util.Optional;
 
 public class ServiceFactoryRegistry {
 
-	private Map<String, ServiceFactory> registry = new HashMap<>();
+	private final Map<String, ServiceFactory> registry = new HashMap<>();
 	
 	public void register(String serviceTypeURI, ServiceFactory factory) {
 		registry.put(serviceTypeURI, factory);

@@ -1,15 +1,14 @@
 package at.jku.isse.passiveprocessengine.rdf.trialcode;
 
-import java.util.Set;
-
-import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.rdf.listeners.StatementListener;
-import org.apache.jena.rdf.model.Statement;
-
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.replay.ContainedStatementImpl;
 import lombok.RequiredArgsConstructor;
+import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.rdf.listeners.StatementListener;
+import org.apache.jena.rdf.model.Statement;
+
+import java.util.Set;
 
 @RequiredArgsConstructor
 public class TransactionalChangeApplyer extends StatementListener {

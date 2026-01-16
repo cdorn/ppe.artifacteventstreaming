@@ -1,16 +1,15 @@
 package at.jku.isse.passiveprocessengine.rdf.trialcode;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
+import at.jku.isse.artifacteventstreaming.api.Commit;
+import at.jku.isse.artifacteventstreaming.api.CommitHandler;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDFS;
 
-import at.jku.isse.artifacteventstreaming.api.Commit;
-import at.jku.isse.artifacteventstreaming.api.CommitHandler;
-import lombok.extern.slf4j.Slf4j;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Slf4j
 public class SimpleService extends CommitLoggingService {

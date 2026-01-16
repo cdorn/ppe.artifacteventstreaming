@@ -1,21 +1,15 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
-import org.apache.jena.ontapi.model.OntClass;
-import org.apache.jena.ontapi.model.OntDataProperty;
-import org.apache.jena.ontapi.model.OntIndividual;
-import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.ontapi.model.OntObjectProperty;
-import org.apache.jena.ontapi.model.OntRelationalProperty;
-import org.apache.jena.vocabulary.XSD;
-
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import lombok.Getter;
 import lombok.NonNull;
+import org.apache.jena.ontapi.model.*;
+import org.apache.jena.vocabulary.XSD;
 
 public class MockSchema {
 
 	public static final String TEST_SCHEMA_URI = "http://at.jku.isse.artifacteventstreaming/types#";
-	public static enum States { Open, InProgress, Closed, ReadyForReview, Released}
+	public enum States { Open, InProgress, Closed, ReadyForReview, Released}
 	
 	@Getter public OntClass issueType;
 	@Getter	public OntDataProperty keyProperty;

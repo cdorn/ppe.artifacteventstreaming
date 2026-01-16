@@ -15,28 +15,27 @@ import java.util.Optional;
 public interface BranchStateUpdater extends BranchStateKeeper {
 
 	/**
-	 * @return any preliminary commit that was persisted but not completely processed by any service
 	 * @throws Exception when loading the history from the event database failed
 	 */
-	public Commit loadState() throws PersistenceException;
+    void loadState() throws PersistenceException;
 	
-	public void beforeServices(Commit commit) throws PersistenceException;
+	//public void beforeServices(Commit commit) throws PersistenceException;
 	
-	public void afterServices(Commit commit) throws PersistenceException;
+	void afterServices(Commit commit) throws PersistenceException;
 	
-	public void beforeMerge(Commit commit) throws PersistenceException;
+	void beforeMerge(Commit commit) throws PersistenceException;
 	
-	public List<Commit> getNonMergedCommits() throws PersistenceException;
+	List<Commit> getNonMergedCommits() throws PersistenceException;
 	
-	public void finishedMerge(Commit commit) throws PersistenceException;
+	void finishedMerge(Commit commit) throws PersistenceException;
 	
-	//public Optional<String> getLastMergedCommitId();
 
-	public void afterForwarded(Commit commit) throws PersistenceException;
+
+	void afterForwarded(Commit commit) throws PersistenceException;
 	
-	public List<Commit> getNonForwardedCommits() throws PersistenceException;
+	List<Commit> getNonForwardedCommits() throws PersistenceException;
 	
-	public Optional<String> getLastForwardedCommitId() throws PersistenceException;
+	Optional<String> getLastForwardedCommitId() throws PersistenceException;
 
 	
 

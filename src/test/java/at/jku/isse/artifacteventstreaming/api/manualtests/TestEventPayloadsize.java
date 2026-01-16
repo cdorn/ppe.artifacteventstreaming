@@ -1,11 +1,12 @@
 package at.jku.isse.artifacteventstreaming.api.manualtests;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.net.URI;
-import java.util.LinkedList;
-import java.util.List;
-
+import at.jku.isse.artifacteventstreaming.api.Commit;
+import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
+import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
+import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
+import com.eventstore.dbclient.DeleteStreamOptions;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntClass;
@@ -15,14 +16,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import com.eventstore.dbclient.DeleteStreamOptions;
+import java.net.URI;
+import java.util.LinkedList;
+import java.util.List;
 
-import at.jku.isse.artifacteventstreaming.api.Commit;
-import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
-import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
-import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Disabled
 class TestEventPayloadsize {

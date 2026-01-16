@@ -1,11 +1,10 @@
 package at.jku.isse.artifacteventstreaming.jena;
 
-import static at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType.MAP_NS;
-import static org.junit.jupiter.api.Assertions.*;
-
-
-import java.util.Map;
-
+import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
+import at.jku.isse.artifacteventstreaming.schemasupport.ResourceMismatchException;
+import at.jku.isse.artifacteventstreaming.schemasupport.UntypedMapResource;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntClass;
@@ -17,12 +16,10 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.Test;
 
-import at.jku.isse.artifacteventstreaming.schemasupport.UntypedMapResource;
-import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
-import at.jku.isse.artifacteventstreaming.schemasupport.ResourceMismatchException;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
-import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
+import java.util.Map;
+
+import static at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType.MAP_NS;
+import static org.junit.jupiter.api.Assertions.*;
 
 class ModelDuplicationTest {
 

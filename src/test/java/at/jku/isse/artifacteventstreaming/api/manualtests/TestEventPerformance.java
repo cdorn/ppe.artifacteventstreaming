@@ -1,9 +1,11 @@
 package at.jku.isse.artifacteventstreaming.api.manualtests;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.net.URI;
-
+import at.jku.isse.artifacteventstreaming.api.*;
+import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
+import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
+import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
+import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
+import com.eventstore.dbclient.DeleteStreamOptions;
 import io.micrometer.observation.ObservationRegistry;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.DatasetFactory;
@@ -15,17 +17,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import com.eventstore.dbclient.DeleteStreamOptions;
+import java.net.URI;
 
-import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
-import at.jku.isse.artifacteventstreaming.api.BranchStateUpdater;
-import at.jku.isse.artifacteventstreaming.api.Commit;
-import at.jku.isse.artifacteventstreaming.api.PerBranchEventStore;
-import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
-import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
-import at.jku.isse.artifacteventstreaming.branch.persistence.RocksDBFactory;
-import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestEventPerformance {
 
@@ -33,7 +28,7 @@ class TestEventPerformance {
 				
 	
 	private static RocksDBFactory cacheFactory;
-	private static EventStoreFactory factory = new EventStoreFactory();
+	private static final EventStoreFactory factory = new EventStoreFactory();
 	private static BranchStateCache branchCache;
 			
 	@BeforeEach
@@ -64,7 +59,7 @@ class TestEventPerformance {
 				.build();		
 		OntModel model = branch.getModel();
 		stateKeeper.loadState();		
-		branch.startCommitHandlers(null);
+		branch.startCommitHandlers();
 		
 		long start = System.currentTimeMillis();
 		for (int j = 0; j < 10; j++) {
@@ -85,9 +80,9 @@ class TestEventPerformance {
 		OntModel model2 = branch2.getModel();
 		long initModel2Size = model2.size();
 		stateKeeper2.loadState();
-		branch.startCommitHandlers(null);
+		branch.startCommitHandlers();
 		System.out.println("Model2 size:"+model2.size());
-		assertTrue(model2.size() == initModel2Size);
+        assertEquals(model2.size(), initModel2Size);
 				
 		// now we do manual application
 		stateKeeper2.getHistory().stream().forEach(pastCommit -> {
@@ -111,7 +106,7 @@ class TestEventPerformance {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper)				
 				.build();				
-		branch.startCommitHandlers(null);
+		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
 		
 		long start = System.currentTimeMillis();
@@ -131,7 +126,7 @@ class TestEventPerformance {
 				.build();		
 		OntModel model2 = branch2.getModel();
 		stateKeeper2.loadState();
-		branch2.startCommitHandlers(null);
+		branch2.startCommitHandlers();
 		// now we do manual application
 		stateKeeper2.getHistory().stream().forEach(pastCommit -> {
 			model2.add(pastCommit.getRemovedStatements().stream().map(Statement.class::cast).toList());

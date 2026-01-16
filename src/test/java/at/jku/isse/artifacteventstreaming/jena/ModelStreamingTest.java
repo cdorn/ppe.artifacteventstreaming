@@ -1,5 +1,7 @@
 package at.jku.isse.artifacteventstreaming.jena;
 
+import at.jku.isse.passiveprocessengine.rdf.trialcode.ImmediateChangeApplyer;
+import at.jku.isse.passiveprocessengine.rdf.trialcode.TransactionalChangeApplyer;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntClass;
@@ -9,9 +11,6 @@ import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.junit.jupiter.api.Test;
-
-import at.jku.isse.passiveprocessengine.rdf.trialcode.ImmediateChangeApplyer;
-import at.jku.isse.passiveprocessengine.rdf.trialcode.TransactionalChangeApplyer;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 

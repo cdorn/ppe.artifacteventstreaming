@@ -36,8 +36,8 @@ public class ReplaySession {
 			return Collections.emptyList();
 		}
 		List<ReplayEntry> replayedEntries = new LinkedList<>();
-		var nextTimestamp = history.get(currentNonReplayedEntryPos).getTimeStamp();
-		while (currentNonReplayedEntryPos < history.size() &&  nextTimestamp == history.get(currentNonReplayedEntryPos).getTimeStamp()) {// as long as changes happened at the same time (as per commit timestamp)
+		var nextTimestamp = history.get(currentNonReplayedEntryPos).timeStamp();
+		while (currentNonReplayedEntryPos < history.size() &&  nextTimestamp == history.get(currentNonReplayedEntryPos).timeStamp()) {// as long as changes happened at the same time (as per commit timestamp)
 			var entry = history.get(currentNonReplayedEntryPos);
 			entry.applyForward(model);
 			replayedEntries.add(entry);
@@ -71,7 +71,7 @@ public class ReplaySession {
 		if (history.isEmpty() || currentNonReplayedEntryPos >= history.size()) {
 			return -1;
 		} else {
-			return history.get(currentNonReplayedEntryPos).getTimeStamp();
+			return history.get(currentNonReplayedEntryPos).timeStamp();
 		}
 	}
 }

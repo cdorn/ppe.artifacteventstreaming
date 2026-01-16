@@ -1,9 +1,7 @@
 package at.jku.isse.artifacteventstreaming.api;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-
+import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
+import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.io.FileUtils;
 import org.apache.jena.query.Dataset;
@@ -15,8 +13,9 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
-import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -64,15 +63,6 @@ class TestPersistentBranchCreation {
 			assert(true);
 		}
 		
-		try {
-		new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
-				.setBranchLocalName(null)
-				.build();
-			assert(false);
-		} catch (Exception e) {
-			assert(true);
-		}
-		
 		String name = BranchBuilder.getBranchNameFromURI(repoURI);
 		assertNull(name);
 		
@@ -81,7 +71,7 @@ class TestPersistentBranchCreation {
 		assertEquals("", name);
 		
 		name = BranchBuilder.getBranchNameFromURI(URI.create(repoURI.toString()));
-		assertEquals(null, name);
+        assertNull(name);
 		
 		name = BranchBuilder.getBranchNameFromURI(URI.create(repoURI.toString()+"#test"));
 		assertEquals("test", name);

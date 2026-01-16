@@ -5,11 +5,11 @@ import java.util.Optional;
 
 public interface BranchStateKeeper {
 
-	public boolean hasSeenCommit(Commit commit);
+	boolean hasSeenCommit(Commit commit);
 	
-	public List<Commit> getHistory();
+	List<Commit> getHistory();
 	
-	public Optional<Commit> getLastCommit();
+	Optional<Commit> getLastCommit();
 	
-	public List<Commit> getCommitsForwardIncludingFrom(String string);
+	List<Commit> getCommitsForwardIncludingFrom(String string);
 }

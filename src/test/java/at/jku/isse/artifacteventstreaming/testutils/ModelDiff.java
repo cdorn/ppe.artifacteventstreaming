@@ -1,13 +1,13 @@
 package at.jku.isse.artifacteventstreaming.testutils;
 
+import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.rdf.model.Statement;
+
 import java.util.AbstractMap;
 import java.util.HashSet;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.rdf.model.Statement;
 
 public class ModelDiff {
 
@@ -25,11 +25,11 @@ public class ModelDiff {
 		Set<Statement> missingInSource = destStmts.stream().filter(stmt -> !sourceStmts.contains(stmt)).collect(Collectors.toSet());
 		Set<Statement> missingInDest = sourceStmts.stream().filter(stmt -> !destStmts.contains(stmt)).collect(Collectors.toSet());
 		
-		System.out.println(String.format("MISSING IN SOURCE: %s out of %s existing", missingInSource.size(), sourceStmts.size()));	
+		System.out.printf("MISSING IN SOURCE: %s out of %s existing%n", missingInSource.size(), sourceStmts.size());
 		if (verbose) {
 			missingInSource.stream().forEach(System.out::println);
 		}
-		System.out.println(String.format("MISSING IN DEST: %s out of %s existing", missingInDest.size(), destStmts.size()));	
+		System.out.printf("MISSING IN DEST: %s out of %s existing%n", missingInDest.size(), destStmts.size());
 		if (verbose) {
 			missingInDest.stream().forEach(System.out::println);
 		}

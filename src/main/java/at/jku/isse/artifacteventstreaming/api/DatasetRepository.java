@@ -6,5 +6,5 @@ import java.net.URI;
 import java.util.Optional;
 
 public interface DatasetRepository {
-	public Optional<Dataset> loadDataset(URI uri);
+	Optional<Dataset> loadDataset(URI uri);
 }

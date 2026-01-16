@@ -8,5 +8,5 @@ public class DefaultInMemoryMetaModelOntologyProvider implements MetaModelOntolo
 	@Override
 	public MetaModelOntology getMetaModelOntology() {
 		return MetaModelSchemaTypes.MetaModelOntology.buildInMemoryOntology(); 	
-	};
+	}
 }

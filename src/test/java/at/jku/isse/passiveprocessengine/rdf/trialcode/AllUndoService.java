@@ -1,16 +1,16 @@
 package at.jku.isse.passiveprocessengine.rdf.trialcode;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import at.jku.isse.artifacteventstreaming.api.*;
-import org.apache.jena.ontapi.model.OntIndividual;
+import at.jku.isse.artifacteventstreaming.api.AbstractHandlerBase;
+import at.jku.isse.artifacteventstreaming.api.Commit;
+import at.jku.isse.artifacteventstreaming.api.CommitHandler;
+import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.rdf.model.Statement;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Slf4j
 public class AllUndoService extends AbstractHandlerBase implements IncrementalCommitHandler {

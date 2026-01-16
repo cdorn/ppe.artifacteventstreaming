@@ -1,14 +1,13 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.when;
-
-import java.net.URI;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
-
+import at.jku.isse.artifacteventstreaming.api.Branch;
+import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
+import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
+import at.jku.isse.artifacteventstreaming.branch.outgoing.CommitToHistoryHandler;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
+import at.jku.isse.artifacteventstreaming.schemasupport.ResourceMismatchException;
+import at.jku.isse.artifacteventstreaming.schemasupport.UntypedMapResource;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntModel;
@@ -23,14 +22,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
-import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
-import at.jku.isse.artifacteventstreaming.branch.outgoing.CommitToHistoryHandler;
-import at.jku.isse.artifacteventstreaming.schemasupport.UntypedMapResource;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
-import at.jku.isse.artifacteventstreaming.schemasupport.ResourceMismatchException;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
+import java.net.URI;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class) 
 class TestContainmentReplay {

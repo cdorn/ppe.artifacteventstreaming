@@ -1,19 +1,17 @@
 package at.jku.isse.artifacteventstreaming.api.manualtests;
 
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-
+import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
 import com.eventstore.dbclient.AppendToStreamOptions;
 import com.eventstore.dbclient.EventData;
 import com.eventstore.dbclient.EventDataBuilder;
 import com.eventstore.dbclient.ExpectedRevision;
-
-import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 class CreateTestStreams {
 
 	
-	private static EventStoreFactory factory = new EventStoreFactory();
+	private static final EventStoreFactory factory = new EventStoreFactory();
 	
 	String testProjectionName = "testProjection";
 	

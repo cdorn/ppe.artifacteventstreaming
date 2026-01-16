@@ -231,8 +231,8 @@ public class ListResourceType {
 	}
 
 	public Optional<Resource> getFormerListOwner(List<StatementWrapper> stmts) {
-		return stmts.stream().filter(wrapper -> wrapper.getOp().equals(AES.OPTYPE.REMOVE))
-			.map(StatementWrapper::getStmt)
+		return stmts.stream().filter(wrapper -> wrapper.op().equals(AES.OPTYPE.REMOVE))
+			.map(StatementWrapper::stmt)
 			.filter(stmt -> stmt.getPredicate().equals(getContainerProperty().asProperty()))
 			.map(Statement::getResource)
 			.findAny();

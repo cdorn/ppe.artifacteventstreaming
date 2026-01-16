@@ -1,12 +1,14 @@
 package at.jku.isse.artifacteventstreaming.api;
 
 
-import java.net.URI;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
+import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
+import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
+import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
+import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
+import at.jku.isse.passiveprocessengine.rdf.trialcode.AllUndoService;
+import at.jku.isse.passiveprocessengine.rdf.trialcode.MockLazyLoadingService;
+import at.jku.isse.passiveprocessengine.rdf.trialcode.SimpleService;
+import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
 import io.micrometer.observation.ObservationRegistry;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
@@ -20,14 +22,11 @@ import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.Test;
 
-import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
-import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
-import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
-import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
-import at.jku.isse.passiveprocessengine.rdf.trialcode.AllUndoService;
-import at.jku.isse.passiveprocessengine.rdf.trialcode.MockLazyLoadingService;
-import at.jku.isse.passiveprocessengine.rdf.trialcode.SimpleService;
-import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
+import java.net.URI;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -54,7 +53,8 @@ class TestCommitHandling {
 				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
 				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
 				.build();
-		branch.startCommitHandlers(null);
+		branch.startCommitHandlers();
+		branch.startWriteTransaction();
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
@@ -74,7 +74,7 @@ class TestCommitHandling {
 				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
 				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
 				.build();
-		branch.startCommitHandlers(null);
+		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
 		branch.getDataset().begin();
 		Resource testResource = model.createResource(repoURI+"#art1");
@@ -104,7 +104,7 @@ class TestCommitHandling {
 		OntModel model = branch.getModel();
 		branch.appendBranchInternalCommitService(new MockLazyLoadingService("Loader", true, repoModel, model, 3));
 		branch.appendBranchInternalCommitService(new MockLazyLoadingService("LoopController", false, repoModel, model, 4));
-		branch.startCommitHandlers(null);
+		branch.startCommitHandlers();
 		
 		branch.getDataset().begin();
 		Resource testResource = model.createResource(repoURI+"#art1");
@@ -124,7 +124,7 @@ class TestCommitHandling {
 		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
 				.build();
-		branch.startCommitHandlers(null);
+		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
 		
 		branch.getDataset().begin();
@@ -162,8 +162,8 @@ class TestCommitHandling {
 				.build();
 		CommitHandler merger = new CompleteCommitMerger(branch);
 		branch.appendIncomingCommitMerger(merger);
-		branch.startCommitHandlers(null);
-		
+		branch.startCommitHandlers();
+		branch.startWriteTransaction();
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
@@ -196,7 +196,8 @@ class TestCommitHandling {
 				.build();
 		CommitHandler merger = new CompleteCommitMerger(branch);
 		branch.appendIncomingCommitMerger(merger);
-		branch.startCommitHandlers(null);
+		branch.startCommitHandlers();
+		branch.startWriteTransaction();
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
@@ -215,7 +216,7 @@ class TestCommitHandling {
 	void testCancelingOutLiteralStatements() throws Exception {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.build();
-		branch.startCommitHandlers(null);
+		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
 		branch.getDataset().begin();
 		Resource testResource = model.createResource(repoURI+"#art1");
@@ -230,7 +231,7 @@ class TestCommitHandling {
 	void testCancelingOutResourceStatements() throws Exception {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.build();
-		branch.startCommitHandlers(null);
+		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
 		branch.getDataset().begin();
 		Resource testResource = model.createResource(repoURI+"#art1");
@@ -246,7 +247,7 @@ class TestCommitHandling {
 	void testNonCancelingOutLiteralStatements() throws Exception {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.build();
-		branch.startCommitHandlers(null);
+		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
 		branch.getDataset().begin();
 		Resource testResource = model.createResource(repoURI+"#art1");
@@ -266,7 +267,7 @@ class TestCommitHandling {
 		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), repoModel, ObservationRegistry.NOOP)
 				.addBranchInternalCommitService(new AllUndoService("UndoService1", repoModel ))
 				.build();
-		branch.startCommitHandlers(null);
+		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
 		branch.getDataset().begin();
 		var modelSize = model.size();

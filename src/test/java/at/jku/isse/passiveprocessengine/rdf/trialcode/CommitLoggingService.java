@@ -1,15 +1,14 @@
 package at.jku.isse.passiveprocessengine.rdf.trialcode;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.UUID;
-
-import org.apache.jena.ontapi.model.OntModel;
-
 import at.jku.isse.artifacteventstreaming.api.AbstractHandlerBase;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.IncrementalCommitHandler;
 import lombok.Getter;
+import org.apache.jena.ontapi.model.OntModel;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.UUID;
 
 public abstract class CommitLoggingService extends AbstractHandlerBase implements IncrementalCommitHandler {
 

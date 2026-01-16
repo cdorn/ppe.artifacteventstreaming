@@ -1,22 +1,17 @@
 package at.jku.isse.artifacteventstreaming.jena;
 
-import java.util.stream.Stream;
-
+import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
+import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
+import at.jku.isse.passiveprocessengine.rdf.trialcode.ChangeListener;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
-import org.apache.jena.ontapi.model.OntClass;
+import org.apache.jena.ontapi.model.*;
 import org.apache.jena.ontapi.model.OntClass.DataMaxCardinality;
 import org.apache.jena.ontapi.model.OntClass.ObjectMaxCardinality;
-import org.apache.jena.ontapi.model.OntDataProperty;
-import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntIndividual.Named;
-import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.ontapi.model.OntProperty;
-import org.apache.jena.rdf.model.Bag;
-import org.apache.jena.rdf.model.InfModel;
-import org.apache.jena.rdf.model.Literal;
-import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.rdf.model.StmtIterator;
+import org.apache.jena.rdf.model.*;
 import org.apache.jena.reasoner.Reasoner;
 import org.apache.jena.reasoner.ReasonerRegistry;
 import org.apache.jena.riot.Lang;
@@ -25,11 +20,7 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.Test;
 
-import at.jku.isse.artifacteventstreaming.schemasupport.MapResourceType;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
-import at.jku.isse.artifacteventstreaming.schemasupport.SingleResourceType;
-import at.jku.isse.passiveprocessengine.rdf.trialcode.ChangeListener;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
