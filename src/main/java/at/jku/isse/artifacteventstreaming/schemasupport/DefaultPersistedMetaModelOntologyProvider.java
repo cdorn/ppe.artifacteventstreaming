@@ -8,5 +8,5 @@ public class DefaultPersistedMetaModelOntologyProvider implements MetaModelOntol
 	@Override
 	public MetaModelOntology getMetaModelOntology() {
 		return MetaModelSchemaTypes.MetaModelOntology.buildDBbackedOntology(); 	
-	};
+	}
 }

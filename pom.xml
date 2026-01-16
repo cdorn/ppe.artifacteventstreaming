@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>at.jku.isse.artifacteventstreaming</groupId>
 	<artifactId>core</artifactId>
-	<version>0.1.10</version>
+	<version>0.2.0</version>
 
 	<licenses>
         <license>
@@ -38,27 +38,29 @@
 			<groupId>org.apache.jena</groupId>
 			<artifactId>apache-jena-libs</artifactId>
 			<type>pom</type>
-			<version>5.1.0</version>
+			<version>5.6.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.rocksdb</groupId>
 			<artifactId>rocksdbjni</artifactId>
-			<version>9.6.1</version>
+			<version>10.2.1</version>
 		</dependency>
 		<dependency>
 			<groupId>com.eventstore</groupId>
 			<artifactId>db-client-java</artifactId>
-			<version>5.2.0</version>
+			<version>5.4.5</version>
 		</dependency>
+		<!-- Source: https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>2.18.1</version>
+			<version>2.20.1</version>
+			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
-			<version>2.15.1</version>
+			<version>2.21.0</version>
 		</dependency>
         <dependency>
             <groupId>io.micrometer</groupId>
@@ -73,7 +75,7 @@
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
-			<version>1.5.10</version>
+			<version>1.5.24</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -86,6 +88,18 @@
 			<groupId>org.mockito</groupId>
 			<artifactId>mockito-junit-jupiter</artifactId>
 			<version>5.14.2</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers</artifactId>
+			<version>2.0.2</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-junit-jupiter</artifactId>
+			<version>2.0.2</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

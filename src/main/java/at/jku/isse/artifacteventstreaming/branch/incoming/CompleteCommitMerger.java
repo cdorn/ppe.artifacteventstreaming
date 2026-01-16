@@ -10,7 +10,7 @@ import org.apache.jena.vocabulary.RDFS;
 
 public class CompleteCommitMerger extends AbstractHandlerBase {
 
-	private Branch branch;
+	private final Branch branch;
 	
 	public CompleteCommitMerger(Branch branch) {
 		super("MergerFor"+branch.getBranchName(), branch.getBranchResource().getModel());

@@ -7,7 +7,7 @@ import java.util.stream.Stream;
 
 public interface PerResourceHistoryRepository {
 	
-	public Stream<ReplayEntry> getHistoryForResource(String uriOrAnonId, String branchURI) throws PersistenceException;
+	Stream<ReplayEntry> getHistoryForResource(String uriOrAnonId, String branchURI) throws PersistenceException;
 	
-	public Stream<ReplayEntry> getHistoryForResources(Set<String> uriOrAnonIds, String branchURI) throws PersistenceException;
+	Stream<ReplayEntry> getHistoryForResources(Set<String> uriOrAnonIds, String branchURI) throws PersistenceException;
 }

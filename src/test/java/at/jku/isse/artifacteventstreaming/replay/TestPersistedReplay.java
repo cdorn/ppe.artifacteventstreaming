@@ -1,17 +1,15 @@
 package at.jku.isse.artifacteventstreaming.replay;
 
-import org.apache.jena.ontapi.OntModelFactory;
-import org.apache.jena.ontapi.OntSpecification;
-import org.junit.jupiter.api.BeforeEach;
-
-import com.eventstore.dbclient.DeleteStreamOptions;
-
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
-import at.jku.isse.artifacteventstreaming.schemasupport.UntypedMapResource;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
+import at.jku.isse.artifacteventstreaming.schemasupport.UntypedMapResource;
+import com.eventstore.dbclient.DeleteStreamOptions;
+import org.apache.jena.ontapi.OntModelFactory;
+import org.apache.jena.ontapi.OntSpecification;
+import org.junit.jupiter.api.BeforeEach;
 
 public class TestPersistedReplay extends TestContainmentReplay{
 		

@@ -1,10 +1,9 @@
 package at.jku.isse.passiveprocessengine.rdf.trialcode;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.rdf.listeners.StatementListener;
 import org.apache.jena.rdf.model.Statement;
-
-import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class ImmediateChangeApplyer extends StatementListener {

@@ -1,20 +1,5 @@
 package at.jku.isse.artifacteventstreaming.api;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.net.URI;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import io.micrometer.observation.ObservationRegistry;
-import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.query.ReadWrite;
-import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFDataMgr;
-import org.apache.jena.vocabulary.RDFS;
-import org.junit.jupiter.api.Test;
-
 import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.branch.BranchRepository;
 import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryDatasetLoader;
@@ -22,6 +7,18 @@ import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryStateKeeper
 import at.jku.isse.artifacteventstreaming.schemasupport.DefaultInMemoryMetaModelOntologyProvider;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.LongRunningNoOpLocalService;
 import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
+import io.micrometer.observation.ObservationRegistry;
+import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.RDFS;
+import org.junit.jupiter.api.Test;
+
+import java.net.URI;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestServiceRegistration {
 
@@ -49,7 +46,7 @@ class TestServiceRegistration {
 				.build();
         repoDataset.commit();
         repoDataset.end();
-		branch.startCommitHandlers(null);
+		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		var lock = branch.startWriteTransaction();

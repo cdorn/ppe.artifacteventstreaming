@@ -1,7 +1,7 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
-import java.net.URI;
-
+import at.jku.isse.artifacteventstreaming.branch.persistence.FilebasedDatasetLoader;
+import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.query.ReadWrite;
@@ -9,9 +9,7 @@ import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import at.jku.isse.artifacteventstreaming.branch.persistence.FilebasedDatasetLoader;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
+import java.net.URI;
 
 import static org.junit.jupiter.api.Assertions.*;
 

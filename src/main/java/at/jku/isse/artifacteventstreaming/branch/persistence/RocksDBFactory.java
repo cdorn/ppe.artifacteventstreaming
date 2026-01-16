@@ -11,7 +11,7 @@ public class RocksDBFactory {
 
 	public static final String DEFAULT_STORAGEPATH = "./branchStatusCache/";
 	
-	private Options options;
+	private final Options options;
 	private RocksDB db;
 	private final String path;
 	

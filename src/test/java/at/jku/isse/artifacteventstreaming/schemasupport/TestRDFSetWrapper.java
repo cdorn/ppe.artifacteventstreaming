@@ -1,14 +1,14 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
+
+import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 

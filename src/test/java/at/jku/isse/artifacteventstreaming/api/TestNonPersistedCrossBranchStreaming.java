@@ -1,12 +1,11 @@
 package at.jku.isse.artifacteventstreaming.api;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.net.URI;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
+import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
+import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
+import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
+import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
+import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
 import io.micrometer.observation.ObservationRegistry;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
@@ -19,12 +18,12 @@ import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.Test;
 
-import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
-import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
-import at.jku.isse.artifacteventstreaming.branch.incoming.CompleteCommitMerger;
-import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
-import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
-import at.jku.isse.passiveprocessengine.rdf.trialcode.SyncForTestingService;
+import java.net.URI;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestNonPersistedCrossBranchStreaming {
 
@@ -66,9 +65,9 @@ class TestNonPersistedCrossBranchStreaming {
 		var streamer13 = new DefaultDirectBranchCommitStreamer(branch, branch3, new InMemoryBranchStateCache());		
 		branch.appendOutgoingCommitDistributer(streamer12);
 		branch.appendOutgoingCommitDistributer(streamer13);
-		branch.startCommitHandlers(null);
-		branch2.startCommitHandlers(null);
-		branch3.startCommitHandlers(null);
+		branch.startCommitHandlers();
+		branch2.startCommitHandlers();
+		branch3.startCommitHandlers();
 		
 		Commit lastCommit = null;
 		for (int j = 0; j < commitRounds; j++) {

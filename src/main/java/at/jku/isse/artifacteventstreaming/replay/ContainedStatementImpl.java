@@ -55,7 +55,7 @@ public class ContainedStatementImpl implements ContainedStatement {
 		if (container == null) {
 			return delegate.toString();
 		} else {
-			return "<"+container.toString() +","+ containmentProperty.toString() +"> contain " + delegate.toString() ;
+			return "<"+ container +","+ containmentProperty.toString() +"> contain " + delegate.toString() ;
 		}
 	}
 	

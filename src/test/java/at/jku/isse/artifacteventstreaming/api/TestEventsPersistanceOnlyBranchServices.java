@@ -1,32 +1,5 @@
 package at.jku.isse.artifacteventstreaming.api;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.net.URI;
-import java.util.List;
-import java.util.Set;
-
-import io.micrometer.observation.ObservationRegistry;
-import org.apache.jena.ontapi.OntModelFactory;
-import org.apache.jena.ontapi.model.OntModel;
-import org.apache.jena.query.DatasetFactory;
-import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.rdf.model.Statement;
-import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFDataMgr;
-import org.apache.jena.vocabulary.RDFS;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.TestInstance.Lifecycle;
-import org.rocksdb.RocksDBException;
-
-import com.eventstore.dbclient.DeleteStreamOptions;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.persistence.EventStoreFactory;
@@ -36,23 +9,65 @@ import at.jku.isse.artifacteventstreaming.branch.persistence.StateKeeperImpl;
 import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonDeserializer;
 import at.jku.isse.artifacteventstreaming.branch.serialization.StatementJsonSerializer;
 import at.jku.isse.artifacteventstreaming.replay.ContainedStatementImpl;
+import com.eventstore.dbclient.DeleteStreamOptions;
+import com.eventstore.dbclient.EventStoreDBClientSettings;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import io.micrometer.observation.ObservationRegistry;
+import net.bytebuddy.utility.dispatcher.JavaDispatcher;
+import org.apache.jena.ontapi.OntModelFactory;
+import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.query.DatasetFactory;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFDataMgr;
+import org.apache.jena.vocabulary.RDFS;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.rocksdb.RocksDBException;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
+import java.net.URI;
+import java.time.Duration;
+import java.util.List;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @TestInstance(Lifecycle.PER_CLASS)
+@Testcontainers
 class TestEventsPersistanceOnlyBranchServices {
 
 	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/repo3");
 				
-	private static RocksDBFactory cacheFactory;
-	private static EventStoreFactory factory = new EventStoreFactory();
-	private static BranchStateCache branchCache;
-			
+	private RocksDBFactory cacheFactory;
+	private EventStoreFactory factory = new EventStoreFactory();
+	private BranchStateCache branchCache;
+
+	@Container
+	GenericContainer<?> eventdb = new GenericContainer<>("eventstore/eventstore:24.10")
+			.withExposedPorts(2113,1112,1113)
+			.waitingFor(Wait.forListeningPort().withStartupTimeout(Duration.ofMinutes(2)));
+
 	@BeforeAll
 	void setupCache() {
+		eventdb.start();
 		cacheFactory = new RocksDBFactory("./branchStatusTestCache/");
 	}
 	
 	@BeforeEach
 	void removeStream() throws RocksDBException {
+		var settings = EventStoreDBClientSettings.builder()
+				.addHost(eventdb.getHost(), eventdb.getFirstMappedPort())
+				.tls(false)
+				.defaultCredentials("admin", "changeit")
+				.maxDiscoverAttempts(1)
+				.buildConnectionSettings();
+		factory = new EventStoreFactory(settings);
 		try {
 			cacheFactory.clearAndCloseCache();
 		}catch (Exception e) {
@@ -102,7 +117,7 @@ class TestEventsPersistanceOnlyBranchServices {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper)				
 				.build();		
-		branch.startCommitHandlers(null);
+		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
 		stateKeeper.loadState();
 		branch.getDataset().begin();
@@ -122,7 +137,7 @@ class TestEventsPersistanceOnlyBranchServices {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper)				
 				.build();		
-		branch.startCommitHandlers(null);
+		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
 		stateKeeper.loadState();
 		branch.getDataset().begin();
@@ -145,7 +160,7 @@ class TestEventsPersistanceOnlyBranchServices {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setStateKeeper(new StateKeeperImpl(repoURI, branchCache, factory.getEventStore(repoURI.toString())))				
 				.build();
-		branch.startCommitHandlers(null);
+		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
 		branch.getDataset().begin();
 		Resource testResource = model.createResource(repoURI+"#art1");
@@ -202,7 +217,7 @@ class TestEventsPersistanceOnlyBranchServices {
 		assert(result.containsAll(List.of(c1, c2, c3)));
 		
 		result = eventStore.loadAllIncomingCommitsForBranchFromCommitIdOnward(c2.getCommitId());
-		assert(result.containsAll(List.of(c3)));
+		assert(result.contains(c3));
 		
 		result = eventStore.loadAllIncomingCommitsForBranchFromCommitIdOnward(c3.getCommitId());
 		assert(result.isEmpty());

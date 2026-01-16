@@ -1,10 +1,9 @@
 package at.jku.isse.passiveprocessengine.rdf.trialcode;
 
-import org.apache.jena.ontapi.model.OntModel;
-
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.CommitHandler;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.jena.ontapi.model.OntModel;
 
 @Slf4j
 public class LongRunningNoOpLocalService extends CommitLoggingService {
@@ -26,7 +25,7 @@ public class LongRunningNoOpLocalService extends CommitLoggingService {
 		super.handleCommit(commit);
 		try {
 			log.debug("Starting to 'work'");
-			Thread.currentThread().sleep(sleepInMillis);
+			Thread.sleep(sleepInMillis);
 			log.debug("Ending 'work'");
 		} catch (InterruptedException e) {					
 			throw new RuntimeException("Faking crash");

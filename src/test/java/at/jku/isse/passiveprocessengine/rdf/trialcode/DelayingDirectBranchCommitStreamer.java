@@ -1,14 +1,14 @@
 package at.jku.isse.passiveprocessengine.rdf.trialcode;
 
-import java.util.LinkedList;
-import java.util.List;
-
 import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.api.BranchStateCache;
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.DefaultDirectBranchCommitStreamer;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.LinkedList;
+import java.util.List;
 
 @Slf4j
 public class DelayingDirectBranchCommitStreamer extends DefaultDirectBranchCommitStreamer {
@@ -29,7 +29,7 @@ public class DelayingDirectBranchCommitStreamer extends DefaultDirectBranchCommi
 		try {
 			log.debug(name+" Starting to 'work' for millis: "+sleepInMillis);
 			currentThread = Thread.currentThread();
-			Thread.currentThread().sleep(sleepInMillis);
+			Thread.sleep(sleepInMillis);
 			super.handleCommit(commit);
 			log.debug(name+" Ending 'work'");
 		} catch (InterruptedException e) {

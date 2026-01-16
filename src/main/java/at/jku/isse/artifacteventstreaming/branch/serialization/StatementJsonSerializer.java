@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
+
 import java.io.IOException;
 
 public class StatementJsonSerializer extends StdSerializer<ContainedStatement> {

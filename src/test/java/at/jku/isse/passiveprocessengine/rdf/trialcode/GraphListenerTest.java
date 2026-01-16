@@ -1,8 +1,5 @@
 package at.jku.isse.passiveprocessengine.rdf.trialcode;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.jena.graph.Graph;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
@@ -14,6 +11,9 @@ import org.apache.jena.reasoner.InfGraph;
 import org.apache.jena.vocabulary.RDF;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class GraphListenerTest {
 
@@ -56,7 +56,7 @@ public class GraphListenerTest {
         type.removeProperties();
         // here I receive the same event twice, due to the two listener registrations
         Assertions.assertEquals(2, listener.added.size()); 
-        Assertions.assertEquals(1, listener.removed.size());
+        Assertions.assertEquals(2, listener.removed.size());
 	}
 	
 	@Test
@@ -74,7 +74,7 @@ public class GraphListenerTest {
         type.removeAll(RDF.type);
         // here I receive the same event twice, due to the two listener registrations
         Assertions.assertEquals(2, listener.added.size()); 
-        Assertions.assertEquals(1, listener.removed.size());
+        Assertions.assertEquals(2, listener.removed.size());
 	}
 	
 	public static class LoggingListener extends StatementListener {

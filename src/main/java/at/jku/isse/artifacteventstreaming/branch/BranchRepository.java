@@ -117,7 +117,7 @@ public class BranchRepository {
 		} else {
 			Optional<Dataset> datasetOpt = datasetLoader.loadDataset(branchURI);
 			if (datasetOpt.isEmpty()) {
-				log.info("Could not find dataset for: "+branchURI.toString());
+				log.info("Could not find dataset for: "+ branchURI);
 				return null;
 			} else {
 				BranchStateUpdater stateKeeper = stateKeeperFactory.createStateKeeperFor(branchURI);
@@ -128,7 +128,6 @@ public class BranchRepository {
 						.setMetaModelOntologyProvider(metaOntologyProvider)
 						.setStateKeeper(stateKeeper)
 						.build();
-				Commit prelimUnfinishedCommit = stateKeeper.loadState();
 				registerBranch(branch); // now branch can be found and referenced by other branches
 				
 				boolean doTX = !repoDataset.isInTransaction();
@@ -140,7 +139,7 @@ public class BranchRepository {
 					repoDataset.commit();
 					repoDataset.end();
 				}
-				branch.startCommitHandlers(prelimUnfinishedCommit);
+				branch.startCommitHandlers();
 				return branch;
 			}
 		}

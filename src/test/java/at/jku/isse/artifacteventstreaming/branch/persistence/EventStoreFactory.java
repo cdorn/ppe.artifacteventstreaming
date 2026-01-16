@@ -12,7 +12,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import lombok.Data;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -34,18 +33,21 @@ public class EventStoreFactory {
 	 private static final SimpleModule commitModule = new SimpleModule().addAbstractTypeMapping(Commit.class, StatementCommitImpl.class);
 	 
 	 public EventStoreFactory() {
-		 EventStoreDBClientSettings settings = EventStoreDBClientSettings.builder()
+		 this(EventStoreDBClientSettings.builder()
 				  .addHost("localhost", 2113)
 				  .tls(false)
 				  .defaultCredentials("admin", "changeit")
 				  .maxDiscoverAttempts(1)
-				  .buildConnectionSettings();
-		client = EventStoreDBClient.create(settings);			
-		StatementJsonSerializer.registerSerializationModule(jsonMapper);	
-		StatementJsonDeserializer.registerDeserializationModule(jsonMapper);		
-		jsonMapper.registerModule(commitModule);
-		
-		projectionClient = EventStoreDBProjectionManagementClient.create(settings);
+				  .buildConnectionSettings());
+	 }
+
+	 public EventStoreFactory(EventStoreDBClientSettings settings) {
+		 client = EventStoreDBClient.create(settings);
+		 StatementJsonSerializer.registerSerializationModule(jsonMapper);
+		 StatementJsonDeserializer.registerDeserializationModule(jsonMapper);
+		 jsonMapper.registerModule(commitModule);
+
+		 projectionClient = EventStoreDBProjectionManagementClient.create(settings);
 	 }
 	 
 	 public EventStoreDBClient getClient() {
@@ -68,23 +70,18 @@ public class EventStoreFactory {
 				// ignore
 			}
 	 }
-	 
-	 @Data
-	 public static class EventMetaData {
-		 
-		 final String commitUUID;		 
-		 final int batchId;
-		 final int totalBatches; 
-		 
-		 public EventMetaData( @JsonProperty("commitUUID") String commitUUID 
-				 ,@JsonProperty("batchId") int batchId
-				, @JsonProperty("totalBatches") int totalBatches) {			
+
+	public record EventMetaData(String commitUUID, int batchId, int totalBatches) {
+
+		public EventMetaData(@JsonProperty("commitUUID") String commitUUID
+				, @JsonProperty("batchId") int batchId
+					, @JsonProperty("totalBatches") int totalBatches) {
 			this.commitUUID = commitUUID;
-			this.batchId = batchId;
-			this.totalBatches = totalBatches;
-		}
-		
-	 }
+				this.batchId = batchId;
+				this.totalBatches = totalBatches;
+			}
+
+	}
 	 
 	 @RequiredArgsConstructor
 	 public static class EventStoreImpl implements PerBranchEventStore {
@@ -121,13 +118,13 @@ public class EventStoreFactory {
 					RecordedEvent recordedEvent = resolvedEvent.getOriginalEvent();					
 					EventMetaData metadata = jsonMapper.readValue(recordedEvent.getUserMetadata(), EventMetaData.class);
 					StatementCommitImpl commit = jsonMapper.readValue(recordedEvent.getEventData(), StatementCommitImpl.class);
-					if (metadata.getTotalBatches() <= 1) {						
+					if (metadata.totalBatches() <= 1) {
 						if (commit != null) {						
 							commits.add(commit);
 						}
 					} else { // multipart
 						joiner.addCommit(commit);
-						if (metadata.getBatchId() == metadata.getTotalBatches()) {// last batch
+						if (metadata.batchId() == metadata.totalBatches()) {// last batch
 							commits.add(joiner.join());
 							joiner = new CommitJoiner(); //reset for next batch
 						}
@@ -176,10 +173,10 @@ public class EventStoreFactory {
 				try {
 					CommitDeliveryEvent event = jsonMapper.readValue(recordedEvent.getEventData(), CommitDeliveryEvent.class);
 					if (event != null) {
-						if (event.getCommitId().equals(fromCommitIdOnwards)) {
+						if (event.commitId().equals(fromCommitIdOnwards)) {
 							break;
 						} else {
-							commits.add(event.getCommit());
+							commits.add(event.commit());
 						}
 					}
 				} catch (IOException e) {
@@ -188,7 +185,7 @@ public class EventStoreFactory {
 					throw new PersistenceException(msg);
 				}
 			}
-			if (Boolean.TRUE.equals(isReverse)) {
+			if (isReverse) {
 				Collections.reverse(commits); // to the earliest commits are at the beginning
 			}
 			return commits;
@@ -246,11 +243,11 @@ public class EventStoreFactory {
 			eventDBclient.appendToStream(branchURI+INCOMING_COMMITS_STREAM_POSTFIX, options, eventData) 
 			.get();
 			} catch (JsonProcessingException e) {
-				String msg = String.format("Error serializing commitdeliveryevent %s event to branch %s with error %s", event.getCommitId(), branchURI, e.getMessage()) ;
+				String msg = String.format("Error serializing commitdeliveryevent %s event to branch %s with error %s", event.commitId(), branchURI, e.getMessage()) ;
 				log.warn(msg);
 				throw new PersistenceException(msg);
 			} catch (InterruptedException | ExecutionException e) {
-				String msg = String.format("Error storing commitdeliveryevent %s event to branch %s with error %s", event.getCommitId(), branchURI, e.getMessage()) ;
+				String msg = String.format("Error storing commitdeliveryevent %s event to branch %s with error %s", event.commitId(), branchURI, e.getMessage()) ;
 				log.warn(msg);
 				throw new PersistenceException(msg);
 			} 

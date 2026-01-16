@@ -11,7 +11,7 @@ import java.util.stream.Stream;
 
 public class ReplayEntryCollectorFromCommits implements ReplayEntryCollector {
 
-	private List<Commit> commitsInChronologicalOrder = new LinkedList<>();
+	private final List<Commit> commitsInChronologicalOrder = new LinkedList<>();
 	
 	
 	public void addCommit(Commit commit) {
@@ -30,7 +30,7 @@ public class ReplayEntryCollectorFromCommits implements ReplayEntryCollector {
 	private Stream<ReplayEntry> flattenCommit(Commit commit, Map<Resource, Set<Property>> replayScope) {
 		return Stream.concat(
 				commit.getAddedStatements().stream()
-				.filter(stmt -> replayScope.keySet().contains(stmt.getSubject()))
+				.filter(stmt -> replayScope.containsKey(stmt.getSubject()))
 				.map(stmt -> {
 					var props = replayScope.get(stmt.getSubject());
 					if (props.contains(stmt.getPredicate())) {
@@ -42,7 +42,7 @@ public class ReplayEntryCollectorFromCommits implements ReplayEntryCollector {
 				.filter(Objects::nonNull) 
 			,
 				commit.getRemovedStatements().stream()
-				.filter(stmt -> replayScope.keySet().contains(stmt.getSubject()))
+				.filter(stmt -> replayScope.containsKey(stmt.getSubject()))
 				.map(stmt -> {
 					var props = replayScope.get(stmt.getSubject());
 					if (props.contains(stmt.getPredicate())) {
