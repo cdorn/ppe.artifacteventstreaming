@@ -165,7 +165,7 @@ public class CoreBranchRepository {
 
     protected void registerBranch(@NonNull CoreBranch branch, @Nullable String owner) {
         repoDataset.begin(ReadWrite.WRITE);
-        var branchResource = repoDataset.getDefaultModel().createResource(branch.getBranchName());
+        var branchResource = repoDataset.getDefaultModel().createResource(branch.getBranchId());
         repoModel.add(branchResource, AES.partOfRepository, repoRes);
         if (owner != null && !owner.isEmpty()) {
             branchResource.addLiteral(AES.ownedBy, owner);
