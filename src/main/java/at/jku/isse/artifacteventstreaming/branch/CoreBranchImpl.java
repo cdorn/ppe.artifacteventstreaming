@@ -3,7 +3,6 @@ package at.jku.isse.artifacteventstreaming.branch;
 import at.jku.isse.artifacteventstreaming.api.*;
 import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
 import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
-import at.jku.isse.artifacteventstreaming.branch.outgoing.CrossBranchStreamer;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
@@ -23,8 +22,7 @@ import org.apache.jena.shared.Lock;
 
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
@@ -35,11 +33,13 @@ public class CoreBranchImpl implements CoreBranch {
     @Getter protected final OntIndividual branchResource;
     protected final String branchResourceURI;
     protected final String branchResourceLabel;
-    @Getter final BranchStateUpdater stateKeeper;
+    @Getter protected final Dataset branchMetadataDataset;
+    @Getter protected final OntModel branchMetadataModel;
+
     protected final TimeStampProvider timeStampProvider;
     protected final ObservationRegistry observationRegistry;
 
-
+    private String lastCommitId;
     protected final Map<String, CommitHandler> handlers = Collections.synchronizedMap(new LinkedHashMap<>());
 
     protected final StatementAggregator stmtAggregator = new StatementAggregator();
@@ -52,9 +52,8 @@ public class CoreBranchImpl implements CoreBranch {
     public CoreBranchImpl(@NonNull Dataset dataset
             , @NonNull OntModel model
             , @NonNull OntIndividual branchResource
-            , @NonNull BranchStateUpdater stateKeeper
-            , @NonNull BlockingQueue<Commit> inQueue
-            , @NonNull BlockingQueue<Commit> outQueue
+            , @NonNull OntModel metadataModel
+            , @NonNull Dataset metadataBranchDataset
             , @NonNull TimeStampProvider timeStampProvider
             , @NonNull ObservationRegistry observationRegistry) {
         super();
@@ -64,11 +63,12 @@ public class CoreBranchImpl implements CoreBranch {
         this.branchResource = branchResource;
         this.branchResourceURI = branchResource.getURI(); // cached so we wont have to access different dataset
         this.branchResourceLabel = branchResource.getLocalName();
-        this.stateKeeper = stateKeeper;
-
+        this.branchMetadataDataset = metadataBranchDataset;
+        this.branchMetadataModel = metadataModel;
         this.timeStampProvider = timeStampProvider;
         stmtAggregator.registerWithModel(model);
     }
+
     @Override
     public void startCommitHandlers() throws BranchConfigurationException, PersistenceException {
         // if we have collected any model changes until here, they would have come from setup logic that we do not persist in commits,
@@ -81,15 +81,6 @@ public class CoreBranchImpl implements CoreBranch {
     @Override
     public void deactivate() {
         isReady.set(false);
-    }
-
-    @Override
-    public Commit getLastCommit() {
-        return stateKeeper.getLastCommit().orElse(null);
-    }
-
-    protected String getLastCommitId() {
-        return getLastCommit() != null ? getLastCommit().getCommitId() : "";
     }
 
     @Override
@@ -127,7 +118,7 @@ public class CoreBranchImpl implements CoreBranch {
             configs.remove(pos+1); // RDF are 1-indexed!
         }
         services.put(service.getURI(), service);
-        // ensure we only add if there is no such handler yet
+        // ensure we only add if there is no such handler yet (we might just add handler here from persisted config)
         var configNode = service.getConfigResource();
         if (configs.indexOf(configNode) <= 0) { // RDF lists are 1-indexed
             configs.add(configNode);
@@ -220,7 +211,7 @@ public class CoreBranchImpl implements CoreBranch {
                 .highCardinalityKeyValue("branch.id", getBranchId())
                 .observeChecked(() -> {
                     if (!stmtAggregator.hasAdditions() && !stmtAggregator.hasRemovals()) {
-                        log.debug("Commit not created as no changes occurred since last commit: {}", getLastCommitId());
+                        log.debug("Commit not created as no changes occurred since last commit", lastCommitId);
                         // we still are expected to be in a transaction, hence close the transaction here
                         if (dataset.isInTransaction()) {
                             dataset.abort();
@@ -228,7 +219,7 @@ public class CoreBranchImpl implements CoreBranch {
                         }
                         return null;
                     } else {
-                        var commit = new StatementCommitImpl(branchResourceURI, commitMsg, getLastCommitId(), timeStampProvider.getCurrentTimeStamp(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());
+                        var commit = new StatementCommitImpl(branchResourceURI, commitMsg, lastCommitId, timeStampProvider.getCurrentTimeStamp(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());
                         handleCommitInternally(commit);
                         return commit;
                     }
@@ -238,8 +229,6 @@ public class CoreBranchImpl implements CoreBranch {
     protected void handleCommitInternally(Commit commit) throws PersistenceException {
         log.debug("Handling commit {} in branch {}", commit.getCommitId(), branchResourceURI);
         // clear the changes
-
-        try {
             if (!services.isEmpty() && !commit.isEmpty()) {
                 executeServiceLoop(commit);
             }
@@ -247,18 +236,12 @@ public class CoreBranchImpl implements CoreBranch {
             Observation.createNotStarted("rdfbackend.transaction.postservicecommit", observationRegistry)
                     .highCardinalityKeyValue("branch.id", getBranchId())
                     .observeChecked(() -> {
-                        stateKeeper.afterServices(commit);
                         log.debug("Branch {} contains now {} statements", branchResourceLabel, model.size());
                         dataset.commit(); // together with commit persistence
+                        dataset.end();
+                        lastCommitId = commit.getCommitId();
                     });
-        } catch (PersistenceException e) {
-            log.warn("Failed to persist post-service commit {} {} with exception {}", commit.getCommitMessage(), commit.getCommitId(), e.getMessage(), e);
-            //SHOULD WE: rethrow e to signal that we cannot continue here as we would lose persisted commit history.
-            undoNoncommitedChanges();
-            throw e; // if so, then we need to abort transaction before rethrowing
-        } finally {
-            dataset.end();
-        }
+
     }
 
     private void executeServiceLoop(Commit commit) {
@@ -356,10 +339,10 @@ public class CoreBranchImpl implements CoreBranch {
         Resource listResource = branchResource.getPropertyResourceValue(refToList);
         Seq list;
         if (listResource == null) {
-            list = branchResource.getModel().createSeq(branchResource.getURI()+"#"+refToList.getLocalName());
+            list = branchMetadataModel.createSeq(branchResource.getURI()+"#"+refToList.getLocalName());
             branchResource.addProperty(refToList, list);
         } else {
-            list = branchResource.getModel().getSeq(listResource);
+            list = branchMetadataModel.getSeq(listResource);
         }
         return list;
     }
@@ -368,7 +351,9 @@ public class CoreBranchImpl implements CoreBranch {
         NodeIterator iter = list.iterator();
         List<OntIndividual> elements = new ArrayList<>();
         while(iter.hasNext()) {
-            elements.add(branchResource.getModel().getIndividual(iter.next().asResource().getURI()));
+            var uri = iter.next().asResource().getURI();
+            var el = branchMetadataModel.getIndividual(uri);
+            elements.add(el);
         }
         return elements;
     }

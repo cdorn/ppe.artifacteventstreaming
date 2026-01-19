@@ -1,9 +1,6 @@
 package at.jku.isse.passiveprocessengine.rdf.trialcode;
 
-import at.jku.isse.artifacteventstreaming.api.Branch;
-import at.jku.isse.artifacteventstreaming.api.Commit;
-import at.jku.isse.artifacteventstreaming.api.CommitHandler;
-import at.jku.isse.artifacteventstreaming.api.ServiceFactory;
+import at.jku.isse.artifacteventstreaming.api.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.ontapi.model.OntIndividual;
@@ -57,9 +54,9 @@ public class SyncForTestingService extends CommitLoggingService {
 //		return config;
 //	}
 	
-	public static ServiceFactory getServiceFactory(String serviceName, CountDownLatch latch, OntModel model) {
+	public static ServiceFactory getServiceFactory(String serviceName, CountDownLatch latch) {
 		if (factory == null) {
-			factory = new DefaultServiceFactory(serviceName, latch, model);
+			factory = new DefaultServiceFactory(serviceName, latch);
 		}
 		return factory;
 	}
@@ -71,12 +68,11 @@ public class SyncForTestingService extends CommitLoggingService {
 		
 		final String serviceName;
 		final CountDownLatch latch;
-		final OntModel model;
 		
 		@Override
-		public CommitHandler getCommitHandlerInstanceFor(Branch sourceBranch, OntIndividual serviceConfigEntryPoint)  {
+		public CommitHandler getCommitHandlerInstanceFor(CoreBranch sourceBranch, OntIndividual serviceConfigEntryPoint)  {
 			// simple, as we dont have any config to do
-			return new SyncForTestingService(serviceName, latch, model);
+			return new SyncForTestingService(serviceName, latch, sourceBranch.getBranchMetadataModel());
 		}
 	}
 

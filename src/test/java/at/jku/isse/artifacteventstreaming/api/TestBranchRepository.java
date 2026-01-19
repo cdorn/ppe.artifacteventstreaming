@@ -39,24 +39,22 @@ class TestBranchRepository {
 	void testCreateRepo() throws Exception {
 		CountDownLatch latch = new CountDownLatch(1);
 		DatasetRepository dataLoader = new InMemoryAutoTxDatasetLoader();
+		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
 		ServiceFactoryRegistry factoryRegistry = new ServiceFactoryRegistry(); // not used for the first repo
-		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory(); 
-		
 		BranchRepository repo = new BranchRepository(repoURI, dataLoader, stateFactory , factoryRegistry, new DefaultInMemoryMetaModelOntologyProvider(), ObservationRegistry.NOOP);
-		OntModel repoModel = repo.getRepositoryModel();
-		factoryRegistry.register(DefaultDirectBranchCommitStreamer.SERVICE_TYPE_URI, new DefaultDirectBranchCommitStreamer.DefaultServiceFactory(repo, new InMemoryBranchStateCache()));
-		BranchImpl branchSource = (BranchImpl) new BranchBuilder(repoURI, repo.getRepositoryDataset(), ObservationRegistry.NOOP)
-				.setBranchLocalName("source")
+		// inmemory datasets, not reused across repo instances, but config needs to be persisted
+		var branchSource =  repo.getInitializedBranchBuilder("source")
 				.build();
-		repo.registerBranch(branchSource); // not really necessary here
-		branchSource.startCommitHandlers();
-		BranchImpl branchDestination = (BranchImpl) new BranchBuilder(repoURI, repo.getRepositoryDataset(), ObservationRegistry.NOOP)
-				.setBranchLocalName("destination")
-				.addBranchInternalCommitService(new SyncForTestingService("BranchDestinationSignaller", latch, repoModel))
+
+		var branchDestination =  repo.getInitializedBranchBuilder("destination")
 				.build();
+
 		branchSource.appendOutgoingCommitDistributer(new DefaultDirectBranchCommitStreamer(branchSource, branchDestination, new InMemoryBranchStateCache()));
+		branchDestination.appendBranchInternalCommitService(new SyncForTestingService("BranchDestinationSignaller", latch, branchDestination.getBranchMetadataModel()));
 		branchDestination.appendIncomingCommitMerger(new CompleteCommitMerger(branchDestination));
-		repo.registerBranch(branchDestination);
+
+
+		branchSource.startCommitHandlers();
 		branchDestination.startCommitHandlers();
 		
 		
@@ -69,17 +67,20 @@ class TestBranchRepository {
 		boolean success = latch.await(2, TimeUnit.SECONDS);
 		assert(success);
 		//RDFDataMgr.write(System.out, repoModel, Lang.TURTLE) ;
-			
+
+		System.out.println("Initial source to branch completed.");
 //		////// ---- now we check if we can replicate that branch structure and print the destination 2 model content
-//		
+//
+		factoryRegistry.register(DefaultDirectBranchCommitStreamer.SERVICE_TYPE_URI, new DefaultDirectBranchCommitStreamer.DefaultServiceFactory(repo, new InMemoryBranchStateCache()));
+
 		// typically this is only done once per JVM, but here duplicated to simulate persistence at the level of datasets.
 		CountDownLatch latch2 = new CountDownLatch(1);
 		ServiceFactoryRegistry factoryRegistry2 = new ServiceFactoryRegistry();
 		BranchRepository repo2 = new BranchRepository(repoURI, dataLoader, stateFactory, factoryRegistry2, new DefaultInMemoryMetaModelOntologyProvider(), ObservationRegistry.NOOP);
-		OntModel repoModel2 = repo2.getRepositoryModel();
+
 		factoryRegistry2.register(DefaultDirectBranchCommitStreamer.SERVICE_TYPE_URI, new DefaultDirectBranchCommitStreamer.DefaultServiceFactory(repo2, new InMemoryBranchStateCache()));
 		factoryRegistry2.register(CompleteCommitMerger.getWellknownServiceTypeURI(), CompleteCommitMerger.getServiceFactory());
-		factoryRegistry2.register(SyncForTestingService.getWellknownServiceTypeURI(), SyncForTestingService.getServiceFactory("BranchCopySignaller", latch2, repoModel2));
+		factoryRegistry2.register(SyncForTestingService.getWellknownServiceTypeURI(), SyncForTestingService.getServiceFactory("BranchCopySignaller", latch2));
 		
 		Branch sourceBranch2 = repo2.getOrLoadBranch(URI.create(repoURI+"/source#source"));
 		Branch destinationBranch2 = repo2.getOrLoadBranch(URI.create(repoURI+"/destination#destination"));
@@ -101,7 +102,7 @@ class TestBranchRepository {
 //		System.out.println("New Destination");
 		//RDFDataMgr.write(System.out, destinationBranch2.getModel(), Lang.TURTLE) ;
 		
-		assert(destinationBranch2.getModel().containsAll(model)); // if we do the same commit, then there should the the same setup, and hence, the destination2 branch having the same content as the original sourceModel
+		assert(destinationBranch2.getModel().isIsomorphicWith(model)); // if we do the same commit, then there should be the same setup, and hence, the destination2 branch having the same content as the original sourceModel
 	}
 	
 	@Mock DatasetRepository nullRepo;
@@ -139,18 +140,18 @@ class TestBranchRepository {
 		
 		CountDownLatch latch = new CountDownLatch(1);
 		BranchRepository repo = new BranchRepository(repoURI, dataLoader, stateFactory , factoryRegistry, new DefaultInMemoryMetaModelOntologyProvider(), ObservationRegistry.NOOP);
-		OntModel repoModel = repo.getRepositoryModel();
+
 		factoryRegistry.register(DefaultDirectBranchCommitStreamer.SERVICE_TYPE_URI, new DefaultDirectBranchCommitStreamer.DefaultServiceFactory(repo, new InMemoryBranchStateCache()));
-		BranchImpl branchSource = (BranchImpl) new BranchBuilder(repoURI, repo.getRepositoryDataset(), ObservationRegistry.NOOP)
+		BranchImpl branchSource = (BranchImpl) new BranchBuilder(repoURI, null, ObservationRegistry.NOOP)
 				.setBranchLocalName("source")
-				.addBranchInternalCommitService(new SyncForTestingService("BranchDestinationSignaller", latch, repoModel))
 				.build();
-		
+		OntModel repoModel = branchSource.getBranchMetadataModel();
+		branchSource.appendBranchInternalCommitService(new SyncForTestingService("BranchDestinationSignaller", latch, repoModel));
+
 		// now lets recreate config:
 		ServiceFactoryRegistry factoryRegistry2 = new ServiceFactoryRegistry();
 		BranchRepository repo2 = new BranchRepository(repoURI, dataLoader, stateFactory, factoryRegistry2, new DefaultInMemoryMetaModelOntologyProvider(), ObservationRegistry.NOOP);
-		OntModel repoModel2 = repo2.getRepositoryModel();
-		var factory = SyncForTestingService.getServiceFactory("BranchCopySignaller", latch, repoModel2);
+		var factory = SyncForTestingService.getServiceFactory("BranchCopySignaller", latch);
 		factoryRegistry2.register(SyncForTestingService.getWellknownServiceTypeURI(), factory);
 		factoryRegistry2.unregister(SyncForTestingService.getWellknownServiceTypeURI());
 		//testing unregistering

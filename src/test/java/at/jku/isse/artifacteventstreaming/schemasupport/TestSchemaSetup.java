@@ -42,8 +42,8 @@ public class TestSchemaSetup {
 	@BeforeEach
 	void setup() throws Exception {		
 		Dataset repoDataset = DatasetFactory.createTxnMem();
-		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);			
-		BranchImpl branch = (BranchImpl) new BranchBuilder(new URI(NS+"repo"), repoDataset, repoModel, ObservationRegistry.NOOP)
+		//OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		BranchImpl branch = (BranchImpl) new BranchBuilder(new URI(NS+"repo"), repoDataset, ObservationRegistry.NOOP)
 				.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF)
 				.setBranchLocalName("branch1")
 				.build();		

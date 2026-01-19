@@ -39,13 +39,13 @@ class TestNonPersistedCrossBranchStreaming {
 		CountDownLatch latch = new CountDownLatch(commitRounds*2);
 		
 		Dataset repoDataset = DatasetFactory.createTxnMem();
-		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
-				
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI1, repoDataset, repoModel, ObservationRegistry.NOOP)
+
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI1, repoDataset, ObservationRegistry.NOOP)
 				.setBranchLocalName("branch1")
 				.build();		
 		OntModel model = branch.getModel();
-		
+		var repoModel = branch.getBranchMetadataModel();
+
 		var branch2signaller = new SyncForTestingService("Branch2Signaller", latch, repoModel);
 		BranchImpl branch2 = (BranchImpl) new BranchBuilder(repoURI2, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.setBranchLocalName("branch2")

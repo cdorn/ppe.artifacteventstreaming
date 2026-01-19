@@ -13,6 +13,8 @@ import java.util.List;
 
 public interface CoreBranch {
 
+    Dataset getBranchMetadataDataset();
+    OntModel getBranchMetadataModel();
 
     OntModel getModel();
     Dataset getDataset();
@@ -20,8 +22,8 @@ public interface CoreBranch {
     String getBranchId();
     String getBranchName();
     String getRepositoryURI();
-    Commit getLastCommit();
-    BranchStateKeeper getStateKeeper();
+
+
     MetaModelSchemaTypes getSchemaUtils();
     void setSchemaUtils(MetaModelSchemaTypes utils);
 
