@@ -105,7 +105,7 @@ public class CoreBranchRepository {
                         .setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF) // DEFER: technical debt - we set the inference model here statically, not as part of the configuration. For now we assume all use cases will require this anyway.
                         .setMetaModelOntologyProvider(metaOntologyProvider)
                         .build();
-                registerBranch(branch); // now branch can be found and referenced by other branches
+                registerBranch(branch, null); // now branch can be found and referenced by other branches
 
                 metadata.begin(ReadWrite.WRITE);
                 initializeBranchHandlers(branch); // reload local commit handlers
@@ -167,16 +167,26 @@ public class CoreBranchRepository {
         return null;
     }
 
-    public void registerBranch(CoreBranch branch) {
+    protected void registerBranch(@NonNull CoreBranch branch, @Nullable String owner) {
+        repoDataset.begin(ReadWrite.WRITE);
+        var branchResource = repoDataset.getDefaultModel().createResource(branch.getBranchName());
+        repoModel.add(branchResource, AES.partOfRepository, repoRes);
+        if (owner != null && !owner.isEmpty()) {
+            branchResource.addLiteral(AES.ownedBy, owner);
+        }
+        repoDataset.commit();
+        repoDataset.end();
+
         branches.put(branch.getBranchResource().getURI(), branch);
     }
 
     public void remove(Branch branch) {
         branch.deactivate();
 
-        // repo overview
+        // repo overview, remove branch resource and owner
         repoDataset.begin(ReadWrite.WRITE);
-        repoModel.remove(branch.getBranchResource(), AES.partOfRepository, repoRes);
+        var branchRes = repoDataset.getDefaultModel().getResource(branch.getBranchId());
+        branchRes.removeProperties();
         repoDataset.commit();
         repoDataset.end();
         // local cache
@@ -199,6 +209,7 @@ public class CoreBranchRepository {
 
     public class RegisteringBranchBuilder extends CoreBranchBuilder{
 
+
         public RegisteringBranchBuilder(@NonNull URI repositoryURI, @Nullable Dataset metadataDataset, @NonNull ObservationRegistry observationRegistry) {
             super(repositoryURI, metadataDataset, observationRegistry);
         }
@@ -206,7 +217,8 @@ public class CoreBranchRepository {
         @Override
         public CoreBranch build() {
             var branch = super.build();
-            registerBranch(branch);
+            registerBranch(branch, owner);
+
             return branch;
         }
     }

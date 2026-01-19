@@ -42,7 +42,7 @@ public class BranchRepository extends CoreBranchRepository {
 		@Override
 		public Branch build() {
 			var branch = super.build();
-			registerBranch(branch);
+			registerBranch(branch, owner);
 			return branch;
 		}
 	}
@@ -61,10 +61,6 @@ public class BranchRepository extends CoreBranchRepository {
 //		var optDataset = datasetLoader.loadDataset(uri);
 //		optDataset.ifPresent(builder::setDataset);
 		return builder;
-	}
-
-	public void registerBranch(Branch branch) {
-		branches.put(branch.getBranchResource().getURI(), branch);
 	}
 
 	@Override
@@ -89,7 +85,7 @@ public class BranchRepository extends CoreBranchRepository {
 						.setMetaModelOntologyProvider(metaOntologyProvider)
 						.setStateKeeper(stateKeeper)
 						.build();
-				registerBranch(branch); // now branch can be found and referenced by other branches
+				registerBranch(branch, null); // now branch can be found and referenced by other branches
 
 				metadata.begin(ReadWrite.WRITE);
 				initializeBranchHandlers(branch); // reload local, in and out commit handlers
