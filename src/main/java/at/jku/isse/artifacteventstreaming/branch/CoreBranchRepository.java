@@ -33,13 +33,9 @@ public class CoreBranchRepository {
     protected final ObservationRegistry observationRegistry;
     private final Map<String, CoreBranch> branches = new HashMap<>();
 
-//    public Dataset getRepositoryDataset() {
-//        return repoDataset;
-//    }
-//
-//    public OntModel getRepositoryModel() {
-//        return repoModel;
-//    }
+    public Dataset getRepositoryDataset() {
+        return repoDataset;
+    }
 
     public CoreBranchRepository(@NonNull URI repositoryURI
             , @NonNull DatasetRepository datasetLoader
@@ -180,7 +176,7 @@ public class CoreBranchRepository {
         branches.put(branch.getBranchResource().getURI(), branch);
     }
 
-    public void remove(Branch branch) {
+    public void remove(CoreBranch branch) {
         branch.deactivate();
 
         // repo overview, remove branch resource and owner
