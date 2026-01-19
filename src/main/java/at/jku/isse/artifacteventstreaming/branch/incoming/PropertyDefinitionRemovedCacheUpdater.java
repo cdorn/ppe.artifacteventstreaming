@@ -24,16 +24,16 @@ import org.apache.jena.vocabulary.RDFS;
 
 public class PropertyDefinitionRemovedCacheUpdater extends AbstractHandlerBase {
 
-	private final Branch branch;
+	private final CoreBranch branch;
 	private final MetaModelSchemaTypes metaschema;
 	
-	public PropertyDefinitionRemovedCacheUpdater(Branch branch, MetaModelSchemaTypes metaschema) {
+	public PropertyDefinitionRemovedCacheUpdater(CoreBranch branch, MetaModelSchemaTypes metaschema) {
 		super("PropertyDefinitionRemovedCacheUpdatedFor"+branch.getBranchName(), branch.getBranchResource().getModel());
 		this.branch = branch;
 		this.metaschema = metaschema;
 	}
 	
-	public PropertyDefinitionRemovedCacheUpdater(String name, Branch branch, MetaModelSchemaTypes metaschema) {
+	public PropertyDefinitionRemovedCacheUpdater(String name, CoreBranch branch, MetaModelSchemaTypes metaschema) {
 		super(name, branch.getBranchResource().getModel());
 		this.branch = branch;
 		this.metaschema = metaschema;

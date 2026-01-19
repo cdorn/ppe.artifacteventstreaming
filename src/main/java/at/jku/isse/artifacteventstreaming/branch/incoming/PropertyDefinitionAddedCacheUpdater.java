@@ -23,16 +23,16 @@ import org.apache.jena.vocabulary.RDFS;
 @Slf4j
 public class PropertyDefinitionAddedCacheUpdater extends AbstractHandlerBase {
 
-	private final Branch branch;
+	private final CoreBranch branch;
 	private final MetaModelSchemaTypes metaschema;
 	
-	public PropertyDefinitionAddedCacheUpdater(Branch branch, MetaModelSchemaTypes metaschema) {
+	public PropertyDefinitionAddedCacheUpdater(CoreBranch branch, MetaModelSchemaTypes metaschema) {
 		super("PropertyDefinitionAddedCacheUpdatedFor"+branch.getBranchName(), branch.getBranchResource().getModel());
 		this.branch = branch;
 		this.metaschema = metaschema;
 	}
 	
-	public PropertyDefinitionAddedCacheUpdater(String name, Branch branch, MetaModelSchemaTypes metaschema) {
+	public PropertyDefinitionAddedCacheUpdater(String name, CoreBranch branch, MetaModelSchemaTypes metaschema) {
 		super(name, branch.getBranchResource().getModel());
 		this.branch = branch;
 		this.metaschema = metaschema;

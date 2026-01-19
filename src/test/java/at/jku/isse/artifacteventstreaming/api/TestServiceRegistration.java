@@ -30,22 +30,30 @@ class TestServiceRegistration {
 	void testUnregisterInternalService() throws Exception {						
 		BranchRepository repo = new BranchRepository(repoURI, new InMemoryDatasetLoader(), new InMemoryStateKeeperFactory(), new ServiceFactoryRegistry(), new DefaultInMemoryMetaModelOntologyProvider(), ObservationRegistry.NOOP);
 		
-		OntModel repoModel = repo.getRepositoryModel(); //OntModelFactory.createModel();
+		//OntModel repoModel = repo.getRepositoryModel(); //OntModelFactory.createModel();
 		// add two services, ensure both get a commit
 		// remove first service, ensure only later one gets commit
-        var repoDataset = repo.getRepositoryDataset();
-        repoDataset.begin(ReadWrite.WRITE);
+        //var repoDataset = repo.getRepositoryDataset();
+        //repoDataset
         CountDownLatch latch = new CountDownLatch(1);
+
+		BranchImpl branch = (BranchImpl) repo.getInitializedBranchBuilder("main")
+//				.addBranchInternalCommitService(localService1)
+//				.addBranchInternalCommitService(localService2)
+//				.addOutgoingCommitDistributer(outService)
+				.build();
+		var repoModel = branch.getBranchMetadataModel();
+		var repoDataset = branch.getBranchMetadataDataset();
+		repoDataset.begin(ReadWrite.WRITE);
 		var outService = new SyncForTestingService("Out1", latch, repoModel);
 		var localService1 = new LongRunningNoOpLocalService("Local1", repoModel, 500);
 		var localService2 = new LongRunningNoOpLocalService("Local2", repoModel, 500);
-		BranchImpl branch = (BranchImpl) repo.getInitializedBranchBuilder("main")
-				.addBranchInternalCommitService(localService1)
-				.addBranchInternalCommitService(localService2)
-				.addOutgoingCommitDistributer(outService)
-				.build();
-        repoDataset.commit();
+		branch.appendBranchInternalCommitService(localService1);
+		branch.appendBranchInternalCommitService(localService2);
+		branch.appendOutgoingCommitDistributer(outService);
+		repoDataset.commit();
         repoDataset.end();
+
 		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
@@ -62,7 +70,8 @@ class TestServiceRegistration {
 		
 		latch = new CountDownLatch(1);
 		var outService2 = new SyncForTestingService("Out2", latch, repoModel);
-        repoDataset.begin(ReadWrite.WRITE);
+
+		repoDataset.begin(ReadWrite.WRITE);
         branch.removeBranchInternalCommitService(localService1);
 		branch.removeOutgoingCommitDistributer(outService);
 		branch.appendOutgoingCommitDistributer(outService2);

@@ -53,17 +53,21 @@ class TestRecoverBranchState {
 	@Test
 	void testNonDeliveredCommitToMerge() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
-		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		//OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
 		URI branchURI = BranchBuilder.generateBranchURI(repoRes, "main");
 		BranchStateUpdater stateKeeper = stateFactory.createStateKeeperFor(branchURI);
 		CountDownLatch latch = new CountDownLatch(1);
-		SyncForTestingService service1 = new SyncForTestingService("Out1", latch, repoModel);
-		Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
+
+		Branch branch = new BranchBuilder(repoURI, repoDataset, ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper)				
-				.addIncomingCommitMerger(new LongRunningNoOpLocalService(repoModel, 2000))
-				.addOutgoingCommitDistributer(service1)
-				.build();		
+				//.addIncomingCommitMerger(new LongRunningNoOpLocalService(repoModel, 2000))
+				//.addOutgoingCommitDistributer(service1)
+				.build();
+		OntModel repoModel = branch.getBranchMetadataModel();
+		SyncForTestingService service1 = new SyncForTestingService("Out1", latch, repoModel);
+		branch.appendOutgoingCommitDistributer(service1);
+		branch.appendIncomingCommitMerger(new LongRunningNoOpLocalService(repoModel, 2000));
 		OntModel model = branch.getModel();
 		stateKeeper.loadState();
 		branch.startCommitHandlers();
@@ -89,14 +93,18 @@ class TestRecoverBranchState {
 		// now 'restart' branch and check if commit is there
 		CountDownLatch latch2 = new CountDownLatch(1);
 		Dataset repoDataset2 = DatasetFactory.createTxnMem();
-		OntModel repoModel2 =  OntModelFactory.createModel(repoDataset2.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
-		SyncForTestingService service2 = new SyncForTestingService("Out2", latch2, repoModel2);
+		//OntModel repoModel2 =  OntModelFactory.createModel(repoDataset2.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+
 		BranchStateUpdater stateKeeper2 = stateFactory.createStateKeeperFor(branchURI);
-		Branch branch2 = new BranchBuilder(repoURI, repoDataset2, repoModel2, ObservationRegistry.NOOP)
+		Branch branch2 = new BranchBuilder(repoURI, repoDataset2, ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper2)		
-				.addIncomingCommitMerger(new LongRunningNoOpLocalService(repoModel2, 500))		
-				.addOutgoingCommitDistributer(service2)
-				.build();		
+				//.addIncomingCommitMerger(new LongRunningNoOpLocalService(repoModel2, 500))
+				//.addOutgoingCommitDistributer(service2)
+				.build();
+		var repoModel2 = branch2.getBranchMetadataModel();
+		SyncForTestingService service2 = new SyncForTestingService("Out2", latch2, repoModel2);
+		branch2.appendOutgoingCommitDistributer(service2);
+		branch2.appendIncomingCommitMerger(new LongRunningNoOpLocalService(repoModel2, 500));
 		OntModel model2 = branch2.getModel();
 		stateKeeper2.loadState();
 		branch2.startCommitHandlers();
@@ -110,18 +118,18 @@ class TestRecoverBranchState {
 	void testNonForwardedCommit() throws Exception {
 		// setup two branches, interrupt forwarding
 		Dataset repoDataset = DatasetFactory.createTxnMem();
-		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		//OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
 		
 		BranchStateUpdater stateKeeper = stateFactory.createStateKeeperFor(branchURI);
-		Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
+		Branch branch = new BranchBuilder(repoURI, repoDataset, ObservationRegistry.NOOP)
 				.setBranchLocalName(SOURCE)
 				.setStateKeeper(stateKeeper)				
 				.build();		
 		stateKeeper.loadState();
 		
 		BranchStateUpdater stateKeeper2 = stateFactory.createStateKeeperFor(branchURI2);
-		Branch branch2 = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
+		Branch branch2 = new BranchBuilder(repoURI, repoDataset, ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper2)	
 				.setBranchLocalName(DEST)
 				.build();		
@@ -146,25 +154,25 @@ class TestRecoverBranchState {
 		assert(branch2.getLastCommit() == null); 
 		assert(branch.getLastCommit() != null); 
 		
-		ensureForwarded(stateFactory, repoDataset, repoModel, cache, 1);							
+		ensureForwarded(stateFactory, cache, 1);
 	}
 	
 	@Test
 	void testForwardedCommitToCatchUp() throws Exception {
 		// we want to init the DefaultDirectBranchCommitStreamer with at least one previously forwarded commit.
 		// setup two branches, interrupt forwarding after the second commit
-		Dataset repoDataset = DatasetFactory.createTxnMem();
-		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		//Dataset repoDataset = DatasetFactory.createTxnMem();
+		//OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
 		BranchStateUpdater stateKeeper = stateFactory.createStateKeeperFor(branchURI);
-		Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
+		Branch branch = new BranchBuilder(repoURI, null, ObservationRegistry.NOOP)
 				.setBranchLocalName(SOURCE)
 				.setStateKeeper(stateKeeper)				
 				.build();		
 		stateKeeper.loadState();
 		
 		BranchStateUpdater stateKeeper2 = stateFactory.createStateKeeperFor(branchURI2);		
-		Branch branch2 = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
+		Branch branch2 = new BranchBuilder(repoURI, null, ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeper2)				
 				.setBranchLocalName(DEST)
 				.build();		
@@ -194,27 +202,30 @@ class TestRecoverBranchState {
 		streamer.interrupt();		
 
 		Thread.sleep(2000);
-		assertEquals(commit.getCommitId(), branch2.getLastCommit().getCommitId()); 
-		assertEquals(commit2.getCommitId(), branch.getLastCommit().getCommitId()); 
+		// source branch last commit is ours second commit
+		assertEquals(commit2.getCommitId(), branch.getLastCommit().getCommitId());
+		// destination branch last commit is only the first forwarded commit as we interrupted before the second
+		assertEquals(commit.getCommitId(), branch2.getLastCommit().getCommitId());
 
-		ensureForwarded(stateFactory, repoDataset, repoModel, cache, 1);	
+
+		ensureForwarded(stateFactory, cache, 1);
 	}
 	
 	@Test
 	void testForwardedCommitOnTrack() throws Exception{
 		// setup two branches, dont interrupt after forwarding
 				Dataset repoDataset = DatasetFactory.createTxnMem();
-				OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+				//OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 				StateKeeperFactory stateFactory = new InMemoryStateKeeperFactory();
 				BranchStateUpdater stateKeeper = stateFactory.createStateKeeperFor(branchURI);
-				Branch branch = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
+				Branch branch = new BranchBuilder(repoURI, repoDataset, ObservationRegistry.NOOP)
 						.setBranchLocalName(SOURCE)
 						.setStateKeeper(stateKeeper)				
 						.build();		
 				stateKeeper.loadState();
 				
 				BranchStateUpdater stateKeeper2 = stateFactory.createStateKeeperFor(branchURI2);		
-				Branch branch2 = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
+				Branch branch2 = new BranchBuilder(repoURI, repoDataset, ObservationRegistry.NOOP)
 						.setStateKeeper(stateKeeper2)				
 						.setBranchLocalName(DEST)
 						.build();		
@@ -226,6 +237,7 @@ class TestRecoverBranchState {
 				DefaultDirectBranchCommitStreamer streamer = new DefaultDirectBranchCommitStreamer(branch, branch2, cache);
 				streamer.init();
 				branch.appendOutgoingCommitDistributer(streamer);
+
 				branch.startCommitHandlers();
 				branch2.startCommitHandlers();
 
@@ -245,24 +257,25 @@ class TestRecoverBranchState {
 				assertEquals(commit2.getCommitId(), branch2.getLastCommit().getCommitId()); 
 				assertEquals(commit2.getCommitId(), branch.getLastCommit().getCommitId()); 
 
-				ensureForwarded(stateFactory, repoDataset, repoModel, cache, 0);	
+				ensureForwarded(stateFactory, cache, 0);
 	}
 	
 	
-	private void ensureForwarded(StateKeeperFactory stateFactory, Dataset repoDataset, OntModel repoModel, BranchStateCache cache, int expCountReceived) throws Exception {
-		// now we recreate branches		
+	private void ensureForwarded(StateKeeperFactory stateFactory, BranchStateCache cache, int expCountReceived) throws Exception {
+		// now we recreate branches
 		BranchStateUpdater stateKeeperNew = stateFactory.createStateKeeperFor(branchURI);
-		Branch branchNew = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
+		Branch branchNew = new BranchBuilder(repoURI, null, ObservationRegistry.NOOP)
 				.setBranchLocalName(SOURCE)
 				.setStateKeeper(stateKeeperNew)				
 				.build();		
 		stateKeeperNew.loadState();
 		
-		CountDownLatch latch = new CountDownLatch(2);		
+		var repoModel = branchNew.getBranchMetadataModel();
+		CountDownLatch latch = new CountDownLatch(2);
 		SyncForTestingService service1 = new SyncForTestingService("InNew", latch, repoModel);
 		SyncForTestingService service2 = new SyncForTestingService("Out2New", latch, repoModel);
 		BranchStateUpdater stateKeeperNew2 = stateFactory.createStateKeeperFor(branchURI2);
-		Branch branchNew2 = new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
+		Branch branchNew2 = new BranchBuilder(repoURI, null, ObservationRegistry.NOOP)
 				.setStateKeeper(stateKeeperNew2)	
 				.setBranchLocalName(DEST)
 				.addIncomingCommitMerger(service1)

@@ -24,7 +24,7 @@ public class DefaultDirectBranchCommitStreamer extends AbstractHandlerBase {
 	
 	public DefaultDirectBranchCommitStreamer(Branch sourceBranch,
 			Branch destinationBranch, BranchStateCache cache) {
-		super(DefaultDirectBranchCommitStreamer.class.getSimpleName()+sourceBranch.getBranchName()+destinationBranch.getBranchName(), sourceBranch.getBranchResource().getModel());
+		super(DefaultDirectBranchCommitStreamer.class.getSimpleName()+sourceBranch.getBranchName()+destinationBranch.getBranchName(), sourceBranch.getBranchMetadataModel());
 		this.sourceBranch = sourceBranch;
 		this.destinationBranch = destinationBranch;
 		this.cache = cache;
@@ -110,18 +110,23 @@ public class DefaultDirectBranchCommitStreamer extends AbstractHandlerBase {
 		private final BranchStateCache cache;
 		
 		@Override
-		public CommitHandler getCommitHandlerInstanceFor(Branch sourceBranch, OntIndividual serviceConfigEntryPoint) throws BranchConfigurationException {
-			// simple, as we dont have any config to do
-			Resource destBranchRes = serviceConfigEntryPoint.getPropertyResourceValue(AES.destinationBranch);
-			Branch destBranch;
-			try {
-				destBranch = branchRepo.getOrLoadBranch(URI.create(destBranchRes.getURI()));
-				DefaultDirectBranchCommitStreamer streamer = new DefaultDirectBranchCommitStreamer(sourceBranch, destBranch, cache);
-				 streamer.init();
-				 return streamer;
-			} catch (PersistenceException | BranchConfigurationException e) {
-				log.error("Error instantiating DefaultDirectBranchCommitStreamer" , e);
-				throw new BranchConfigurationException("Error instantiating DefaultDirectBranchCommitStreamer due to "+e.getMessage());
+		public CommitHandler getCommitHandlerInstanceFor(CoreBranch sourceBranch, OntIndividual serviceConfigEntryPoint) throws BranchConfigurationException {
+			if (sourceBranch instanceof Branch srcBranch) {
+
+				// simple, as we dont have any config to do
+				Resource destBranchRes = serviceConfigEntryPoint.getPropertyResourceValue(AES.destinationBranch);
+				Branch destBranch;
+				try {
+					destBranch = branchRepo.getOrLoadBranch(URI.create(destBranchRes.getURI()));
+					DefaultDirectBranchCommitStreamer streamer = new DefaultDirectBranchCommitStreamer(srcBranch, destBranch, cache);
+					streamer.init();
+					return streamer;
+				} catch (PersistenceException | BranchConfigurationException e) {
+					log.error("Error instantiating DefaultDirectBranchCommitStreamer", e);
+					throw new BranchConfigurationException("Error instantiating DefaultDirectBranchCommitStreamer due to " + e.getMessage());
+				}
+			} else {
+				throw new BranchConfigurationException("Source branch is not of type Branch");
 			}
 			 
 			 

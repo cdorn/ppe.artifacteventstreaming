@@ -33,6 +33,8 @@ public class CoreBranchImpl implements CoreBranch {
     @Getter protected final OntIndividual branchResource;
     protected final String branchResourceURI;
     protected final String branchResourceLabel;
+    @Getter protected final Dataset branchMetadataDataset;
+    @Getter protected final OntModel branchMetadataModel;
 
     protected final TimeStampProvider timeStampProvider;
     protected final ObservationRegistry observationRegistry;
@@ -50,6 +52,8 @@ public class CoreBranchImpl implements CoreBranch {
     public CoreBranchImpl(@NonNull Dataset dataset
             , @NonNull OntModel model
             , @NonNull OntIndividual branchResource
+            , @NonNull OntModel metadataModel
+            , @NonNull Dataset metadataBranchDataset
             , @NonNull TimeStampProvider timeStampProvider
             , @NonNull ObservationRegistry observationRegistry) {
         super();
@@ -59,10 +63,12 @@ public class CoreBranchImpl implements CoreBranch {
         this.branchResource = branchResource;
         this.branchResourceURI = branchResource.getURI(); // cached so we wont have to access different dataset
         this.branchResourceLabel = branchResource.getLocalName();
-
+        this.branchMetadataDataset = metadataBranchDataset;
+        this.branchMetadataModel = metadataModel;
         this.timeStampProvider = timeStampProvider;
         stmtAggregator.registerWithModel(model);
     }
+
     @Override
     public void startCommitHandlers() throws BranchConfigurationException, PersistenceException {
         // if we have collected any model changes until here, they would have come from setup logic that we do not persist in commits,
@@ -76,8 +82,6 @@ public class CoreBranchImpl implements CoreBranch {
     public void deactivate() {
         isReady.set(false);
     }
-
-
 
     @Override
     public String getBranchId() {
@@ -114,7 +118,7 @@ public class CoreBranchImpl implements CoreBranch {
             configs.remove(pos+1); // RDF are 1-indexed!
         }
         services.put(service.getURI(), service);
-        // ensure we only add if there is no such handler yet
+        // ensure we only add if there is no such handler yet (we might just add handler here from persisted config)
         var configNode = service.getConfigResource();
         if (configs.indexOf(configNode) <= 0) { // RDF lists are 1-indexed
             configs.add(configNode);
@@ -335,10 +339,10 @@ public class CoreBranchImpl implements CoreBranch {
         Resource listResource = branchResource.getPropertyResourceValue(refToList);
         Seq list;
         if (listResource == null) {
-            list = branchResource.getModel().createSeq(branchResource.getURI()+"#"+refToList.getLocalName());
+            list = branchMetadataModel.createSeq(branchResource.getURI()+"#"+refToList.getLocalName());
             branchResource.addProperty(refToList, list);
         } else {
-            list = branchResource.getModel().getSeq(listResource);
+            list = branchMetadataModel.getSeq(listResource);
         }
         return list;
     }
@@ -347,7 +351,9 @@ public class CoreBranchImpl implements CoreBranch {
         NodeIterator iter = list.iterator();
         List<OntIndividual> elements = new ArrayList<>();
         while(iter.hasNext()) {
-            elements.add(branchResource.getModel().getIndividual(iter.next().asResource().getURI()));
+            var uri = iter.next().asResource().getURI();
+            var el = branchMetadataModel.getIndividual(uri);
+            elements.add(el);
         }
         return elements;
     }

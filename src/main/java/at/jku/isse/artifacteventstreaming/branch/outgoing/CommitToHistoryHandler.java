@@ -12,11 +12,11 @@ public class CommitToHistoryHandler extends AbstractHandlerBase {
 	public static final String SERVICE_TYPE_URI = CommitHandler.serviceTypeBaseURI+CommitToHistoryHandler.class.getSimpleName();
 	public static final String CACHE_ENTRY_PREFIX = "LAST_COMMIT_TRANSFORMED_TO_HISTORY";
 	
-	private final Branch sourceBranch;
+	private final CoreBranch sourceBranch;
 	private final InMemoryHistoryRepository historyRepo;
 	private final BranchStateCache cache;	
 	
-	public CommitToHistoryHandler(Branch sourceBranch, InMemoryHistoryRepository historyRepo,
+	public CommitToHistoryHandler(CoreBranch sourceBranch, InMemoryHistoryRepository historyRepo,
 			 BranchStateCache cache) {
 		super(CommitToHistoryHandler.class.getSimpleName()+sourceBranch.getBranchName(), sourceBranch.getBranchResource().getModel());
 		this.sourceBranch = sourceBranch;
@@ -87,7 +87,7 @@ public class CommitToHistoryHandler extends AbstractHandlerBase {
 		private final InMemoryHistoryRepository historyRepo;
 		
 		@Override
-		public CommitHandler getCommitHandlerInstanceFor(Branch sourceBranch
+		public CommitHandler getCommitHandlerInstanceFor(CoreBranch sourceBranch
 				, OntIndividual serviceConfigEntryPoint
 				) {
 			// simple, as we dont have any config to do

@@ -13,6 +13,8 @@ import java.util.List;
 
 public interface CoreBranch {
 
+    Dataset getBranchMetadataDataset();
+    OntModel getBranchMetadataModel();
 
     OntModel getModel();
     Dataset getDataset();

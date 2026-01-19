@@ -32,12 +32,14 @@ public class BranchImpl extends CoreBranchImpl implements Branch, Runnable {
 	public BranchImpl(@NonNull Dataset dataset
 			, @NonNull OntModel model
 			, @NonNull OntIndividual branchResource
+			, @NonNull OntModel metadataModel
+			, @NonNull Dataset metadataBranchDataset
 			, @NonNull BranchStateUpdater stateKeeper
 			, @NonNull BlockingQueue<Commit> inQueue
 			, @NonNull BlockingQueue<Commit> outQueue
 			, @NonNull TimeStampProvider timeStampProvider
             , @NonNull ObservationRegistry observationRegistry) {
-		super(dataset, model, branchResource, timeStampProvider, observationRegistry);
+		super(dataset, model, branchResource, metadataModel, metadataBranchDataset, timeStampProvider, observationRegistry);
 		this.stateKeeper = stateKeeper;
 		this.inQueue = inQueue;
 		this.outQueue = outQueue;
@@ -200,7 +202,8 @@ public class BranchImpl extends CoreBranchImpl implements Branch, Runnable {
 			log.info("MergeCommit {} merged into branch {} has no changes after incoming processing", commit.getCommitId(), this.branchResource.getURI());
 		}
 		handleCommitInternally(commit);
-		outQueue.add(commit); 
+		outQueue.add(commit);
+		stateKeeper.afterServices(commit);
 		return commit;
 		
 	}
@@ -235,7 +238,6 @@ public class BranchImpl extends CoreBranchImpl implements Branch, Runnable {
 		var commit = super.commitChanges(commitMsg);
 		if (commit != null) {
 			stateKeeper.afterServices(commit);
-
 			outQueue.add(commit);
 		}
 		return commit;

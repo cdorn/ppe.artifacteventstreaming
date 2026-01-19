@@ -5,6 +5,6 @@ import org.apache.jena.ontapi.model.OntIndividual;
 
 public interface ServiceFactory {
 
-	CommitHandler getCommitHandlerInstanceFor(Branch branch, OntIndividual serviceConfigEntryPoint) throws BranchConfigurationException;
+	CommitHandler getCommitHandlerInstanceFor(CoreBranch branch, OntIndividual serviceConfigEntryPoint) throws BranchConfigurationException;
 	
 	}

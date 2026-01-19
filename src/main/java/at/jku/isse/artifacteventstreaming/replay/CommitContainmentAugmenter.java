@@ -44,7 +44,7 @@ public class CommitContainmentAugmenter extends AbstractHandlerBase implements I
 		}
 		
 		@Override
-		public CommitHandler getCommitHandlerInstanceFor(Branch sourceBranch
+		public CommitHandler getCommitHandlerInstanceFor(CoreBranch sourceBranch
 				, OntIndividual serviceConfigEntryPoint
 				) {
 			// obtain metamodel schema						

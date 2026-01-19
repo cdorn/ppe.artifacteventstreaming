@@ -49,11 +49,13 @@ class TestCommitHandling {
 	@Test
 	void testTwoServicesBranch() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
-		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
-				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
-				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
+		//OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, ObservationRegistry.NOOP)
 				.build();
+		var repoModel = branch.getBranchMetadataModel();
+		branch.appendBranchInternalCommitService(new SimpleService("Service1", false, repoModel));
+		branch.appendBranchInternalCommitService(new SimpleService("Service2", true, repoModel));
+
 		branch.startCommitHandlers();
 		branch.startWriteTransaction();
 		OntModel model = branch.getModel();
@@ -70,11 +72,14 @@ class TestCommitHandling {
 	@Test
 	void testAbortCommit() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
-		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
-				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
-				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
+		//OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, ObservationRegistry.NOOP)
+		//		.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
+		//		.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
 				.build();
+		var repoModel = branch.getBranchMetadataModel();
+		branch.appendBranchInternalCommitService(new SimpleService("Service1", false, repoModel));
+		branch.appendBranchInternalCommitService(new SimpleService("Service2", true, repoModel));
 		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
 		branch.getDataset().begin();
@@ -99,10 +104,11 @@ class TestCommitHandling {
 	@Test
 	void testLoopControl() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
-		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
+		//OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset,  ObservationRegistry.NOOP)
 				.build();
 		OntModel model = branch.getModel();
+		var repoModel = branch.getBranchMetadataModel();
 		branch.appendBranchInternalCommitService(new MockLazyLoadingService("Loader", true, repoModel, model, 3));
 		branch.appendBranchInternalCommitService(new MockLazyLoadingService("LoopController", false, repoModel, model, 4));
 		branch.startCommitHandlers();
@@ -123,8 +129,8 @@ class TestCommitHandling {
 	@Disabled
 	void testTrueChanges() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
-		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
+		//OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, ObservationRegistry.NOOP)
 				.build();
 		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
@@ -154,14 +160,20 @@ class TestCommitHandling {
 	@Test
 	void testLoopDetection() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
-		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		//OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		CountDownLatch latch = new CountDownLatch(1);
-		var service = new SyncForTestingService("Out1", latch, repoModel);
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
-				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
-				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
-				.addOutgoingCommitDistributer(service)
+
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, ObservationRegistry.NOOP)
+//				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
+//				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
+//				.addOutgoingCommitDistributer(service)
 				.build();
+		var repoModel = branch.getBranchMetadataModel();
+		var service = new SyncForTestingService("Out1", latch, repoModel);
+		branch.appendOutgoingCommitDistributer(service);
+		branch.appendBranchInternalCommitService(new SimpleService("Service1", false, repoModel));
+		branch.appendBranchInternalCommitService(new SimpleService("Service2", true, repoModel));
+
 		CommitHandler merger = new CompleteCommitMerger(branch);
 		branch.appendIncomingCommitMerger(merger);
 		branch.startCommitHandlers();
@@ -190,12 +202,19 @@ class TestCommitHandling {
 	void testSameCommitHandling() throws Exception {
 		CountDownLatch latch = new CountDownLatch(2);
 		Dataset repoDataset = DatasetFactory.createTxnMem();
-		OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, repoModel, ObservationRegistry.NOOP)
-				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
-				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
-				.addOutgoingCommitDistributer(new SyncForTestingService("Out1", latch, repoModel))
+		//OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, ObservationRegistry.NOOP)
+//				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
+//				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
+//				.addOutgoingCommitDistributer(new SyncForTestingService("Out1", latch, repoModel))
 				.build();
+
+		var repoModel = branch.getBranchMetadataModel();
+		var service = new SyncForTestingService("Out1", latch, repoModel);
+		branch.appendOutgoingCommitDistributer(service);
+		branch.appendBranchInternalCommitService(new SimpleService("Service1", false, repoModel));
+		branch.appendBranchInternalCommitService(new SimpleService("Service2", true, repoModel));
+
 		CommitHandler merger = new CompleteCommitMerger(branch);
 		branch.appendIncomingCommitMerger(merger);
 		branch.startCommitHandlers();
@@ -265,10 +284,12 @@ class TestCommitHandling {
 	
 	@Test
 	void testUndoServiceStatements() throws Exception {
-		OntModel repoModel = OntModelFactory.createModel();
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), repoModel, ObservationRegistry.NOOP)
-				.addBranchInternalCommitService(new AllUndoService("UndoService1", repoModel ))
+		//OntModel repoModel = OntModelFactory.createModel();
+		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
 				.build();
+		var repoModel = branch.getBranchMetadataModel();
+		branch.appendBranchInternalCommitService(new AllUndoService("UndoService1", repoModel ));
+
 		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
 		branch.getDataset().begin();
