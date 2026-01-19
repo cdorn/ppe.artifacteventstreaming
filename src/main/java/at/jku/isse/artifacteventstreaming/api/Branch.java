@@ -43,8 +43,7 @@ public interface Branch extends CoreBranch {
 	 */
     void removeIncomingCommitMerger(CommitHandler handler);
 	
-	Set<IncrementalCommitHandler> getRegisteredLocalCommitHandlers();
-	
+
 
 	
 	void appendOutgoingCommitDistributer(@NonNull CommitHandler crossBranchHandler);

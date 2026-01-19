@@ -10,6 +10,7 @@ import org.apache.jena.query.Dataset;
 import org.apache.jena.shared.Lock;
 
 import java.util.List;
+import java.util.Set;
 
 public interface CoreBranch {
 
@@ -103,5 +104,7 @@ public interface CoreBranch {
      * @throws Exception                    when handling of preliminary commit or any other replaying to get up to date fails
      */
     void startCommitHandlers() throws PersistenceException, BranchConfigurationException;
+
+    Set<IncrementalCommitHandler> getRegisteredLocalCommitHandlers();
 
 }
