@@ -14,11 +14,13 @@ import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.NodeIterator;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Seq;
 import org.apache.jena.shared.Lock;
+import org.apache.jena.sparql.core.Transactional;
 
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -148,7 +150,7 @@ public class CoreBranchImpl implements CoreBranch {
     public void startReadTransaction() {
         Observation.createNotStarted("rdfbackend.transaction.readstart", observationRegistry)
                 .highCardinalityKeyValue("branch.id", getBranchId())
-                .observe(() -> dataset.begin(ReadWrite.READ));
+                .observe(() -> dataset.begin(TxnType.READ_PROMOTE)); // it needs to be READ_PROMOTE to ensure detection when promotion needs to get a new transaction (see promoteToWriteTransaction() )
     }
 
     @Override
@@ -156,6 +158,32 @@ public class CoreBranchImpl implements CoreBranch {
         Observation.createNotStarted("rdfbackend.transaction.readend", observationRegistry)
                 .highCardinalityKeyValue("branch.id", getBranchId())
                 .observe(dataset::end);
+    }
+
+    @Override
+    public Lock promoteToWriteTransaction() {
+        if (!dataset.isInTransaction()) {
+            // we cannot promote a non-existing transaction
+            return null;
+        }
+        if (dataset.transactionMode().equals(ReadWrite.WRITE)) {
+            // already in a write transaction
+            return null;
+        } else {
+            // promote
+            var writeLock = dataset.getLock();
+            writeLock.enterCriticalSection(false);
+            var isPromoted = dataset.promote();
+            if (isPromoted) {
+                return writeLock;
+            } else {
+                // still in read mode
+                dataset.end();
+                // start a new write transaction
+                dataset.begin(ReadWrite.WRITE);
+                return writeLock;
+            }
+        }
     }
 
     @Override

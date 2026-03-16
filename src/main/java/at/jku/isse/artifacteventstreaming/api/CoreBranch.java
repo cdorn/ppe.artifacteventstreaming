@@ -73,6 +73,15 @@ public interface CoreBranch {
     void completeReadTransaction();
 
     /**
+     * enables to continue a read transaction by acquiring and entering a lock, then promoting to Write Transaction.
+     * when promotion succeeds then same semantics as if called startWriteTransaction
+     * will throw if current transaction is a fixed read transaction.
+     * if no current transaction, returns null
+     * @return lock or null if already in a write transaction (or in no transaction)
+     */
+    Lock promoteToWriteTransaction();
+
+    /**
      *  if the underlying model is based on a transactional dataset, use this delegate method to obtain a lock to ensure noone else is writing to this model/dataset in the meantime
      */
     Lock startWriteTransaction();
