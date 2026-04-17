@@ -59,7 +59,8 @@ class TestServiceRegistration {
 		Resource testResource = model.createResource(repoURI+"#art1");
 		var lock = branch.startWriteTransaction();
         model.add(testResource, RDFS.label, model.createTypedLiteral(1));
-		Commit commit = branch.concludeTransaction(lock,"TestCommit1");
+		Commit commit = branch.commitChanges("TestCommit1");
+		branch.completeTransaction(lock);
 		boolean success = latch.await(5, TimeUnit.SECONDS);
 		assert(success);
 		assertEquals(1, localService1.getReceivedCommits().size());
@@ -79,7 +80,8 @@ class TestServiceRegistration {
         repoDataset.end();
         lock = branch.startWriteTransaction();
 		model.add(testResource, RDFS.label, model.createTypedLiteral(2));
-		Commit commit2 = branch.concludeTransaction(lock,"TestCommit2");
+		Commit commit2 = branch.commitChanges("TestCommit2");
+		branch.completeTransaction(lock);
 		boolean success2 = latch.await(5, TimeUnit.SECONDS);
 		
 		//RDFDataMgr.write(System.out, branch.getBranchResource().getModel(), Lang.TURTLE) ;

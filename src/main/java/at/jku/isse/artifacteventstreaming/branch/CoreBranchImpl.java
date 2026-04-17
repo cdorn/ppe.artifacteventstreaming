@@ -217,33 +217,6 @@ public class CoreBranchImpl implements CoreBranch {
         }
     }
 
-    @Deprecated(forRemoval = true)
-    @Override
-    public void abortWriteTransaction(@NonNull Lock lock) {
-        //this.undoNoncommitedChanges(); // we also need to clear the commit statement queue
-        dataset.abort();
-        dataset.end();
-        lock.leaveCriticalSection();
-    }
-
-    @Deprecated(forRemoval = true)
-    @Override
-    public Commit concludeTransaction(@NonNull Lock writeLock, String commitMsg) throws BranchConfigurationException, PersistenceException {
-        Commit commit = null;
-        if (dataset.transactionMode() != null && dataset.transactionMode().equals(ReadWrite.WRITE)) {
-            try {
-                commit = this.commitChanges(commitMsg);
-                // dataset write transaction end set by commitChanges() logic
-            } finally {
-                writeLock.leaveCriticalSection();
-            }
-        } else {
-            dataset.end();
-            writeLock.leaveCriticalSection();
-        }
-        return commit;
-    }
-
     /**
      * assumes no other tread is making changes to the model while services are processing
      */

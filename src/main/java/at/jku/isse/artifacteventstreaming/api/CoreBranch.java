@@ -92,19 +92,9 @@ public interface CoreBranch {
     Lock startWriteTransaction();
 
     /**
-     *  use  {@link commitChanges(String commitMsg)} to complete the commit, then use {@link completeTransaction(Lock lock)} to end the transaction and release the lock
-     */
-    @Deprecated(forRemoval = true)
-    Commit concludeTransaction(Lock writeLock, String commitMsg) throws PersistenceException, BranchConfigurationException;
-
-
-    /**
      * ensures no changes (cached or otherwise) are applied/persisted/forwarded
      */
     void abortWriteTransaction();
-
-    @Deprecated(forRemoval = true)
-    void abortWriteTransaction(@NonNull Lock lock) ;
 
     /**
      * @param service
