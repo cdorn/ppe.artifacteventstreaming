@@ -8,6 +8,7 @@ import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.shared.Lock;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Set;
@@ -58,11 +59,12 @@ public interface CoreBranch {
     Commit commitChanges(String commitMsg) throws PersistenceException, BranchConfigurationException;
 
 
-    /**
-     * drops all currently cached changes/statements
-     * and aborts the model transaction (undoes the changes)
-     */
-    void undoNoncommitedChanges();
+//    /**
+//     * drops all currently cached changes/statements
+//     * and aborts the model transaction (undoes the changes)
+//     */
+//    @Deprecated(forRemoval = true)
+//    void undoNoncommitedChanges();
 
 
     /**
@@ -70,7 +72,10 @@ public interface CoreBranch {
      */
     void startReadTransaction();
 
-    void completeReadTransaction();
+    /**
+     * wraps up any transaction with dataset end() (can also be used as fallback/finally on write transactions to ensure rollback and lock release
+     */
+    void completeTransaction(@Nullable Lock lock);
 
     /**
      * enables to continue a read transaction by acquiring and entering a lock, then promoting to Write Transaction.
@@ -87,11 +92,9 @@ public interface CoreBranch {
     Lock startWriteTransaction();
 
     /**
-     *  when having acquired a lock, use this method instead of {@link commitChanges(String commitMsg)} to complete the write transaction and release the lock
+     * ensures no changes (cached or otherwise) are applied/persisted/forwarded
      */
-    Commit concludeTransaction(Lock writeLock, String commitMsg) throws PersistenceException, BranchConfigurationException;
-
-    void abortWriteTransaction(@NonNull Lock lock) ;
+    void abortWriteTransaction();
 
     /**
      * @param service
