@@ -93,7 +93,7 @@ class TestCommitHandling {
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		branch.commitChanges("TestCommit");
-		branch.completeTransaction(null);
+		branch.completeTransaction(lock);
 
 		// now lets change and undo it
 		lock = branch.startWriteTransaction();
@@ -101,6 +101,8 @@ class TestCommitHandling {
 			 .add(testResource, RDFS.label, model.createTypedLiteral(-1));
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		branch.abortWriteTransaction();
+		branch.completeTransaction(lock);
+
 		System.out.println("undo now:");
 		lock = branch.startWriteTransaction();
 		int lastLabel = testResource.getProperty(RDFS.label).getInt();
