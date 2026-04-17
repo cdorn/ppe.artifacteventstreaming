@@ -45,7 +45,8 @@ class TestPromoteToWriteTransaction {
         try {
             assertNull(branch.promoteToWriteTransaction());
         } finally {
-            branch.abortWriteTransaction(writeLock);
+            branch.abortWriteTransaction();
+            branch.completeTransaction(writeLock);
         }
     }
 
@@ -69,7 +70,7 @@ class TestPromoteToWriteTransaction {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-            branch.completeReadTransaction();
+            branch.completeTransaction(null);
             readerDone.countDown();
         });
         reader.start();
@@ -82,7 +83,8 @@ class TestPromoteToWriteTransaction {
             assertEquals(ReadWrite.WRITE, branch.getDataset().transactionMode(),
                     "Dataset must be in WRITE mode after promotion");
         } finally {
-            branch.abortWriteTransaction(lock);
+            branch.abortWriteTransaction();
+            branch.completeTransaction(lock);
         }
     }
 
@@ -109,7 +111,8 @@ class TestPromoteToWriteTransaction {
             try {
                 Lock writeLock = branch.startWriteTransaction();
                 model.add(art1, RDFS.label, model.createTypedLiteral(42));
-                branch.concludeTransaction(writeLock, "concurrent write");
+                branch.commitChanges("concurrent write");
+                branch.completeTransaction(writeLock);
             } catch (Exception e) {
                 writerError.set(e);
             } finally {
@@ -137,7 +140,8 @@ class TestPromoteToWriteTransaction {
             assertEquals(42, art1.getProperty(RDFS.label).getInt(),
                     "Fresh write transaction must see the value committed by the concurrent writer");
         } finally {
-            branch.abortWriteTransaction(promotedLock);
+            branch.abortWriteTransaction();
+            branch.completeTransaction(promotedLock);
         }
     }
 }

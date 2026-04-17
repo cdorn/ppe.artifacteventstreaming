@@ -1,6 +1,8 @@
 package at.jku.isse.artifacteventstreaming.api;
 
 
+import at.jku.isse.artifacteventstreaming.api.exceptions.BranchConfigurationException;
+import at.jku.isse.artifacteventstreaming.api.exceptions.PersistenceException;
 import at.jku.isse.artifacteventstreaming.branch.BranchBuilder;
 import at.jku.isse.artifacteventstreaming.branch.BranchImpl;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
@@ -19,7 +21,9 @@ import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
+import org.apache.jena.tdb2.TDB2Factory;
 import org.apache.jena.vocabulary.RDFS;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -34,12 +38,15 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestCommitHandling {
 
 	public static URI repoURI = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/repo1");
-		
+
 	@Test
-	void testCreateBranch() {
+	void testCreateBranch() throws Exception {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
+				.setDataset(TDB2Factory.createDataset())
 				.build();
 		System.out.println(branch.toString());
+		branch.startCommitHandlers();
+		branch.getBranchMetadataDataset().begin();
 		assertEquals("main", branch.getBranchName());
 		assertEquals(branch.getRepositoryURI(), repoURI.toString());		
 	}
@@ -49,19 +56,21 @@ class TestCommitHandling {
 	@Test
 	void testTwoServicesBranch() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
-		//OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, ObservationRegistry.NOOP)
+				.setDataset(TDB2Factory.createDataset())
 				.build();
 		var repoModel = branch.getBranchMetadataModel();
 		branch.appendBranchInternalCommitService(new SimpleService("Service1", false, repoModel));
 		branch.appendBranchInternalCommitService(new SimpleService("Service2", true, repoModel));
 
 		branch.startCommitHandlers();
-		branch.startWriteTransaction();
+		var lock = branch.startWriteTransaction();
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("TestCommit");
+		branch.completeTransaction(lock);
+		branch.startReadTransaction();
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		assertEquals(1, commit.getAddedStatements().size()); // we remove effectless changes, hence only the last change is kept.
 		
@@ -72,40 +81,41 @@ class TestCommitHandling {
 	@Test
 	void testAbortCommit() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
-		//OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, ObservationRegistry.NOOP)
-		//		.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
-		//		.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
+				.setDataset(TDB2Factory.createDataset())
 				.build();
 		var repoModel = branch.getBranchMetadataModel();
 		branch.appendBranchInternalCommitService(new SimpleService("Service1", false, repoModel));
 		branch.appendBranchInternalCommitService(new SimpleService("Service2", true, repoModel));
 		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
-		branch.getDataset().begin();
+		var lock = branch.startWriteTransaction();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
-		Commit commit = branch.commitChanges("TestCommit");
+		branch.commitChanges("TestCommit");
+		branch.completeTransaction(null);
+
 		// now lets change and undo it
-		branch.getDataset().begin();
+		lock = branch.startWriteTransaction();
 		model.remove(testResource, RDFS.label, model.createTypedLiteral(21))
 			 .add(testResource, RDFS.label, model.createTypedLiteral(-1));
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
-		branch.undoNoncommitedChanges();
+		branch.abortWriteTransaction();
 		System.out.println("undo now:");
-		branch.getDataset().begin();
+		lock = branch.startWriteTransaction();
 		int lastLabel = testResource.getProperty(RDFS.label).getInt();
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		assertEquals(21, lastLabel);
 		Commit nullCommit = branch.commitChanges("NoChanges");
 		assertNull(nullCommit);
+		branch.completeTransaction(lock);
 	}
 
 	@Test
 	void testLoopControl() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
-		//OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset,  ObservationRegistry.NOOP)
+				.setDataset(TDB2Factory.createDataset())
 				.build();
 		OntModel model = branch.getModel();
 		var repoModel = branch.getBranchMetadataModel();
@@ -113,12 +123,14 @@ class TestCommitHandling {
 		branch.appendBranchInternalCommitService(new MockLazyLoadingService("LoopController", false, repoModel, model, 4));
 		branch.startCommitHandlers();
 		
-		branch.getDataset().begin();
+		var lock = branch.startWriteTransaction();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		model.remove(testResource, RDFS.label, model.createTypedLiteral(2));
 		model.remove(testResource, RDFS.label, model.createTypedLiteral(2));
 		Commit commit = branch.commitChanges("TestCommit");
+		branch.completeTransaction(lock);
+		branch.startReadTransaction();
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		assertEquals(2, model.size());
 		assertEquals(1, commit.getAddedStatements().size());
@@ -129,27 +141,34 @@ class TestCommitHandling {
 	@Disabled
 	void testTrueChanges() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
-		//OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, ObservationRegistry.NOOP)
+				.setDataset(TDB2Factory.createDataset())
 				.build();
 		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
 		
-		branch.getDataset().begin();
+		var lock = branch.startWriteTransaction();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		model.remove(testResource, RDFS.label, model.createTypedLiteral(2)); // this should not result in an event, as there is no change to the model
 		model.remove(testResource, RDFS.label, model.createTypedLiteral(2));
 		Commit commit = branch.commitChanges("TestCommit");
+		branch.completeTransaction(lock);
+
+		branch.startReadTransaction();
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		assertEquals(1, model.size());
 		assertEquals(1, commit.getAddedStatements().size());
 		//FIXME: JENA notification does not work correctly as events are provided for non-effective changes, e.g., removing something that is not in the model should not pop up
 		assertEquals(0, commit.getRemovedStatements().size());
-		
-		branch.getDataset().begin();
+		branch.completeTransaction(null);
+
+		lock = branch.startWriteTransaction();
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1)); // this should not result in an event, as there is no change to the model
 		Commit commit2 = branch.commitChanges("TestCommit2");
+		branch.completeTransaction(lock);
+
+		branch.startReadTransaction();
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		assertEquals(1, model.size());
 		//FIXME: JENA notification does not work correctly as events are provided for non-effective changes
@@ -160,13 +179,10 @@ class TestCommitHandling {
 	@Test
 	void testLoopDetection() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
-		//OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		CountDownLatch latch = new CountDownLatch(1);
 
 		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, ObservationRegistry.NOOP)
-//				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
-//				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
-//				.addOutgoingCommitDistributer(service)
+				.setDataset(TDB2Factory.createDataset())
 				.build();
 		var repoModel = branch.getBranchMetadataModel();
 		var service = new SyncForTestingService("Out1", latch, repoModel);
@@ -177,11 +193,13 @@ class TestCommitHandling {
 		CommitHandler merger = new CompleteCommitMerger(branch);
 		branch.appendIncomingCommitMerger(merger);
 		branch.startCommitHandlers();
-		branch.startWriteTransaction();
+		var lock = branch.startWriteTransaction();
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("TestCommit");
+		branch.completeTransaction(lock);
+
 		boolean success = latch.await(1,  TimeUnit.SECONDS);
 		assertEquals(0, branch.getOutQueue().size());	
 		assertEquals(1, service.getReceivedCommits().size());
@@ -202,11 +220,8 @@ class TestCommitHandling {
 	void testSameCommitHandling() throws Exception {
 		CountDownLatch latch = new CountDownLatch(2);
 		Dataset repoDataset = DatasetFactory.createTxnMem();
-		//OntModel repoModel =  OntModelFactory.createModel(repoDataset.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
 		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, ObservationRegistry.NOOP)
-//				.addBranchInternalCommitService(new SimpleService("Service1", false, repoModel))
-//				.addBranchInternalCommitService(new SimpleService("Service2", true, repoModel))
-//				.addOutgoingCommitDistributer(new SyncForTestingService("Out1", latch, repoModel))
+				.setDataset(TDB2Factory.createDataset())
 				.build();
 
 		var repoModel = branch.getBranchMetadataModel();
@@ -218,11 +233,12 @@ class TestCommitHandling {
 		CommitHandler merger = new CompleteCommitMerger(branch);
 		branch.appendIncomingCommitMerger(merger);
 		branch.startCommitHandlers();
-		branch.startWriteTransaction();
+		var lock = branch.startWriteTransaction();
 		OntModel model = branch.getModel();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("TestCommit");
+		branch.completeTransaction(lock);
 
 		Commit again = new StatementCommitImpl("blabl", "commitcopy", "", 0
 				, new HashSet<>(commit.getAddedStatements())
@@ -236,30 +252,40 @@ class TestCommitHandling {
 	@Test
 	void testCancelingOutLiteralStatements() throws Exception {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
+				.setDataset(TDB2Factory.createDataset())
 				.build();
 		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
-		branch.getDataset().begin();
+		var lock = branch.startWriteTransaction();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		testResource.removeAll(RDFS.label);
 		Commit commit = branch.commitChanges("TestCommit");
+		branch.completeTransaction(lock);
+
+		branch.startReadTransaction();
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		assertNull(commit);
+		branch.completeTransaction(null);
+
 	}
 	
 	@Test
 	void testCancelingOutResourceStatements() throws Exception {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
+				.setDataset(TDB2Factory.createDataset())
 				.build();
 		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
-		branch.getDataset().begin();
+		var lock = branch.startWriteTransaction();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		Resource art2 = model.createResource(repoURI+"#art2");
 		model.add(testResource, RDFS.seeAlso, art2);
 		testResource.removeAll(RDFS.seeAlso);
 		Commit commit = branch.commitChanges("TestCommit");
+		branch.completeTransaction(lock);
+
+		branch.startReadTransaction();
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		assertNull(commit);
 	}
@@ -267,10 +293,11 @@ class TestCommitHandling {
 	@Test
 	void testNonCancelingOutLiteralStatements() throws Exception {
 		Branch branch = new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
+				.setDataset(TDB2Factory.createDataset())
 				.build();
 		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
-		branch.getDataset().begin();
+		var lock = branch.startWriteTransaction();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		Literal lit1 = model.createTypedLiteral(1);		
 		model.add(testResource, RDFS.label, lit1);
@@ -278,21 +305,24 @@ class TestCommitHandling {
 		var stmt = model.createStatement(testResource, RDFS.label, lit2);
 		model.remove(stmt);		
 		Commit commit = branch.commitChanges("TestCommit");
+		branch.completeTransaction(lock);
+
+		branch.startReadTransaction();
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		assertNotNull(commit);
 	}
 	
 	@Test
 	void testUndoServiceStatements() throws Exception {
-		//OntModel repoModel = OntModelFactory.createModel();
 		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)
+				.setDataset(TDB2Factory.createDataset())
 				.build();
 		var repoModel = branch.getBranchMetadataModel();
 		branch.appendBranchInternalCommitService(new AllUndoService("UndoService1", repoModel ));
 
 		branch.startCommitHandlers();
 		OntModel model = branch.getModel();
-		branch.getDataset().begin();
+		var lock = branch.startWriteTransaction();
 		var modelSize = model.size();
 		Resource testResource = model.createResource(repoURI+"#art1");
 		Literal lit1 = model.createTypedLiteral(1);		
@@ -303,6 +333,9 @@ class TestCommitHandling {
 		model.add(testResource, RDFS.seeAlso, art2);
 		
 		Commit commit = branch.commitChanges("TestCommit");
+		branch.completeTransaction(lock);
+
+		branch.startReadTransaction();
 		var modelSizeAfter = model.size();				
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
 		assertEquals(modelSize, modelSizeAfter);
