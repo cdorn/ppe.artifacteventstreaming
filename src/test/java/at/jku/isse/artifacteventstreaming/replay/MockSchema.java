@@ -6,6 +6,8 @@ import lombok.NonNull;
 import org.apache.jena.ontapi.model.*;
 import org.apache.jena.vocabulary.XSD;
 
+import java.util.List;
+
 public class MockSchema {
 
 	public static final String TEST_SCHEMA_URI = "http://at.jku.isse.artifacteventstreaming/types#";
@@ -33,12 +35,11 @@ public class MockSchema {
 		stateProperty = schemaUtils.getSingleType().createSingleDataPropertyType(TEST_SCHEMA_URI+"state", issueType, model.getDatatype(XSD.xstring));
 		priorityProperty = schemaUtils.getSingleType().createSingleDataPropertyType(TEST_SCHEMA_URI+"priority", issueType, model.getDatatype(XSD.xint));
 		derivedLongProperty = schemaUtils.getSingleType().createSingleDataPropertyType(TEST_SCHEMA_URI+"derivedPriority", issueType, model.getDatatype(XSD.xlong));
-		
-		
-		requirementsProperty =  schemaUtils.getSetType().createObjectPropertyType( TEST_SCHEMA_URI+"requirements", issueType, issueType);  
-		bugsProperty = schemaUtils.getPrimaryPropertyType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"bugs", issueType, issueType);
-		upstreamProperty = schemaUtils.getPrimaryPropertyType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"upstream", issueType, issueType);
-		downstreamProperty = schemaUtils.getPrimaryPropertyType().createBaseObjectPropertyType(TEST_SCHEMA_URI+"downstream", issueType, issueType);
+
+		requirementsProperty =  schemaUtils.getSetType().createObjectPropertyType( TEST_SCHEMA_URI+"requirements", issueType, issueType);
+		bugsProperty = schemaUtils.getPrimaryPropertyType().createBaseObjectPropertyType(model, TEST_SCHEMA_URI+"bugs", List.of(issueType), issueType);
+		upstreamProperty = schemaUtils.getPrimaryPropertyType().createBaseObjectPropertyType(model, TEST_SCHEMA_URI+"upstream", List.of(issueType), issueType);
+		downstreamProperty = schemaUtils.getPrimaryPropertyType().createBaseObjectPropertyType(model, TEST_SCHEMA_URI+"downstream", List.of(issueType), issueType);
 		
 		parentProperty = schemaUtils.getSingleType().createSingleObjectPropertyType(TEST_SCHEMA_URI+"parent", issueType, issueType);
 		labelProperty = schemaUtils.getListType().addLiteralListProperty(issueType, TEST_SCHEMA_URI+"label", model.getDatatype(XSD.xstring));

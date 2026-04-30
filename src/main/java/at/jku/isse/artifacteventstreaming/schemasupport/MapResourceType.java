@@ -92,7 +92,7 @@ public class MapResourceType  {
 		//valueProp.addDomain(mapType);
 		//valueProp.addRange(valueType);
 
-		OntObjectProperty hasMap = primaryPropertyType.createBaseObjectPropertyType(propertyURI, resource, mapType);
+		OntObjectProperty hasMap = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), propertyURI, List.of(resource), mapType);
 //		OntObjectProperty hasMap = model.createObjectProperty(propertyURI);
 //		hasMap.addDomain(resource);
 //		hasMap.addRange(mapType);
@@ -114,13 +114,13 @@ public class MapResourceType  {
 		mapType.addSuperClass(mapEntryClass);
 		subclassesCache.add(mapType);
 
-		OntObjectProperty valueProp = primaryPropertyType.createBaseObjectPropertyType(propertyURI+OBJECT_VALUE, mapType, valueType);
+		OntObjectProperty valueProp = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), propertyURI+OBJECT_VALUE, List.of(mapType), valueType);
 		//OntObjectProperty valueProp = model.createObjectProperty(propertyURI+OBJECT_VALUE);
 		valueProp.addSuperProperty(objectValueProperty);
 		//valueProp.addDomain(mapType);
 		//valueProp.addRange(valueType);
 
-		OntObjectProperty hasMap = primaryPropertyType.createBaseObjectPropertyType(propertyURI, resource, mapType);
+		OntObjectProperty hasMap = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), propertyURI, List.of(resource), mapType);
 //		OntObjectProperty hasMap = model.createObjectProperty(propertyURI);
 //		hasMap.addDomain(resource);
 //		hasMap.addRange(mapType);

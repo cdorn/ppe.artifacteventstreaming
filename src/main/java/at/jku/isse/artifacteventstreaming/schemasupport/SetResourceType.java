@@ -18,18 +18,18 @@ public class SetResourceType {
 	
 	public OntDataProperty createDataPropertyType( @NonNull String propUri, @NonNull OntClass domain, @NonNull OntDataRange range ) {				
 		return primaryType.createBaseDataPropertyType(domain.getModel(), propUri, List.of(domain), range);
-//		var prop = domain.getModel().createDataProperty(propUri);
-//		prop.addDomain(domain);		
-//		prop.addRange(range);			
-//		return prop;	
 	}
 
 	public OntObjectProperty createObjectPropertyType(@NonNull String propUri, @NonNull OntClass domain, @NonNull OntClass range ) {
-		return primaryType.createBaseObjectPropertyType(propUri, domain, range);
-//		var prop = domain.getModel().createObjectProperty(propUri);
-//		prop.addDomain(domain);		
-//		prop.addRange(range);			
-//		return prop;	
+		return primaryType.createBaseObjectPropertyType(domain.getModel(), propUri, List.of(domain), range);
+	}
+
+	public OntDataProperty createDataPropertyType( @NonNull String propUri, @NonNull List<OntClass> domains, @NonNull OntDataRange range ) {
+		return primaryType.createBaseDataPropertyType(domains.getFirst().getModel(), propUri, domains, range);
+	}
+
+	public OntObjectProperty createObjectPropertyType(@NonNull String propUri, @NonNull List<OntClass> domains, @NonNull OntClass range ) {
+		return primaryType.createBaseObjectPropertyType(domains.getFirst().getModel(), propUri, domains, range);
 	}
 
 	public void removePropertyURIfromCache(String propertyURI) {
