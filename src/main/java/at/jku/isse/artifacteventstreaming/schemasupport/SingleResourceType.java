@@ -76,11 +76,22 @@ public class SingleResourceType {
 	}
 
 	public OntObjectProperty createSingleObjectPropertyType(@NonNull String propURI, @NonNull OntClass domain, @NonNull OntClass range) {
-		var prop = primaryPropertyType.createBaseObjectPropertyType(propURI, domain, range);
+		var prop = primaryPropertyType.createBaseObjectPropertyType(domain.getModel(), propURI, List.of(domain), range);
 		if (prop != null) {
 			var maxOneProp = getMaxOneObjectCardinalityRestriction(domain.getModel(), prop, range);
-			//domain.addSuperClass(maxOneProp);
 			domain.addProperty(RDFS.subClassOf, maxOneProp);			
+			singleObjectProperty.addSubProperty(prop);
+			objectSubpropertyCache.add(prop);
+		}
+		return prop;
+	}
+
+	public OntObjectProperty createSingleObjectPropertyType(@NonNull String propURI, @NonNull List<OntClass> domains, @NonNull OntClass range) {
+		var localModel = domains.getFirst().getModel();
+		var prop = primaryPropertyType.createBaseObjectPropertyType(localModel, propURI, domains, range);
+		if (prop != null) {
+			var maxOneProp = getMaxOneObjectCardinalityRestriction(localModel, prop, range);
+			domains.forEach(domain -> domain.addProperty(RDFS.subClassOf, maxOneProp));
 			singleObjectProperty.addSubProperty(prop);
 			objectSubpropertyCache.add(prop);
 		}

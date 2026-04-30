@@ -32,19 +32,17 @@ public class BasePropertyType {
 		return new HashSet<>(propertyCache);
 	}
 
-	public OntObjectProperty createBaseObjectPropertyType(@NonNull String propUri, @NonNull OntClass domain, @NonNull OntClass range ) {
-		//if (domain.getModel().getObjectProperty(propUri) != null)
+	public OntObjectProperty createBaseObjectPropertyType(@NonNull OntModel model, @NonNull String propUri, @NonNull List<OntClass> domains, @NonNull OntClass range ) {
 		if (existsPrimaryProperty(propUri))
 			return null;
-		var prop = domain.getModel().createObjectProperty(propUri);
+		var prop = model.createObjectProperty(propUri);
+		domains.forEach(prop::addDomain);
 		prop.addRange(range);
-		prop.addDomain(domain);
 		propertyCache.add(propUri);
 		return prop;
 	}
 	
-	public OntDataProperty createBaseDataPropertyType(@NonNull OntModel model, @NonNull String propUri, @NonNull List<OntClass> domains, @NonNull OntDataRange range ) {				
-		//if (model.getDataProperty(propUri) != null)
+	public OntDataProperty createBaseDataPropertyType(@NonNull OntModel model, @NonNull String propUri, @NonNull List<OntClass> domains, @NonNull OntDataRange range ) {
 		if (existsPrimaryProperty(propUri))
 			return null;
 		var prop = model.createDataProperty(propUri);

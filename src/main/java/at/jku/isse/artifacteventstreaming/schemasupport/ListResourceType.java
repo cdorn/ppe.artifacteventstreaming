@@ -55,17 +55,14 @@ public class ListResourceType {
 		OntClass listType = model.createOntClass(generateListTypeURI(listPropertyURI));
 		listType.addSuperClass(listClass);			
 		// create the property that points to this list type // ensure we only point to one list only
-		var prop = primaryPropertyType.createBaseObjectPropertyType( listPropertyURI, resource, listType);  
+		var prop = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), listPropertyURI, List.of(resource), listType);
 		var maxOneProp = singleType.getMaxOneObjectCardinalityRestriction(model, prop, listType);
 		resource.addProperty(RDFS.subClassOf, maxOneProp);
 		//NOTE: we cannot use createSingleObject... to avoid putting this property into the single property cache as this is a list property
 		
 		// now also restrict the list content to be of valueType, and property to be a subproperty of 'li'			
-		var liProp = primaryPropertyType.createBaseObjectPropertyType(generateSpecificObjectListProperty(listPropertyURI), listType, valueType);
-		//var liProp = model.createObjectProperty();
+		var liProp = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), generateSpecificObjectListProperty(listPropertyURI), List.of(listType), valueType);
 		liProp.addProperty(RDFS.subPropertyOf, LI);
-		//liProp.addDomain(listType);
-		//liProp.addRange(valueType);
 		var restr = createAllValuesFromRestriction(model, liProp, valueType);
 		// add the restriction to the list type
 		listType.addProperty(RDFS.subClassOf, restr);
@@ -86,7 +83,7 @@ public class ListResourceType {
 		OntClass listType = model.createOntClass(generateListTypeURI(listPropertyURI));
 		listType.addSuperClass(listClass);			
 		// create the property that points to this list type // ensure we only point to one list only
-		var prop = primaryPropertyType.createBaseObjectPropertyType( listPropertyURI, resource, listType);  
+		var prop = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), listPropertyURI, List.of(resource), listType);
 		//NOTE: we cannot use createSingleData... to avoid putting this property into the single property cache as this is a list property
 		var maxOneProp = singleType.getMaxOneObjectCardinalityRestriction(model, prop, listType);
 		resource.addProperty(RDFS.subClassOf, maxOneProp);

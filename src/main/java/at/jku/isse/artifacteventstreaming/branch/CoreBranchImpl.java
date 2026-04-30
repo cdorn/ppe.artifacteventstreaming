@@ -159,9 +159,13 @@ public class CoreBranchImpl implements CoreBranch {
 
     @Override
     public void completeTransaction(Lock lock) {
-        dataset.end();
-        if (lock != null) {
-            lock.leaveCriticalSection();
+        try {
+            dataset.end();
+        }
+        finally {
+            if (lock != null) {
+                lock.leaveCriticalSection();
+            }
         }
     }
 
