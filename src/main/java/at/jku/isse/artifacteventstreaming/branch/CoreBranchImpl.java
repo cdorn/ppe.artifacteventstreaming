@@ -114,7 +114,7 @@ public class CoreBranchImpl implements CoreBranch {
     // local changes handling ---------------------------------------------------------------
 
     public Set<IncrementalCommitHandler> getRegisteredLocalCommitHandlers() {
-        return new HashSet<>(services.values());
+        return new LinkedHashSet<>(services.values());
     }
 
     @Override
@@ -158,18 +158,6 @@ public class CoreBranchImpl implements CoreBranch {
     }
 
     @Override
-    public void completeTransaction(Lock lock) {
-        try {
-            dataset.end();
-        }
-        finally {
-            if (lock != null) {
-                lock.leaveCriticalSection();
-            }
-        }
-    }
-
-    @Override
     public Lock promoteToWriteTransaction() {
         if (!dataset.isInTransaction()) {
             // we cannot promote a non-existing transaction
@@ -200,25 +188,41 @@ public class CoreBranchImpl implements CoreBranch {
     }
 
     @Override
+    public void completeTransaction(Lock lock) {
+        try {
+            dataset.end();
+        }
+        finally {
+            if (lock != null) {
+                lock.leaveCriticalSection();
+            }
+        }
+    }
+
+    @Override
     public Lock startWriteTransaction() {
         return Observation.createNotStarted("rdfbackend.transaction.writestart", observationRegistry)
                 .highCardinalityKeyValue(BRANCH_ID, getBranchId())
                 .observe(() -> {
+                    getRegisteredLocalCommitHandlers().forEach(CommitHandler::beforeTransactionStarted);
                     var writeLock = dataset.getLock();
                     writeLock.enterCriticalSection(false);
                     dataset.begin(ReadWrite.WRITE);
+                    getRegisteredLocalCommitHandlers().forEach(CommitHandler::afterTransactionStarted);
                     return writeLock;
                 });
     }
 
     @Override
     public void abortWriteTransaction() {
+        getRegisteredLocalCommitHandlers().forEach(CommitHandler::beforeTransactionAborted);
         // clear stmt queue
         stmtAggregator.retrieveAddedStatements();
         stmtAggregator.retrieveRemovedStatements();
         if (dataset.isInTransaction()) {
             dataset.abort();
         }
+        getRegisteredLocalCommitHandlers().forEach(CommitHandler::afterTransactionStarted);
     }
 
     /**
@@ -248,6 +252,7 @@ public class CoreBranchImpl implements CoreBranch {
 
     protected void handleCommitInternally(Commit commit) throws PersistenceException {
         log.debug("Handling commit {} in branch {}", commit.getCommitId(), branchResourceURI);
+        getRegisteredLocalCommitHandlers().forEach(CommitHandler::beforeTransactionCommitted);
         // clear the changes
         if (!services.isEmpty() && !commit.isEmpty()) {
             executeServiceLoop(commit);
@@ -259,6 +264,7 @@ public class CoreBranchImpl implements CoreBranch {
                     log.debug("Branch {} contains now {} statements", branchResourceLabel, model.size());
                     dataset.commit(); // together with commit persistence
                     lastCommitId = commit.getCommitId();
+                    getRegisteredLocalCommitHandlers().forEach(CommitHandler::afterTransactionCommitted);
                 });
 
     }
