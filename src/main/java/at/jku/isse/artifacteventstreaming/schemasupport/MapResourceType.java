@@ -8,6 +8,8 @@ import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.XSD;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -41,9 +43,17 @@ public class MapResourceType  {
 	private final OntClass mapEntryClass;
 	private final Set<OntClass> subclassesCache = new HashSet<>();
 	private final BasePropertyType primaryPropertyType;
+
+	@Getter private final MessageDigest messageDigest;
 	
-	public MapResourceType(@NonNull OntModel model, @NonNull BasePropertyType primaryType) {		
-		this.primaryPropertyType = primaryType;
+	public MapResourceType(@NonNull OntModel model, @NonNull BasePropertyType primaryType) {
+        try {
+            messageDigest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+
+        this.primaryPropertyType = primaryType;
 		mapEntryClass = model.getOntClass(ENTRY_TYPE_URI);
 		keyProperty = model.getDataProperty(KEY_PROPERTY_URI);
 		literalValueProperty = model.getDataProperty(LITERAL_VALUE_PROPERTY_URI);
@@ -86,16 +96,11 @@ public class MapResourceType  {
 		subclassesCache.add(mapType);
 
 		//use base property to enable tracking of existing properties
-		//OntDataProperty valueProp = model.createDataProperty(propertyURI+LITERAL_VALUE);
 		OntDataProperty valueProp = primaryPropertyType.createBaseDataPropertyType(model, propertyURI+LITERAL_VALUE, List.of(mapType), valueType);
 		valueProp.addSuperProperty(literalValueProperty);
-		//valueProp.addDomain(mapType);
-		//valueProp.addRange(valueType);
+
 
 		OntObjectProperty hasMap = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), propertyURI, List.of(resource), mapType);
-//		OntObjectProperty hasMap = model.createObjectProperty(propertyURI);
-//		hasMap.addDomain(resource);
-//		hasMap.addRange(mapType);
 		mapReferenceSuperProperty.addSubProperty(hasMap);			
 		return hasMap;
 	}
@@ -115,15 +120,9 @@ public class MapResourceType  {
 		subclassesCache.add(mapType);
 
 		OntObjectProperty valueProp = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), propertyURI+OBJECT_VALUE, List.of(mapType), valueType);
-		//OntObjectProperty valueProp = model.createObjectProperty(propertyURI+OBJECT_VALUE);
 		valueProp.addSuperProperty(objectValueProperty);
-		//valueProp.addDomain(mapType);
-		//valueProp.addRange(valueType);
 
 		OntObjectProperty hasMap = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), propertyURI, List.of(resource), mapType);
-//		OntObjectProperty hasMap = model.createObjectProperty(propertyURI);
-//		hasMap.addDomain(resource);
-//		hasMap.addRange(mapType);
 		mapReferenceSuperProperty.addSubProperty(hasMap);	
 		return hasMap;
 	}

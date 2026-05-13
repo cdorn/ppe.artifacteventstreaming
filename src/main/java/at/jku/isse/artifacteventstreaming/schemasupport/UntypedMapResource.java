@@ -1,6 +1,7 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
 
+import at.jku.isse.artifacteventstreaming.api.AES;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.rdf.model.*;
@@ -8,6 +9,7 @@ import org.apache.jena.rdf.model.impl.ModelCom;
 import org.apache.jena.rdf.model.impl.StatementImpl;
 import org.apache.jena.vocabulary.RDF;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -102,7 +104,7 @@ public class UntypedMapResource implements Map<String, RDFNode> {
 			map.put(key,  newStmt);
 			return getValueFromStatement(prevStmt);
 		} else {
-			var entry = createEntry(); 
+			var entry = createEntry(key);
 			addBackReference(entry);
 			entry.addLiteral(mapType.getKeyProperty(), key);
 			setValue(key, entry, node);
@@ -111,9 +113,17 @@ public class UntypedMapResource implements Map<String, RDFNode> {
 		}
 	}
 
-	private Resource createEntry() {
-		return mapType.getMapEntryClass().getModel().createResource().addProperty( RDF.type, mapType.getMapEntryClass() );
-		//return mapType.getMapEntryClass().createIndividual() --> too slow
+	private Resource createEntry(String key) {
+		var ownerId = mapOwner.isAnon() ? mapOwner.getId().toString() : mapOwner.getURI();
+		var details = key+ownerId+this.mapEntryProperty.getURI();
+		byte[] digest = mapType.getMessageDigest().digest(details.getBytes(StandardCharsets.UTF_8));
+		var uriPart = Base64.getUrlEncoder()
+				.withoutPadding().encodeToString(digest);
+		var uri = "http://at.jku.isse/mapEntry/"+mapEntryProperty.getLocalName()+"#"+uriPart;
+
+		return mapType.getMapEntryClass().getModel().createResource(uri)
+				.addProperty( RDF.type, mapType.getMapEntryClass() );
+		//return mapType.getMapEntryClass().createIndividual() --> too slow??
 	}
 	
 	private void addBackReference(Resource entry) {

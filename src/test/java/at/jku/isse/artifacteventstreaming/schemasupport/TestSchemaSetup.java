@@ -75,7 +75,7 @@ public class TestSchemaSetup {
 
 		// Map properties for Art and String
 		mapOfArt = metaSchema.getMapType().addObjectMapProperty(typeChild, MAP_OF_ART, typeChild);
-		mapOfString = metaSchema.getMapType().addLiteralMapProperty(typeChild, "mapOfString", stringRange);
+		mapOfString = metaSchema.getMapType().addLiteralMapProperty(typeChild, NS+"mapOfString", stringRange);
 	}
 	
 	
