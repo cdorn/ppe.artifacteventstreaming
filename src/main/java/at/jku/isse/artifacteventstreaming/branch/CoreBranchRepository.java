@@ -107,8 +107,6 @@ public class CoreBranchRepository {
                 initializeBranchHandlers(branch); // reload local commit handlers
                 metadata.commit();
                 metadata.end();
-
-                branch.startCommitHandlers();
                 return branch;
             }
         }

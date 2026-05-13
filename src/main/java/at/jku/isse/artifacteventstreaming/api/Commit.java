@@ -1,5 +1,7 @@
 package at.jku.isse.artifacteventstreaming.api;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.List;
 import java.util.Set;
 
@@ -34,5 +36,8 @@ public interface Commit {
 	void removeEffectlessStatements(int baseAdds, int baseRemoves);
 
 	long getTimeStamp();
+
+	@Nullable String getMergedCommitId();
+	@Nullable String getMergedFromBranchURI();
 
 }

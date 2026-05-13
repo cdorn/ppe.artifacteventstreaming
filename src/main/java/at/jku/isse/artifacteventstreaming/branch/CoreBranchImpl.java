@@ -46,12 +46,10 @@ public class CoreBranchImpl implements CoreBranch {
     protected final ObservationRegistry observationRegistry;
 
     private String lastCommitId;
-    protected final Map<String, CommitHandler> handlers = Collections.synchronizedMap(new LinkedHashMap<>());
 
     protected final StatementAggregator stmtAggregator = new StatementAggregator();
     protected final Map<String, IncrementalCommitHandler> services = Collections.synchronizedMap(new LinkedHashMap<>());
-
-    protected final AtomicBoolean isReady = new AtomicBoolean(false);
+    protected final AtomicBoolean isReady = new AtomicBoolean(true);
 
     @Getter
     @Setter
@@ -77,19 +75,7 @@ public class CoreBranchImpl implements CoreBranch {
         stmtAggregator.registerWithModel(model);
     }
 
-    @Override
-    public void startCommitHandlers() throws BranchConfigurationException, PersistenceException {
-        // if we have collected any model changes until here, they would have come from setup logic that we do not persist in commits,
-        // hence we clear the statement aggregator first
-        stmtAggregator.retrieveAddedStatements();
-        stmtAggregator.retrieveRemovedStatements();
-        isReady.set(true);
-    }
 
-    @Override
-    public void deactivate() {
-        isReady.set(false);
-    }
 
     @Override
     public String getBranchId() {
@@ -170,19 +156,22 @@ public class CoreBranchImpl implements CoreBranch {
             return Observation.createNotStarted("rdfbackend.transaction.writepromote", observationRegistry)
                     .highCardinalityKeyValue(BRANCH_ID, getBranchId())
                     .observe(() -> {
-            // promote
-            var writeLock = dataset.getLock();
-            writeLock.enterCriticalSection(false);
-            var isPromoted = dataset.promote();
-            if (isPromoted) {
-                return writeLock;
-            } else {
-                // still in read mode
-                dataset.end();
-                // start a new write transaction
-                dataset.begin(ReadWrite.WRITE);
-                return writeLock;
-            }
+                        // clear stmt queue
+                        stmtAggregator.retrieveAddedStatements();
+                        stmtAggregator.retrieveRemovedStatements();
+                        // promote
+                        var writeLock = dataset.getLock();
+                        writeLock.enterCriticalSection(false);
+                        var isPromoted = dataset.promote();
+                        if (isPromoted) {
+                            return writeLock;
+                        } else {
+                            // still in read mode
+                            dataset.end();
+                            // start a new write transaction
+                            dataset.begin(ReadWrite.WRITE);
+                            return writeLock;
+                        }
                     });
         }
     }
@@ -204,6 +193,9 @@ public class CoreBranchImpl implements CoreBranch {
         return Observation.createNotStarted("rdfbackend.transaction.writestart", observationRegistry)
                 .highCardinalityKeyValue(BRANCH_ID, getBranchId())
                 .observe(() -> {
+                    // clear stmt queue
+                    stmtAggregator.retrieveAddedStatements();
+                    stmtAggregator.retrieveRemovedStatements();
                     getRegisteredLocalCommitHandlers().forEach(CommitHandler::beforeTransactionStarted);
                     var writeLock = dataset.getLock();
                     writeLock.enterCriticalSection(false);
@@ -225,14 +217,23 @@ public class CoreBranchImpl implements CoreBranch {
         getRegisteredLocalCommitHandlers().forEach(CommitHandler::afterTransactionStarted);
     }
 
+    @Override
+    public Commit commitChanges(@NonNull String commitMsg, @NonNull String mergedFromCommitId, @NonNull String mergedFromBranchURI  ) throws PersistenceException, BranchConfigurationException {
+        return commit(commitMsg, mergedFromCommitId, mergedFromBranchURI);
+    }
+
     /**
      * assumes no other tread is making changes to the model while services are processing
      */
     @Override
-    public Commit commitChanges(String commitMsg) throws BranchConfigurationException, PersistenceException {
+    public Commit commitChanges(@NonNull String commitMsg) throws BranchConfigurationException, PersistenceException {
+       return commit(commitMsg, null, null);
+    }
+
+    private Commit commit(@NonNull String commitMsg, String mergedFromCommitId, String mergedFromBranchURI) throws BranchConfigurationException, PersistenceException{
         if (!isReady.get()) {
             abortWriteTransaction();
-            throw new BranchConfigurationException(String.format("Branch %s with objectid %s has been deactivated (or was never ready), cannot make changes on non-active branch, please create a new branch object", getBranchId(), this.hashCode()));
+            throw new BranchConfigurationException(String.format("Branch %s with objectid %s has been deactivated, cannot make changes on non-active branch, please create a new branch object", getBranchId(), this.hashCode()));
         }
         return Observation.createNotStarted("rdfbackend.transaction.writecommit", observationRegistry)
                 .highCardinalityKeyValue(BRANCH_ID, getBranchId())
@@ -243,7 +244,11 @@ public class CoreBranchImpl implements CoreBranch {
                         abortWriteTransaction();
                         return null;
                     } else {
-                        var commit = new StatementCommitImpl(branchResourceURI, commitMsg, lastCommitId, timeStampProvider.getCurrentTimeStamp(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());
+                        var commit = new StatementCommitImpl(branchResourceURI, UUID.randomUUID().toString()
+                                , commitMsg, lastCommitId
+                                , timeStampProvider.getCurrentTimeStamp()
+                                , stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements()
+                                , mergedFromCommitId, mergedFromBranchURI);
                         handleCommitInternally(commit);
                         return commit;
                     }
@@ -330,17 +335,6 @@ public class CoreBranchImpl implements CoreBranch {
         return offsets;
     }
 
-//    @Deprecated(forRemoval = true)
-//    @Override
-//    public void undoNoncommitedChanges() {
-//        if (dataset.isInTransaction()) {
-//            dataset.abort();
-//            dataset.end();
-//        }
-//        stmtAggregator.retrieveAddedStatements();
-//        stmtAggregator.retrieveRemovedStatements();
-//    }
-
     protected Seq createOrGetListResource(Property refToList) {
         Resource listResource = branchResource.getPropertyResourceValue(refToList);
         Seq list;
@@ -363,4 +357,10 @@ public class CoreBranchImpl implements CoreBranch {
         }
         return elements;
     }
+
+    @Override
+    public void deactivate() {
+        isReady.set(false);
+    }
+
 }

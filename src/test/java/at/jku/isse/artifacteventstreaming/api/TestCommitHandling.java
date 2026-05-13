@@ -346,9 +346,9 @@ class TestCommitHandling {
 	
 	@Test
 	void testCommitComparison() {
-		StatementCommitImpl commit1 = new StatementCommitImpl("", "", "", "", 0, Collections.emptySet(), Collections.emptySet());
-		StatementCommitImpl commit2 = new StatementCommitImpl("", "", "", "", 0, Collections.emptySet(), Collections.emptySet());
-		StatementCommitImpl commit3 = new StatementCommitImpl("", "1", "", "", 0, Collections.emptySet(), Collections.emptySet());
+		StatementCommitImpl commit1 = new StatementCommitImpl("", "", "", "", 0, Collections.emptySet(), Collections.emptySet(), null, null);
+		StatementCommitImpl commit2 = new StatementCommitImpl("", "", "", "", 0, Collections.emptySet(), Collections.emptySet(), null, null);
+		StatementCommitImpl commit3 = new StatementCommitImpl("", "1", "", "", 0, Collections.emptySet(), Collections.emptySet(), null, null);
 		assertEquals(commit1, commit2);
 		assertNotEquals(commit1, commit3);
 				

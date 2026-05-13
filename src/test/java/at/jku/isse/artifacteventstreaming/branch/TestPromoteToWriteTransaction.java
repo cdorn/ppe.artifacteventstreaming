@@ -97,7 +97,7 @@ class TestPromoteToWriteTransaction {
     @Test
     void promoteStartsFreshWriteTransactionAfterConcurrentWrite() throws Exception {
         CoreBranch branch = buildBranch();
-        branch.startCommitHandlers(); // required by concludeTransaction -> commitChanges
+        //branch.startCommitHandlers(); // required by concludeTransaction -> commitChanges
         OntModel model = branch.getModel();
         Resource art1 = model.createResource(ART1_URI);
 

@@ -25,9 +25,13 @@ public class BranchImpl extends CoreBranchImpl implements Branch, Runnable {
 	private final ExecutorService inExecutor = Executors.newSingleThreadExecutor();
 	private final ExecutorService outExecutor = Executors.newSingleThreadExecutor();
 	private final RecoveringCrossBranchStreamer crossBranchStreamer;
+	protected final Map<String, CommitHandler> handlers = Collections.synchronizedMap(new LinkedHashMap<>());
 	@Getter private final BlockingQueue<Commit> inQueue;
 	@Getter private final BlockingQueue<Commit> outQueue;
 	@Getter final BranchStateUpdater stateKeeper;
+
+
+
 
 	public BranchImpl(@NonNull Dataset dataset
 			, @NonNull OntModel model
@@ -57,8 +61,8 @@ public class BranchImpl extends CoreBranchImpl implements Branch, Runnable {
 
 	@Override
 	public void startCommitHandlers() throws BranchConfigurationException, PersistenceException {
-		super.startCommitHandlers();
-		isReady.set(false);
+		stmtAggregator.retrieveAddedStatements();
+		stmtAggregator.retrieveRemovedStatements();
 
 		// re-forward all nonforwarded commits
 		crossBranchStreamer.recoverState();
@@ -197,7 +201,7 @@ public class BranchImpl extends CoreBranchImpl implements Branch, Runnable {
 	 */
 	private Commit commitMergeOf(Commit mergedCommit) throws PersistenceException {
 		//we always create a local commit upon a merge to signal that we received and processed that commit
-		var commit = new StatementCommitImpl( branchResourceURI , mergedCommit.getCommitId(), mergedCommit.getCommitMessage(), getLastCommitId(), timeStampProvider.getCurrentTimeStamp(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements());
+		var commit = new StatementCommitImpl( branchResourceURI , mergedCommit.getCommitId(), mergedCommit.getCommitMessage(), getLastCommitId(), timeStampProvider.getCurrentTimeStamp(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements(), mergedCommit.getCommitId(), mergedCommit.getOriginatingBranchId());
 		if (commit.isEmpty()) {
 			log.info("MergeCommit {} merged into branch {} has no changes after incoming processing", commit.getCommitId(), this.branchResource.getURI());
 		}
@@ -234,7 +238,7 @@ public class BranchImpl extends CoreBranchImpl implements Branch, Runnable {
 	}
 
 	@Override
-	public Commit commitChanges(String commitMsg) throws PersistenceException, BranchConfigurationException {
+	public Commit commitChanges(@org.jspecify.annotations.NonNull String commitMsg) throws PersistenceException, BranchConfigurationException {
 		var commit = super.commitChanges(commitMsg);
 		if (commit != null) {
 			stateKeeper.afterServices(commit);

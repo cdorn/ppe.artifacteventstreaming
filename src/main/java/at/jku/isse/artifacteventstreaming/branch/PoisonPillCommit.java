@@ -2,6 +2,7 @@ package at.jku.isse.artifacteventstreaming.branch;
 
 import at.jku.isse.artifacteventstreaming.api.Commit;
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.List;
@@ -90,6 +91,15 @@ public class PoisonPillCommit implements Commit {
 		return -1;
 	}
 
+	@Override
+	public @Nullable String getMergedCommitId() {
+		 return null;
+	}
+
+	@Override
+	public @Nullable String getMergedFromBranchURI() {
+		return null;
+	}
 
 
 }

@@ -56,7 +56,9 @@ public class CommitSplitter {
 				, commit.getCommitMessage()
 				, commit.getTimeStamp()
 				, new LinkedHashSet<>(batch)
-				, Collections.emptySet()))
+				, Collections.emptySet()
+				, commit.getMergedCommitId()
+				, commit.getMergedFromBranchURI() ))
 				.flatMap(this::transformToSingleEvent);		
 		
 		List<List<ContainedStatement>> removedBatches = splitList(commit.getRemovedStatements());
@@ -68,6 +70,8 @@ public class CommitSplitter {
 				, commit.getTimeStamp()
 				, Collections.emptySet()
 				, new LinkedHashSet<>(batch)
+						, commit.getMergedCommitId()
+						, commit.getMergedFromBranchURI()
 				))
 				.flatMap(this::transformToSingleEvent);				
 		
@@ -97,7 +101,7 @@ public class CommitSplitter {
 	}
 	
 	/**
-	 * @param commitToSplit only for commits that are less than STATEMENT_BATCH_SIZE statements, as otherwise the divide into batches would have kicked in
+	 * @param commit only for commits that are less than STATEMENT_BATCH_SIZE statements, as otherwise the divide into batches would have kicked in
 	 * @return
 	 */
 	private Stream<byte[]> splitBatch(Commit commit) {
@@ -110,7 +114,9 @@ public class CommitSplitter {
 					, commit.getCommitMessage()
 					, commit.getTimeStamp()
 					, new LinkedHashSet<>(commit.getAddedStatements())
-					, Collections.emptySet()))
+					, Collections.emptySet()
+					, commit.getMergedCommitId()
+					, commit.getMergedFromBranchURI() ))
 			, transformToSingleEvent(new StatementCommitImpl(commit.getOriginatingBranchId()
 							, commit.getCommitId()
 							, commit.getCommitMessage()
@@ -128,7 +134,9 @@ public class CommitSplitter {
 					, commit.getCommitMessage()
 					, commit.getTimeStamp()
 					, new LinkedHashSet<>(halfList)
-					, Collections.emptySet()) )
+					, Collections.emptySet()
+							, commit.getMergedCommitId()
+							, commit.getMergedFromBranchURI() ) )
 					.flatMap(this::transformToSingleEvent);			
 		} else if (commit.getRemovalCount() > 0) {
 			return splitInHalf(commit.getRemovedStatements())
@@ -139,7 +147,9 @@ public class CommitSplitter {
 					, commit.getCommitMessage()
 					, commit.getTimeStamp()
 					, Collections.emptySet()
-					, new LinkedHashSet<>(halfList)) )
+					, new LinkedHashSet<>(halfList)
+							, commit.getMergedCommitId()
+							, commit.getMergedFromBranchURI() ) )
 					.flatMap(this::transformToSingleEvent);
 		} else {
 			return Stream.empty();

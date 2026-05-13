@@ -25,7 +25,10 @@ public class StatementCommitImpl implements Commit {
 	private final String originatingBranchId;
 	@Getter
 	private final long timeStamp;
-	
+	@Getter
+	private final String mergedCommitId;
+	@Getter
+	private final String mergedFromBranchURI;
 	
 	public StatementCommitImpl(String branchId, String commitMsg, String precedingCommitId, long timeStamp) {
 		this.commitMessage = commitMsg;
@@ -33,6 +36,8 @@ public class StatementCommitImpl implements Commit {
 		this.commitId = generateUUID();
 		this.precedingCommitId = precedingCommitId;
 		this.timeStamp = timeStamp;
+		this.mergedCommitId = null;
+		this.mergedFromBranchURI = null;
 	}
 	
 	public StatementCommitImpl( String branchId
@@ -49,20 +54,24 @@ public class StatementCommitImpl implements Commit {
 	
 	// annotations used for serialization/deserialization
 	public StatementCommitImpl(@JsonProperty("originatingBranchId") String branchId
-			, @JsonProperty("commitId") String mergedCommitId
+			, @JsonProperty("commitId") String commitId
 			, @JsonProperty("commitMessage") String commitMsg
 			, @JsonProperty("precedingCommitId") String precedingCommitId
 			, @JsonProperty("timeStamp") long timeStamp
 			, @JsonProperty("addedStatements") Set<? extends ContainedStatement> addedStatements
 			, @JsonProperty("removedStatements") Set<? extends ContainedStatement> removedStatements
+			, @JsonProperty("mergedCommitId") String mergedCommitId
+			, @JsonProperty("mergedFromBranchURI") String mergedFromBranchURI
 			) {
 		this.commitMessage = commitMsg;
 		this.originatingBranchId = branchId;
-		this.commitId = mergedCommitId;
+		this.commitId = commitId;
 		this.precedingCommitId = precedingCommitId;
 		this.addedStatements.addAll(addedStatements);
 		this.removedStatements.addAll(removedStatements);
 		this.timeStamp = timeStamp;
+		this.mergedCommitId = mergedCommitId;
+		this.mergedFromBranchURI = mergedFromBranchURI;
 	}
 	
 	private String generateUUID() {

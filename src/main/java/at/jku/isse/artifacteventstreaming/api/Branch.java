@@ -15,6 +15,15 @@ import java.util.Set;
 
 public interface Branch extends CoreBranch {
 
+
+
+	/**
+	 * @throws BranchConfigurationException when incoming commits are reenqueue but no merge handler is available
+	 * @throws Exception                    when handling of preliminary commit or any other replaying to get up to date fails
+	 */
+	void startCommitHandlers() throws PersistenceException, BranchConfigurationException;
+
+
 	BranchStateKeeper getStateKeeper();
 	Commit getLastCommit();
 	/**

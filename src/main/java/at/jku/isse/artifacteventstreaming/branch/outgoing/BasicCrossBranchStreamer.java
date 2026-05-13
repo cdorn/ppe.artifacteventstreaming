@@ -74,6 +74,8 @@ public class BasicCrossBranchStreamer implements Runnable {
                 , cloneSource.getPrecedingCommitId()
                 , cloneSource.getTimeStamp()
                 , new LinkedHashSet<>(cloneSource.getAddedStatements())
-                , new LinkedHashSet<>(cloneSource.getRemovedStatements()));
+                , new LinkedHashSet<>(cloneSource.getRemovedStatements())
+                , cloneSource.getMergedCommitId()
+                , cloneSource.getMergedFromBranchURI());
     }
 }

@@ -40,7 +40,9 @@ public class CommitJoiner {
 					, commit.getCommitMessage()
 					, commit.getTimeStamp()
 					, new LinkedHashSet<>(addedStmts)
-					, new LinkedHashSet<>(removedStmts));
+					, new LinkedHashSet<>(removedStmts)
+					, commit.getMergedCommitId()
+					, commit.getMergedFromBranchURI() );
 		}
 		
 	}
