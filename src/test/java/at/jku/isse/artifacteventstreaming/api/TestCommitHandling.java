@@ -140,45 +140,6 @@ class TestCommitHandling {
 	}
 	
 	@Test
-	@Disabled
-	void testTrueChanges() throws Exception {
-		Dataset repoDataset = DatasetFactory.createTxnMem();
-		BranchImpl branch = (BranchImpl) new BranchBuilder(repoURI, repoDataset, ObservationRegistry.NOOP)
-				.setDataset(TDB2Factory.createDataset())
-				.build();
-		branch.startCommitHandlers();
-		OntModel model = branch.getModel();
-		
-		var lock = branch.startWriteTransaction();
-		Resource testResource = model.createResource(repoURI+"#art1");
-		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
-		model.remove(testResource, RDFS.label, model.createTypedLiteral(2)); // this should not result in an event, as there is no change to the model
-		model.remove(testResource, RDFS.label, model.createTypedLiteral(2));
-		Commit commit = branch.commitChanges("TestCommit");
-		branch.completeTransaction(lock);
-
-		branch.startReadTransaction();
-		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
-		assertEquals(1, model.size());
-		assertEquals(1, commit.getAddedStatements().size());
-		//FIXME: JENA notification does not work correctly as events are provided for non-effective changes, e.g., removing something that is not in the model should not pop up
-		assertEquals(0, commit.getRemovedStatements().size());
-		branch.completeTransaction(null);
-
-		lock = branch.startWriteTransaction();
-		model.add(testResource, RDFS.label, model.createTypedLiteral(1)); // this should not result in an event, as there is no change to the model
-		Commit commit2 = branch.commitChanges("TestCommit2");
-		branch.completeTransaction(lock);
-
-		branch.startReadTransaction();
-		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
-		assertEquals(1, model.size());
-		//FIXME: JENA notification does not work correctly as events are provided for non-effective changes
-		assertEquals(0, commit2.getAddedStatements().size());
-		assertEquals(0, commit2.getRemovedStatements().size());
-	}
-	
-	@Test
 	void testLoopDetection() throws Exception {
 		Dataset repoDataset = DatasetFactory.createTxnMem();
 		CountDownLatch latch = new CountDownLatch(1);
