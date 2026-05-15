@@ -2,16 +2,16 @@ package at.jku.isse.artifacteventstreaming.branch;
 
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import at.jku.isse.artifacteventstreaming.replay.ContainedStatementImpl;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.apache.jena.graph.Graph;
-import org.apache.jena.ontapi.UnionGraph;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.rdf.listeners.StatementListener;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Statement;
-import org.apache.jena.rdf.model.impl.ModelCom;
-import org.apache.jena.reasoner.InfGraph;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -27,7 +27,7 @@ public class StatementAggregator extends StatementListener {
 		if (removedStatements.isEmpty()) {
 			addedStatements.add(s);
 		} else {
-			// if the remove set contains exactly this statement, then we wont add this statement, as the two are inverse
+			// if the remove set contained exactly this statement, then we wont add this statement, as the two are inverse
 			if (!removedStatements.remove(s)) {
 				addedStatements.add(s);
 			} else {
@@ -42,7 +42,7 @@ public class StatementAggregator extends StatementListener {
 			removedStatements.add(s);
 		} 
 		else {
-			// if the added set contains exactly this statement, then we wont add this statement, as the two are inverse
+			// if the added set contained exactly this statement, then we wont add this statement, as the two are inverse
 			if (!addedStatements.remove(s)) {
 				removedStatements.add(s);
 			} else {
@@ -60,27 +60,29 @@ public class StatementAggregator extends StatementListener {
 	}
 
 	
-	public Set<? extends ContainedStatement> retrieveAddedStatements() {		
+	public Set<? extends ContainedStatement> drainAddedStatements() {
 		var set = addedStatements.stream().map(ContainedStatementImpl::new).collect(Collectors.toSet());
 		addedStatements.clear();
 		return set;
 	}
 	
-	public Set<? extends ContainedStatement> retrieveRemovedStatements() {
+	public Set<? extends ContainedStatement> drainRemovedStatements() {
 		var set = removedStatements.stream().map(ContainedStatementImpl::new).collect(Collectors.toSet());
 		removedStatements.clear();
 		return set;
 	}
 	
 	public void registerWithModel(OntModel model) {
-		// when using inference, this does not register the listener at the right graph:	https://github.com/apache/jena/issues/2868		
-		if (model.getGraph() instanceof InfGraph infG) {
-            Graph raw = infG.getRawGraph();
-            if (raw instanceof UnionGraph ugraph) {
-            	ugraph.getEventManager().register(((ModelCom)model).adapt(this));
-            }            
-        } else {
-        	model.register(this);
-        }
+//		// when using inference, this does not register the listener at the right graph:	https://github.com/apache/jena/issues/2868
+//		if (model.getGraph() instanceof InfGraph infG) {
+//            Graph raw = infG.getRawGraph();
+//            if (raw instanceof UnionGraph ugraph) {
+//            	ugraph.getEventManager().register(((ModelCom)model).adapt(this));
+//            }
+//        } else {
+//        	model.register(this);
+//        }
+		model.register(this);
+
 	}
 }

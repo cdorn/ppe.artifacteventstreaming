@@ -74,7 +74,7 @@ class TestContainmentReplay {
 		seq.add(1, "First");
 		map.put("First", m.createTypedLiteral(1));
 		
-		var commit1 = new StatementCommitImpl(branchURI , "TestCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		var commit1 = new StatementCommitImpl(branchURI , "TestCommit", "", 0, aggr.drainAddedStatements(), aggr.drainRemovedStatements());
 		augmenter.handleCommit(commit1);
 		commit2history.handleCommit(commit1);
 		
@@ -84,7 +84,7 @@ class TestContainmentReplay {
 		issue1.addProperty(schema.getStateProperty(), m.createTypedLiteral("Resolved"));
 		seq.add(1, "NewFirst");
 		map.put("Second", m.createTypedLiteral(2));
-		var commit2 = new StatementCommitImpl(branchURI , "TestCommit2", "", 1, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		var commit2 = new StatementCommitImpl(branchURI , "TestCommit2", "", 1, aggr.drainAddedStatements(), aggr.drainRemovedStatements());
 		augmenter.handleCommit(commit2);
 		commit2history.handleCommit(commit2);
 		
@@ -94,7 +94,7 @@ class TestContainmentReplay {
 		issue1.addProperty(schema.getStateProperty(), m.createTypedLiteral("Closed"));
 		seq.add(1, "VeryNewFirst");
 		map.put("First", m.createTypedLiteral(3));
-		var commit3 = new StatementCommitImpl(branchURI , "TestCommit3", "", 2, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		var commit3 = new StatementCommitImpl(branchURI , "TestCommit3", "", 2, aggr.drainAddedStatements(), aggr.drainRemovedStatements());
 		augmenter.handleCommit(commit3);
 		commit2history.handleCommit(commit3);
 	}

@@ -61,8 +61,8 @@ public class BranchImpl extends CoreBranchImpl implements Branch, Runnable {
 
 	@Override
 	public void startCommitHandlers() throws BranchConfigurationException, PersistenceException {
-		stmtAggregator.retrieveAddedStatements();
-		stmtAggregator.retrieveRemovedStatements();
+		stmtAggregator.drainAddedStatements();
+		stmtAggregator.drainRemovedStatements();
 
 		// re-forward all nonforwarded commits
 		crossBranchStreamer.recoverState();
@@ -201,7 +201,7 @@ public class BranchImpl extends CoreBranchImpl implements Branch, Runnable {
 	 */
 	private Commit commitMergeOf(Commit mergedCommit) throws PersistenceException {
 		//we always create a local commit upon a merge to signal that we received and processed that commit
-		var commit = new StatementCommitImpl( branchResourceURI , mergedCommit.getCommitId(), mergedCommit.getCommitMessage(), getLastCommitId(), timeStampProvider.getCurrentTimeStamp(), stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements(), mergedCommit.getCommitId(), mergedCommit.getOriginatingBranchId());
+		var commit = new StatementCommitImpl( branchResourceURI , mergedCommit.getCommitId(), mergedCommit.getCommitMessage(), getLastCommitId(), timeStampProvider.getCurrentTimeStamp(), stmtAggregator.drainAddedStatements(), stmtAggregator.drainRemovedStatements(), mergedCommit.getCommitId(), mergedCommit.getOriginatingBranchId());
 		if (commit.isEmpty()) {
 			log.info("MergeCommit {} merged into branch {} has no changes after incoming processing", commit.getCommitId(), this.branchResource.getURI());
 		}

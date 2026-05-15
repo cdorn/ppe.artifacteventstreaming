@@ -46,21 +46,21 @@ class TestPartialReplay {
 		issue1.addProperty(schema.getPriorityProperty(), m.createTypedLiteral(1L));
 		issue1.removeAll(schema.getStateProperty());
 		issue1.addProperty(schema.getStateProperty(), m.createTypedLiteral("InProgress"));
-		var commit1 = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", 0, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		var commit1 = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit", "", 0, aggr.drainAddedStatements(), aggr.drainRemovedStatements());
 		collector.addCommit(commit1);
 		
 		issue1.addProperty(schema.getPriorityProperty(), m.createTypedLiteral(2L));
 		issue1.remove(schema.getPriorityProperty(), m.createTypedLiteral(1L));
 		issue1.removeAll(schema.getStateProperty());
 		issue1.addProperty(schema.getStateProperty(), m.createTypedLiteral("Resolved"));
-		var commit2 = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit2", "", 1, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		var commit2 = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit2", "", 1, aggr.drainAddedStatements(), aggr.drainRemovedStatements());
 		collector.addCommit(commit2);
 		
 		issue1.addProperty(schema.getPriorityProperty(), m.createTypedLiteral(3L));
 		issue1.remove(schema.getPriorityProperty(), m.createTypedLiteral(2L));
 		issue1.removeAll(schema.getStateProperty());
 		issue1.addProperty(schema.getStateProperty(), m.createTypedLiteral("Closed"));
-		var commit3 = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit3", "", 2, aggr.retrieveAddedStatements(), aggr.retrieveRemovedStatements());
+		var commit3 = new StatementCommitImpl(baseURI+"SomeBranchID"  , "TestCommit3", "", 2, aggr.drainAddedStatements(), aggr.drainRemovedStatements());
 		collector.addCommit(commit3);
 		
 	}

@@ -157,8 +157,8 @@ public class CoreBranchImpl implements CoreBranch {
                     .highCardinalityKeyValue(BRANCH_ID, getBranchId())
                     .observe(() -> {
                         // clear stmt queue
-                        stmtAggregator.retrieveAddedStatements();
-                        stmtAggregator.retrieveRemovedStatements();
+                        stmtAggregator.drainAddedStatements();
+                        stmtAggregator.drainRemovedStatements();
                         // promote
                         var writeLock = dataset.getLock();
                         writeLock.enterCriticalSection(false);
@@ -194,8 +194,8 @@ public class CoreBranchImpl implements CoreBranch {
                 .highCardinalityKeyValue(BRANCH_ID, getBranchId())
                 .observe(() -> {
                     // clear stmt queue
-                    stmtAggregator.retrieveAddedStatements();
-                    stmtAggregator.retrieveRemovedStatements();
+                    stmtAggregator.drainAddedStatements();
+                    stmtAggregator.drainRemovedStatements();
                     getRegisteredLocalCommitHandlers().forEach(CommitHandler::beforeTransactionStarted);
                     var writeLock = dataset.getLock();
                     writeLock.enterCriticalSection(false);
@@ -209,8 +209,8 @@ public class CoreBranchImpl implements CoreBranch {
     public void abortWriteTransaction() {
         getRegisteredLocalCommitHandlers().forEach(CommitHandler::beforeTransactionAborted);
         // clear stmt queue
-        stmtAggregator.retrieveAddedStatements();
-        stmtAggregator.retrieveRemovedStatements();
+        stmtAggregator.drainAddedStatements();
+        stmtAggregator.drainRemovedStatements();
         if (dataset.isInTransaction()) {
             dataset.abort();
         }
@@ -247,7 +247,7 @@ public class CoreBranchImpl implements CoreBranch {
                         var commit = new StatementCommitImpl(branchResourceURI, UUID.randomUUID().toString()
                                 , commitMsg, lastCommitId
                                 , timeStampProvider.getCurrentTimeStamp()
-                                , stmtAggregator.retrieveAddedStatements(), stmtAggregator.retrieveRemovedStatements()
+                                , stmtAggregator.drainAddedStatements(), stmtAggregator.drainRemovedStatements()
                                 , mergedFromCommitId, mergedFromBranchURI);
                         handleCommitInternally(commit);
                         return commit;
@@ -299,12 +299,12 @@ public class CoreBranchImpl implements CoreBranch {
                                 // any changes by a service are now in the statement lists
                         );
                 // provide changes immediately to next service:
-                commit.appendAddedStatements(stmtAggregator.retrieveAddedStatements());
+                commit.appendAddedStatements(stmtAggregator.drainAddedStatements());
                 newAdds = commit.getAdditionCount() - addsCount;
                 addsCount = commit.getAdditionCount();
                 perIterationAdds += newAdds;
 
-                commit.appendRemovedStatement(stmtAggregator.retrieveRemovedStatements());
+                commit.appendRemovedStatement(stmtAggregator.drainRemovedStatements());
                 newRemoves = commit.getRemovalCount() - removesCount;
                 removesCount = commit.getRemovalCount();
                 perIterationsRemovals += newRemoves;
