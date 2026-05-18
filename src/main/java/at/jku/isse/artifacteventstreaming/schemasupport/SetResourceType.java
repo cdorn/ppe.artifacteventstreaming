@@ -34,6 +34,5 @@ public class SetResourceType {
 
 	public void removePropertyURIfromCache(String propertyURI) {
 		// nothing to do, as all properties are removed via base/primary property cache,
-		// we do however would have stale subclasses cache entries (not a problem as long as we just override stale entries)
 	}
 }

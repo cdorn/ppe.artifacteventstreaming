@@ -49,25 +49,14 @@ class TestSchemaReinit extends TestSchemaSetup {
 		var listSubclasses = listBaseClass.subClasses().toList();
 		assertFalse(listSubclasses.isEmpty());
 
-		var listInstance = m.createIndividual(NS + "testListInst", listSubclasses.get(0));
+		var listInstance = m.createIndividual(ListResourceType.LIST_COLLECTION_URI_PREFIX + "testListInst", listSubclasses.get(0));
 		assertTrue(metaSchema.getListType().isListCollection(listInstance));
 
 		var reinitSchema = new MetaModelSchemaTypes(m);
 		assertTrue(reinitSchema.getListType().isListCollection(listInstance));
 	}
 
-	@Test
-	void testListWasListCollectionAfterReinit() {
-		var listBaseClass = m.getOntClass(RDF.Seq);
-		var listSubclasses = listBaseClass.subClasses().toList();
-		assertFalse(listSubclasses.isEmpty());
 
-		List<Resource> types = List.of(listSubclasses.get(0).asResource());
-		assertTrue(metaSchema.getListType().wasListCollection(types));
-
-		var reinitSchema = new MetaModelSchemaTypes(m);
-		assertTrue(reinitSchema.getListType().wasListCollection(types));
-	}
 
 	@Test
 	void testMapSubclassesCacheRecreatedOnReinit() {
@@ -76,25 +65,14 @@ class TestSchemaReinit extends TestSchemaSetup {
 		var mapSubclasses = mapEntryBaseClass.subClasses().toList();
 		assertFalse(mapSubclasses.isEmpty());
 
-		var mapInstance = m.createIndividual(NS + "testMapInst", mapSubclasses.get(0));
+		var mapInstance = m.createIndividual(UntypedMapResource.MAP_ENTRY_URI_PREFIX + "/testMapInst#1", mapSubclasses.get(0));
 		assertTrue(metaSchema.getMapType().isMapEntry(mapInstance));
 
 		var reinitSchema = new MetaModelSchemaTypes(m);
 		assertTrue(reinitSchema.getMapType().isMapEntry(mapInstance));
 	}
 
-	@Test
-	void testMapWasMapEntryAfterReinit() {
-		var mapEntryBaseClass = m.getOntClass(MapResourceType.ENTRY_TYPE_URI);
-		var mapSubclasses = mapEntryBaseClass.subClasses().toList();
-		assertFalse(mapSubclasses.isEmpty());
 
-		List<Resource> types = List.of(mapSubclasses.get(0).asResource());
-		assertTrue(metaSchema.getMapType().wasMapEntry(types));
-
-		var reinitSchema = new MetaModelSchemaTypes(m);
-		assertTrue(reinitSchema.getMapType().wasMapEntry(types));
-	}
 
 	@Test
 	void testDuplicatePreventionAfterReinit() {
@@ -156,13 +134,13 @@ class TestSchemaReinit extends TestSchemaSetup {
 		var listBaseClass = noInfModel.getOntClass(RDF.Seq);
 		var listSubs = listBaseClass.subClasses().toList();
 		assertFalse(listSubs.isEmpty());
-		var listInst = noInfModel.createIndividual(NS2 + "listInst", listSubs.get(0));
+		var listInst = noInfModel.createIndividual(ListResourceType.LIST_COLLECTION_URI_PREFIX + "listInst", listSubs.get(0));
 		assertTrue(schema2.getListType().isListCollection(listInst));
 
 		var mapBaseClass = noInfModel.getOntClass(MapResourceType.ENTRY_TYPE_URI);
 		var mapSubs = mapBaseClass.subClasses().toList();
 		assertFalse(mapSubs.isEmpty());
-		var mapInst = noInfModel.createIndividual(NS2 + "mapInst", mapSubs.get(0));
+		var mapInst = noInfModel.createIndividual(UntypedMapResource.MAP_ENTRY_URI_PREFIX + "mapInst", mapSubs.get(0));
 		assertTrue(schema2.getMapType().isMapEntry(mapInst));
 		dataset.commit();
 		dataset.end();

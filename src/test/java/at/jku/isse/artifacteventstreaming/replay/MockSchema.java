@@ -26,8 +26,7 @@ public class MockSchema {
 	@Getter public OntObjectProperty labelProperty;
 	@Getter public OntObjectProperty keyValueProperty;
 	
-	//private final PropertyCardinalityTypes schemaUtils;
-	
+
 	public MockSchema(@NonNull OntModel model, @NonNull MetaModelSchemaTypes schemaUtils) {				
 		issueType = model.createOntClass(TEST_SCHEMA_URI+"Issue");
 		
@@ -37,9 +36,9 @@ public class MockSchema {
 		derivedLongProperty = schemaUtils.getSingleType().createSingleDataPropertyType(TEST_SCHEMA_URI+"derivedPriority", issueType, model.getDatatype(XSD.xlong));
 
 		requirementsProperty =  schemaUtils.getSetType().createObjectPropertyType( TEST_SCHEMA_URI+"requirements", issueType, issueType);
-		bugsProperty = schemaUtils.getPrimaryPropertyType().createBaseObjectPropertyType(model, TEST_SCHEMA_URI+"bugs", List.of(issueType), issueType);
-		upstreamProperty = schemaUtils.getPrimaryPropertyType().createBaseObjectPropertyType(model, TEST_SCHEMA_URI+"upstream", List.of(issueType), issueType);
-		downstreamProperty = schemaUtils.getPrimaryPropertyType().createBaseObjectPropertyType(model, TEST_SCHEMA_URI+"downstream", List.of(issueType), issueType);
+		bugsProperty = schemaUtils.getSetType().createObjectPropertyType(TEST_SCHEMA_URI+"bugs", List.of(issueType), issueType);
+		upstreamProperty = schemaUtils.getSetType().createObjectPropertyType(TEST_SCHEMA_URI+"upstream", List.of(issueType), issueType);
+		downstreamProperty = schemaUtils.getSetType().createObjectPropertyType(TEST_SCHEMA_URI+"downstream", List.of(issueType), issueType);
 		
 		parentProperty = schemaUtils.getSingleType().createSingleObjectPropertyType(TEST_SCHEMA_URI+"parent", issueType, issueType);
 		labelProperty = schemaUtils.getListType().addLiteralListProperty(issueType, TEST_SCHEMA_URI+"label", model.getDatatype(XSD.xstring));

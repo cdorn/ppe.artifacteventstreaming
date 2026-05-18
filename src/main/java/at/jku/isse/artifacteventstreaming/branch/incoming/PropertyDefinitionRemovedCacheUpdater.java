@@ -54,7 +54,7 @@ public class PropertyDefinitionRemovedCacheUpdater extends AbstractHandlerBase {
 	
 	private void handleRemovedProperty(String propertyURI, Commit commit) {
 		log.debug(String.format("Handling removed property %s from commit %s applied to branch %s ", propertyURI, commit.getCommitId(), branch.getBranchId()));
-		metaschema.removeURIfromCaches(propertyURI);
+		metaschema.cleanupCachesAfterRemotePropertyRemoval(propertyURI);
 	}
 
 	public static String getWellknownServiceTypeURI() {

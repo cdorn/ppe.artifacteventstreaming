@@ -48,8 +48,8 @@ public class PropertyDefinitionAddedCacheUpdater extends AbstractHandlerBase {
 		.filter(stmt -> !metaschema.getPrimaryPropertyType().getKnownPropertyURIs().contains(stmt.getSubject().getURI()))
 		.forEach(stmt -> { 
 			var propertyURI = stmt.getSubject().getURI();
-			log.debug(String.format("Handling added property %s from commit %s applied to branch %s ", propertyURI, commit.getCommitId(), branch.getBranchId()));
-			metaschema.addURItoCaches(propertyURI, stmt.getSubject().getModel());
+			log.debug("Handling added property {} from commit {} applied to branch {} ", propertyURI, commit.getCommitId(), branch.getBranchId());
+			metaschema.syncCachesAfterRemotePropertyAdded(propertyURI, stmt.getSubject().getModel());
 			
 		}); 	
 	}

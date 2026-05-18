@@ -1,8 +1,13 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
+import lombok.Getter;
 import lombok.NonNull;
 import org.apache.jena.ontapi.model.*;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -10,7 +15,14 @@ import java.util.Set;
 public class BasePropertyType {
 	public final Set<String> propertyUriCache = new HashSet<>();
 
+	private final MessageDigest messageDigest;
+
 	public BasePropertyType(OntModel model) {
+		try {
+			messageDigest = MessageDigest.getInstance("SHA-256");
+		} catch (NoSuchAlgorithmException e) {
+			throw new RuntimeException(e);
+		}
 		fillCache(model);
 	}
 
@@ -58,5 +70,12 @@ public class BasePropertyType {
 
 	public void addToCache(String propertyURI) {
 		propertyUriCache.add(propertyURI);
+	}
+
+	public String hashAsIdPart(String... args) {
+		var strTohash = String.join("", args);
+		byte[] digest = messageDigest.digest(strTohash.getBytes(StandardCharsets.UTF_8));
+		return Base64.getUrlEncoder()
+				.withoutPadding().encodeToString(digest);
 	}
 }

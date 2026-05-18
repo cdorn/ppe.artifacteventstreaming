@@ -62,7 +62,7 @@ public class MetaModelSchemaTypes {
 	 * do not use if an affected property is in the domain of multiple classes  
 	 */
 	public void deleteOntClassInclSubclasses(OntClass ontClass) {
-		ontClass.subClasses().forEach(this::deleteOntClassInclOwnedProperties);
+		ontClass.subClasses().toList().forEach(this::deleteOntClassInclOwnedProperties);
 		deleteOntClassInclOwnedProperties(ontClass);
 	}
 	
@@ -81,11 +81,11 @@ public class MetaModelSchemaTypes {
 			if (singleType.isSingleProperty(prop)) {
 				singleType.removeSingleProperty(prop);
 			} else
-			if (listType.isListContainerReferenceProperty(prop)) {
-				listType.removeListContainerReferenceProperty(prop);
+			if (listType.isOwnsListProperty(prop)) {
+				listType.removeListOwnershipPropertyDefinition(prop);
 			} else 
 			if (mapType.isMapContainerReferenceProperty(prop)) {
-				mapType.removeMapContainerReferenceProperty(prop);
+				mapType.removeMapOwnershipPropertyDefinition(prop);
 			} else {
 				primaryPropertyType.removeBaseProperty(prop);
 			}
@@ -111,24 +111,27 @@ public class MetaModelSchemaTypes {
 	}
 
 	/**
+	 * used when notified about external (i.e., synced) removal of property, hence underlying model contains no triples anymore, just cleanup cache
 	 * @param propertyURI to be checked across single, set, list, map types to be removed from caches
-	 * no change to model, only in-memory cache data structure affected
 	 */
-	public void removeURIfromCaches(String propertyURI) {
+	public void cleanupCachesAfterRemotePropertyRemoval(String propertyURI) {
 		this.primaryPropertyType.removePropertyURIfromCache(propertyURI);
 		this.singleType.removePropertyURIfromCache(propertyURI);
-		this.mapType.removePropertyURIfromCache(propertyURI);
-		this.listType.removePropertyURIfromCache(propertyURI);
 		this.setType.removePropertyURIfromCache(propertyURI);
+		this.listType.cleanupCacheAfterRemotePropertyRemoval(propertyURI);
+		this.mapType.cleanupCacheAfterRemotePropertyRemoval(propertyURI);
 	}
-	
-	public void addURItoCaches(String propertyURI, Model modelAddedTo) {
+
+	public void syncCachesAfterRemotePropertyAdded(String propertyURI, Model modelAddedTo) {
 		var prop = modelAddedTo.getProperty(propertyURI);
 		if (prop != null) {
-			// we dont check set type, map type or list type as currently these dont cache properties themselves
-			singleType.addIfIsSinglePropertyBasedOnSuperProperty(prop);
 			primaryPropertyType.addToCache(propertyURI);
-		} 
+			if (singleType.addIfIsSinglePropertyBasedOnSuperProperty(prop))
+				return;
+
+			listType.addToOwnershipPropertyCacheIfApplicable(prop);
+			mapType.addToOwnershipPropertyCacheIfApplicable(prop);
+		}
 	}
 	
 	public static class MetaModelOntology {

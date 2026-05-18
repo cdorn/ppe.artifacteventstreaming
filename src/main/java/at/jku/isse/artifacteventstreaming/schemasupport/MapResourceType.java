@@ -8,8 +8,6 @@ import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.XSD;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -26,7 +24,7 @@ public class MapResourceType  {
 	public static final String LITERAL_VALUE_PROPERTY_URI = MAP_NS+LITERAL_VALUE;
 	public static final String OBJECT_VALUE_PROPERTY_URI = MAP_NS+OBJECT_VALUE;
 	public static final String CONTAINEROWNER_PROPERTY_URI = MAP_NS+"containerOwnerRef";
-	public static final String MAP_REFERENCE_SUPERPROPERTY_URI = MAP_NS+"mapRef";
+	public static final String MAP_OWNERSHIP_SUPERPROPERTY_URI = MAP_NS+"mapRef";
 		
 	@Getter
 	private final OntDataProperty keyProperty;
@@ -35,42 +33,40 @@ public class MapResourceType  {
 	@Getter
 	private final OntObjectProperty.Named objectValueProperty;
 	@Getter
-	private final OntObjectProperty containerProperty;
+	private final OntObjectProperty mapOwnedByProperty;
 	@Getter
-	private final OntObjectProperty mapReferenceSuperProperty;
+	private final OntObjectProperty mapOwnershipSuperProperty;
 	
 	@Getter
 	private final OntClass mapEntryClass;
 	private final Set<OntClass> subclassesCache = new HashSet<>();
+	@Getter
+    private final Set<Property> ownsPropertyCache = new HashSet<>();
 	private final BasePropertyType primaryPropertyType;
 
-	@Getter private final MessageDigest messageDigest;
-	
-	public MapResourceType(@NonNull OntModel model, @NonNull BasePropertyType primaryType) {
-        try {
-            messageDigest = MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
 
+
+	public MapResourceType(@NonNull OntModel model, @NonNull BasePropertyType primaryType) {
         this.primaryPropertyType = primaryType;
 		mapEntryClass = model.getOntClass(ENTRY_TYPE_URI);
 		keyProperty = model.getDataProperty(KEY_PROPERTY_URI);
 		literalValueProperty = model.getDataProperty(LITERAL_VALUE_PROPERTY_URI);
 		objectValueProperty = model.getObjectProperty(OBJECT_VALUE_PROPERTY_URI);
-		containerProperty = model.getObjectProperty(CONTAINEROWNER_PROPERTY_URI);
-		mapReferenceSuperProperty = model.getObjectProperty(MAP_REFERENCE_SUPERPROPERTY_URI);			
+		mapOwnedByProperty = model.getObjectProperty(CONTAINEROWNER_PROPERTY_URI);
+		mapOwnershipSuperProperty = model.getObjectProperty(MAP_OWNERSHIP_SUPERPROPERTY_URI);
 		initHierarchyCache();
 	}		
 			
 	private void initHierarchyCache() {
 		mapEntryClass.subClasses().forEach(subclassesCache::add);
+		mapOwnershipSuperProperty.subProperties(true)
+				.forEach(subProp -> ownsPropertyCache.add(subProp.asProperty()));
 	}
 	
-	public static boolean isEntryProperty(OntProperty property) {
-		// better done via super/subproperty check
-		return property.getLocalName().endsWith(MapResourceType.LITERAL_VALUE) || property.getLocalName().endsWith(MapResourceType.OBJECT_VALUE);
-	}
+//	public static boolean isEntryProperty(OntProperty property) {
+//		// better done via super/subproperty check
+//		return property.getLocalName().endsWith(MapResourceType.LITERAL_VALUE) || property.getLocalName().endsWith(MapResourceType.OBJECT_VALUE);
+//	}
 	
 	public boolean isMapEntrySubclass(OntObjectProperty mapEntryProperty) {
 		return  mapEntryProperty.ranges(true).anyMatch(rangeClass -> rangeClass.equals(mapEntryClass)
@@ -78,7 +74,7 @@ public class MapResourceType  {
 	}
 	
 	public boolean isMapContainerReferenceProperty(OntProperty prop) {
-		return mapReferenceSuperProperty.subProperties(true).anyMatch(subProp -> subProp.equals(prop));
+		return mapOwnershipSuperProperty.subProperties(true).anyMatch(subProp -> subProp.equals(prop));
 	}
 	
 	public OntObjectProperty addLiteralMapProperty(OntClass resource, String propertyURI, OntDataRange valueType) {
@@ -101,7 +97,8 @@ public class MapResourceType  {
 
 
 		OntObjectProperty hasMap = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), propertyURI, List.of(resource), mapType);
-		mapReferenceSuperProperty.addSubProperty(hasMap);			
+		mapOwnershipSuperProperty.addSubProperty(hasMap);
+		ownsPropertyCache.add(hasMap.asProperty());
 		return hasMap;
 	}
 
@@ -123,59 +120,111 @@ public class MapResourceType  {
 		valueProp.addSuperProperty(objectValueProperty);
 
 		OntObjectProperty hasMap = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), propertyURI, List.of(resource), mapType);
-		mapReferenceSuperProperty.addSubProperty(hasMap);	
+		mapOwnershipSuperProperty.addSubProperty(hasMap);
+		ownsPropertyCache.add(hasMap.asProperty());
 		return hasMap;
 	}
 
 	private String generateMapEntryTypeURI(String propertyURI) {
 		return propertyURI+ENTRY_TYPE;
 	}
-	
 
-	public void removePropertyURIfromCache(String propertyURI) {
-		// nothing to do, as all properties are removed via base/primary property cache,
-		// we do however would have stale subclasses cache entries (not a problem as long as we just override stale entries)
+	// Remote changes syncing in (deleted/adding of property definitions )
+
+	public void addToOwnershipPropertyCacheIfApplicable(Property prop) {
+		if (prop.canAs(OntObjectProperty.class)) {
+			var ontProp = prop.as(OntObjectProperty.class);
+			// rather expensive, better to find additional hints to evaluate this
+			if (ontProp.superProperties(true).anyMatch(sp -> sp.equals(mapOwnershipSuperProperty))) {
+				ownsPropertyCache.add(prop);
+			}
+		}
+
+		//TODO: subclass cache sync
 	}
-	
+
 	/**
-	 * @param prop OntProperty to remove from its owning class including the specific map entry type and its value predicate
+	 * used when notified about external (i.e., synced) removal of property, hence underlying model contains no triples anymore, just cleanup cache
+	 * @param propertyURI
 	 */
-	public void removeMapContainerReferenceProperty(OntProperty mapReferenceProperty) {
-		var model = mapReferenceProperty.getModel();
-		// remove listType:
-		var mapType = model.createOntClass(generateMapEntryTypeURI(mapReferenceProperty.getURI()));
-		// remove from cache
-		subclassesCache.remove(mapType);
-		// remove any predicates from any properties that happen to be defined
-		MetaModelSchemaTypes.getExplicitlyDeclaredProperties(mapType).forEach(primaryPropertyType::removeBaseProperty);
-		// remove predicates association from mapType itself 
-		mapType.removeProperties();
-		// remove map reference property
-		primaryPropertyType.removeBaseProperty(mapReferenceProperty);
-	}
-	
-	public boolean isMapEntry(OntIndividual ontInd) {
-		return ontInd.classes(true).anyMatch(type -> subclassesCache.contains(type) || type.equals(mapEntryClass));
-	}
-	
-	public boolean wasMapEntry(List<Resource> delTypes) {
-		return delTypes.stream().anyMatch(type -> type.getURI().equals(getMapEntryClass().getURI()) || 
-				subclassesCache.stream().map(RDFNode::asResource).anyMatch(clazz -> clazz.equals(type))  );
+	public void cleanupCacheAfterRemotePropertyRemoval(String propertyURI) {
+		//keep in sync with method below
+		ownsPropertyCache.removeIf(p -> p.getURI().equals(propertyURI));
+		var mapTypeURI = generateMapEntryTypeURI(propertyURI);
+		subclassesCache.removeIf(c -> c.getURI().equals(mapTypeURI));
 	}
 
-	public List<Property> findMapReferencePropertiesBetween(Resource subject, OntObject mapEntry) {
+	/**
+	 * @param mapOwnershipProperty OntProperty to remove from its owning class including the specific map entry type and its value predicate
+	 */
+	public void removeMapOwnershipPropertyDefinition(OntProperty mapOwnershipProperty) {
+		var model = mapOwnershipProperty.getModel();
+		// remove listType:
+		var mapType = model.getOntClass(generateMapEntryTypeURI(mapOwnershipProperty.getURI()));
+		if (mapType != null) {
+			// remove from cache
+			subclassesCache.remove(mapType);
+			// remove any predicates from any properties that happen to be defined
+			MetaModelSchemaTypes.getExplicitlyDeclaredProperties(mapType).forEach(primaryPropertyType::removeBaseProperty);
+			// remove predicates association from mapType itself
+			mapType.removeProperties();
+			// remove map reference property
+		}
+		ownsPropertyCache.remove(mapOwnershipProperty.asProperty());
+		primaryPropertyType.removeBaseProperty(mapOwnershipProperty);
+	}
+
+
+
+	// Instance-level checks ================================================
+
+	public boolean isMapEntry(Resource ontInd) {
+		// TOO slow: return ontInd.classes(true).anyMatch(type -> subclassesCache.contains(type) || type.equals(mapEntryClass));
+		// as we control map entry creation, we can take a shortcut:
+		var uri = ontInd.getURI();
+		return uri != null && uri.startsWith(UntypedMapResource.MAP_ENTRY_URI_PREFIX);
+	}
+	
+//	public boolean wasMapEntry(List<Resource> delTypes) {
+//		// too slow, see above
+//		return delTypes.stream().anyMatch(type -> type.getURI().equals(getMapEntryClass().getURI()) ||
+//				subclassesCache.stream().map(RDFNode::asResource).anyMatch(clazz -> clazz.equals(type))  );
+//	}
+
+	public boolean wasMapEntryBasedOnURI(Resource res) {
+		// too slow, see above
+		//return delTypes.stream().anyMatch(type -> type.getURI().equals(getMapEntryClass().getURI()) ||
+		//		subclassesCache.stream().map(RDFNode::asResource).anyMatch(clazz -> clazz.equals(type))  );
+		return isMapEntry(res);
+	}
+
+	public Property findReferencePropertyFromCache(Resource owner, Resource entry) {
+		var iter = owner.getModel().listStatements(owner, null, entry);
+		while (iter.hasNext()) {
+			Property pred = iter.next().getPredicate();
+			if (ownsPropertyCache.contains(pred)) {
+				iter.close();
+				return pred;
+			}
+		}
+		return null;
+	}
+
+	public List<Property> findMapReferencePropertiesBetween(Resource subject, Resource mapEntry) {
 		List<Property> props = new ArrayList<>();
 		var iter = subject.getModel().listStatements(subject, null, mapEntry);
 		while (iter.hasNext()) {
 			props.add(iter.next().getPredicate());
-		}		
+		}
 		if (props.size() > 1) {
-			props.remove(mapReferenceSuperProperty.asProperty());
+			props.remove(mapOwnershipSuperProperty.asProperty());
 		}
 		return props;
 	}
 	
-
+	protected String hashAsIdPart(String... args) {
+		return primaryPropertyType.hashAsIdPart(args);
+	}
 	
 	protected static class MapSchemaFactory {
 		
@@ -219,9 +268,9 @@ public class MapResourceType  {
 				containerProperty.addDomain(mapEntryClass);
 			}
 			
-			var mapReferenceSuperProperty = model.getObjectProperty(MAP_REFERENCE_SUPERPROPERTY_URI);
+			var mapReferenceSuperProperty = model.getObjectProperty(MAP_OWNERSHIP_SUPERPROPERTY_URI);
 			if (mapReferenceSuperProperty == null) {
-				mapReferenceSuperProperty = model.createObjectProperty(MAP_REFERENCE_SUPERPROPERTY_URI);
+				mapReferenceSuperProperty = model.createObjectProperty(MAP_OWNERSHIP_SUPERPROPERTY_URI);
 				mapReferenceSuperProperty.addRange(mapEntryClass);
 			}
 		}

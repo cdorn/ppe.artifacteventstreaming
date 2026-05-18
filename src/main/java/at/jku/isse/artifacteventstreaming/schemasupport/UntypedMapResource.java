@@ -1,7 +1,6 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
 
-import at.jku.isse.artifacteventstreaming.api.AES;
 import org.apache.jena.ontapi.model.OntObject;
 import org.apache.jena.ontapi.model.OntObjectProperty;
 import org.apache.jena.rdf.model.*;
@@ -9,12 +8,12 @@ import org.apache.jena.rdf.model.impl.ModelCom;
 import org.apache.jena.rdf.model.impl.StatementImpl;
 import org.apache.jena.vocabulary.RDF;
 
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class UntypedMapResource implements Map<String, RDFNode> {	
+public class UntypedMapResource implements Map<String, RDFNode> {
 
+	public static final String MAP_ENTRY_URI_PREFIX = "http://at.jku.isse/mapEntry/";
 	private final OntObject mapOwner;
 	private final Property mapEntryProperty;	
 	private final Map<String, Statement> map = new HashMap<>();
@@ -115,11 +114,8 @@ public class UntypedMapResource implements Map<String, RDFNode> {
 
 	private Resource createEntry(String key) {
 		var ownerId = mapOwner.isAnon() ? mapOwner.getId().toString() : mapOwner.getURI();
-		var details = key+ownerId+this.mapEntryProperty.getURI();
-		byte[] digest = mapType.getMessageDigest().digest(details.getBytes(StandardCharsets.UTF_8));
-		var uriPart = Base64.getUrlEncoder()
-				.withoutPadding().encodeToString(digest);
-		var uri = "http://at.jku.isse/mapEntry/"+mapEntryProperty.getLocalName()+"#"+uriPart;
+		var uriPart  = mapType.hashAsIdPart(key, ownerId, this.mapEntryProperty.getURI());
+		var uri = MAP_ENTRY_URI_PREFIX +mapEntryProperty.getLocalName()+"#"+uriPart;
 
 		return mapType.getMapEntryClass().getModel().createResource(uri)
 				.addProperty( RDF.type, mapType.getMapEntryClass() );
@@ -127,7 +123,7 @@ public class UntypedMapResource implements Map<String, RDFNode> {
 	}
 	
 	private void addBackReference(Resource entry) {
-		entry.addProperty(mapType.getContainerProperty().asProperty(), this.mapOwner);
+		entry.addProperty(mapType.getMapOwnedByProperty().asProperty(), this.mapOwner);
 	}
 
 	private void addForwardReference(OntObject mapOwner, Resource entry) {

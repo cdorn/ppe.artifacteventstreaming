@@ -291,6 +291,59 @@ class TestCommitContainmentAugmenter {
 		}
 	}
 
+	@Test
+	void listDeletionIsAugmentedWithOwnerAndProperty() {
+		Seq seq = schemaUtil.getListType().getOrCreateSequenceFor(issue1, schema.getLabelProperty());
+		seq.add(1, "First");
+		drain();
+
+		issue1.removeAll(schema.getLabelProperty().asProperty());
+		seq.removeProperties();
+		var commit = drainToCommit("listDel", 1);
+		augmenter.handleCommit(commit);
+
+		var removedAugmented = commit.getRemovedStatements().stream()
+				.filter(stmt -> !stmt.getSubject().equals(issue1))
+				.filter(stmt -> stmt.getContainerOrSubject().equals(issue1))
+				.toList();
+		assertFalse(removedAugmented.isEmpty(), "List deletion should be augmented with the owning resource");
+		for (ContainedStatement stmt : removedAugmented) {
+			assertEquals(schema.getLabelProperty().asProperty(), stmt.getContainmentPropertyOrPredicate());
+		}
+	}
+
+	@Test
+	void individualDeletionPassesThroughWithoutException() {
+		var issue2 = schema.createIssue("Issue2");
+		drain();
+
+		issue2.removeProperties();
+		var commit = drainToCommit("individualDel", 1);
+		assertDoesNotThrow(() -> augmenter.handleCommit(commit));
+
+		for (ContainedStatement stmt : commit.getRemovedStatements()) {
+			assertEquals(stmt.getSubject(), stmt.getContainerOrSubject(),
+					"Individual deletion should not augment statements");
+		}
+	}
+
+	@Test
+	void schemaClassAdditionPassesThroughWithoutException() {
+		m.createOntClass(MockSchema.TEST_SCHEMA_URI + "NewArtifactType");
+		var commit = drainToCommit("schemaAdd", 0);
+		assertDoesNotThrow(() -> augmenter.handleCommit(commit));
+	}
+
+	@Test
+	void schemaClassDeletionPassesThroughWithoutException() {
+		var tempClass = m.createOntClass(MockSchema.TEST_SCHEMA_URI + "TemporaryType");
+		drain();
+
+		tempClass.removeProperties();
+		var commit = drainToCommit("schemaDel", 1);
+		assertDoesNotThrow(() -> augmenter.handleCommit(commit));
+	}
+
 	private void drain() {
 		aggr.drainAddedStatements();
 		aggr.drainRemovedStatements();
