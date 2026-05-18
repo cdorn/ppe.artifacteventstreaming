@@ -79,7 +79,7 @@ public class MetaModelSchemaTypes {
 			// determine set/map/list/single type
 			// then call matching delete
 			if (singleType.isSingleProperty(prop)) {
-				singleType.removeSingleProperty(ontClass, prop);
+				singleType.removeSingleProperty(prop);
 			} else
 			if (listType.isListContainerReferenceProperty(prop)) {
 				listType.removeListContainerReferenceProperty(ontClass, prop);
@@ -140,7 +140,6 @@ public class MetaModelSchemaTypes {
 			metaontology = loadMetaSchemaFromDB(isInMemory);
 			metaontology.begin(ReadWrite.WRITE);
 			this.metamodel = OntModelFactory.createModel(metaontology.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
-			new SingleResourceType.SingleSchemaFactory(metamodel);
 			new MapResourceType.MapSchemaFactory(metamodel);
 			new ListResourceType.ListSchemaFactory(metamodel);
 			metaontology.commit();

@@ -167,7 +167,7 @@ class TestRemoveSchemaElements {
 		var ontClass = model.createOntClass(NS+"Demo");
 		var prop = metaTypes.getSingleType().createSingleDataPropertyType(NS+"demoSingle", ontClass, model.getDatatype(XSD.xstring));
 		
-		var subPropsSize = metaTypes.getSingleType().getSingleLiteralProperty().subProperties(true).count();
+		var subPropsSize = metaTypes.getSingleType().getSinglePropertyCount();
 		var sizeMiddle = model.size();
 		var sizeMetaMiddle = metaModel.getMetamodel().size();
 		dataset.commit();
@@ -183,7 +183,7 @@ class TestRemoveSchemaElements {
 		// ensure model has same size --> no leftover statements
 		var sizeEnd = model.size();
 		var sizeMetaEnd = metaModel.getMetamodel().size();
-		var subPropsSizeEnd =  metaTypes.getSingleType().getSingleLiteralProperty().subProperties(true).count();
+		var subPropsSizeEnd =  metaTypes.getSingleType().getSinglePropertyCount();
 		dataset.commit();
 		dataset.end();
 		metaModel.getMetaontology().end();

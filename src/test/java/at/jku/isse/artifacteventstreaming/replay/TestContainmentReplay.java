@@ -4,6 +4,7 @@ import at.jku.isse.artifacteventstreaming.api.Branch;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.outgoing.CommitToHistoryHandler;
+import at.jku.isse.artifacteventstreaming.branch.persistence.InMemoryBranchStateCache;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import at.jku.isse.artifacteventstreaming.schemasupport.ResourceMismatchException;
@@ -61,7 +62,7 @@ class TestContainmentReplay {
 		
 		when(mockBranch.getBranchName()).thenReturn("testBranch");
 		when(mockBranch.getBranchResource()).thenReturn(m.createIndividual(baseURI+"mock"));
-		var commit2history = new CommitToHistoryHandler(mockBranch, historyRepo, null);
+		var commit2history = new CommitToHistoryHandler(mockBranch, historyRepo, new InMemoryBranchStateCache());
 		CommitContainmentAugmenter augmenter = new CommitContainmentAugmenter(branchURI, m, schemaUtil);
 
 		issue1 = schema.createIssue("Issue1");
@@ -180,7 +181,7 @@ class TestContainmentReplay {
 		RDFDataMgr.write(System.out, m, Lang.TURTLE) ;
 		
 		var fwd = session.playForwardOneTimestamp();
-		assertEquals(5, fwd.size()); //type info and list linking
+		assertEquals(4, fwd.size()); //type info and list linking
 		var seq = schemaUtil.getListType().getOrCreateSequenceFor(issue1, schema.getLabelProperty());
 		assertEquals("First", seq.getString(1));
 		

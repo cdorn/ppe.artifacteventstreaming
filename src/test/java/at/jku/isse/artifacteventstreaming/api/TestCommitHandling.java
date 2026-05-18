@@ -134,9 +134,10 @@ class TestCommitHandling {
 		branch.completeTransaction(lock);
 		branch.startReadTransaction();
 		RDFDataMgr.write(System.out, model, Lang.TURTLE) ;
-		assertEquals(2, model.size());
+		assertEquals(1, model.size());
 		assertEquals(1, commit.getAddedStatements().size());
-		assertEquals(2, commit.getRemovedStatements().size());
+		assertEquals(0, commit.getRemovedStatements().size());
+	// looping flag cancels out, removing non-existing triple also leaves no residue
 	}
 	
 	@Test

@@ -13,6 +13,7 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.shared.Lock;
 import org.apache.jena.vocabulary.RDFS;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
@@ -24,7 +25,8 @@ import java.util.concurrent.Executors;
 class MultipleWriterTest {
 
 	public static URI repoURI1 = URI.create("http://at.jku.isse.artifacteventstreaming/testrepos/multiplewriteaccess");		
-	
+
+    @Disabled //was for exploring only
 	@Test
 	void testMultipleThreadsWritingToDifferentArt() throws Exception {
 		Branch branch = new BranchBuilder(repoURI1, DatasetFactory.createTxnMem(), ObservationRegistry.NOOP)

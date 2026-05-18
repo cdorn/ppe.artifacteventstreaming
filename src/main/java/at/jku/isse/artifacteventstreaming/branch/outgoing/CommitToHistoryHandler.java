@@ -2,6 +2,7 @@ package at.jku.isse.artifacteventstreaming.branch.outgoing;
 
 import at.jku.isse.artifacteventstreaming.api.*;
 import at.jku.isse.artifacteventstreaming.replay.InMemoryHistoryRepository;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.ontapi.model.OntIndividual;
@@ -16,8 +17,8 @@ public class CommitToHistoryHandler extends AbstractHandlerBase {
 	private final InMemoryHistoryRepository historyRepo;
 	private final BranchStateCache cache;	
 	
-	public CommitToHistoryHandler(CoreBranch sourceBranch, InMemoryHistoryRepository historyRepo,
-			 BranchStateCache cache) {
+	public CommitToHistoryHandler(@NonNull CoreBranch sourceBranch, @NonNull InMemoryHistoryRepository historyRepo,
+			 @NonNull BranchStateCache cache) {
 		super(CommitToHistoryHandler.class.getSimpleName()+sourceBranch.getBranchName(), sourceBranch.getBranchResource().getModel());
 		this.sourceBranch = sourceBranch;
 		this.historyRepo = historyRepo;
@@ -71,7 +72,7 @@ public class CommitToHistoryHandler extends AbstractHandlerBase {
 		return CACHE_ENTRY_PREFIX+SERVICE_TYPE_URI+sourceBranch.getBranchId();
 	}
 	
-	public static ServiceFactory getServiceFactory(BranchStateCache cache, InMemoryHistoryRepository historyRepo) {
+	public static ServiceFactory getServiceFactory(@NonNull BranchStateCache cache, @NonNull InMemoryHistoryRepository historyRepo) {
 		if (factory == null) {
 			factory = new DefaultServiceFactory(cache, historyRepo);
 		}

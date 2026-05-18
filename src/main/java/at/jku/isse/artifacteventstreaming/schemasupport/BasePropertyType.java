@@ -2,34 +2,29 @@ package at.jku.isse.artifacteventstreaming.schemasupport;
 
 import lombok.NonNull;
 import org.apache.jena.ontapi.model.*;
-import org.apache.jena.vocabulary.RDF;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 public class BasePropertyType {
-	public final Set<String> propertyCache = new HashSet<>();
+	public final Set<String> propertyUriCache = new HashSet<>();
 
 	public BasePropertyType(OntModel model) {
 		fillCache(model);
 	}
 
 	private void fillCache(OntModel model) {
-		var node = model.getResource(RDF.Nodes.Property.getURI());
-		var iter = model.listResourcesWithProperty(RDF.type, node);
-		while (iter.hasNext()) {
-			propertyCache.add(iter.next().getURI());
-		}
+		model.properties().forEach(prop -> propertyUriCache.add(prop.getURI()));
 	}
 	
 	public boolean existsPrimaryProperty(String uri) {
 		//return model.getGraph().contains(ResourceFactory.createResource(uri).asNode(), RDF.Nodes.type, Node.ANY);
-		return propertyCache.contains(uri);
+		return propertyUriCache.contains(uri);
 	}
 	
 	public Set<String> getKnownPropertyURIs() {
-		return new HashSet<>(propertyCache);
+		return new HashSet<>(propertyUriCache);
 	}
 
 	public OntObjectProperty createBaseObjectPropertyType(@NonNull OntModel model, @NonNull String propUri, @NonNull List<OntClass> domains, @NonNull OntClass range ) {
@@ -38,7 +33,7 @@ public class BasePropertyType {
 		var prop = model.createObjectProperty(propUri);
 		domains.forEach(prop::addDomain);
 		prop.addRange(range);
-		propertyCache.add(propUri);
+		propertyUriCache.add(propUri);
 		return prop;
 	}
 	
@@ -48,20 +43,20 @@ public class BasePropertyType {
 		var prop = model.createDataProperty(propUri);
 		domains.forEach(prop::addDomain);		
 		prop.addRange(range);			
-		propertyCache.add(propUri);
+		propertyUriCache.add(propUri);
 		return prop;	
 	}
 	
 	public void removeBaseProperty(@NonNull OntProperty ontProperty) {
-		propertyCache.remove(ontProperty.getURI());
+		propertyUriCache.remove(ontProperty.getURI());
 		ontProperty.removeProperties();
 	}
 
 	public void removePropertyURIfromCache(String propertyURI) {
-		propertyCache.remove(propertyURI);
+		propertyUriCache.remove(propertyURI);
 	}
 
 	public void addToCache(String propertyURI) {
-		propertyCache.add(propertyURI);
+		propertyUriCache.add(propertyURI);
 	}
 }

@@ -46,8 +46,8 @@ public interface CommitHandler {
 	default void beforeTransactionCommitted() {}
 
 	/**
-	 * after changes have been successfully commited, the transaction is still open, within write lock
-	 * reads are potentially possible but not advised
+	 * after changes have been successfully commited, the write lock is still held,
+	 * but no reads/writes possible as transaction is closed, so any reads/writes will lead to an exception
 	 */
 	default void afterTransactionCommitted() {}
 }

@@ -22,10 +22,7 @@ public class StatementAugmentationSession {
 	private final List<ContainedStatement> addedStatements;
 	private final List<ContainedStatement> removedStatements;
 	private final MetaModelSchemaTypes schemaUtils;
-	
-//	private final Set<ContainedStatement> addedAugmentedStatements = new HashSet<>();
-//	private final Set<ContainedStatement> removedAugmentedStatements = new HashSet<>();
-//	
+
 	public void process() {
 		 Map<RDFNode, List<StatementWrapper>> opsPerInst = collectPerInstance(addedStatements, removedStatements);
 		 opsPerInst.entrySet().stream()
@@ -206,41 +203,7 @@ public class StatementAugmentationSession {
 	}
 	
 	protected boolean isSingleProperty(Statement stmt) {		
-		if (stmt.getObject().isLiteral()) {			
-			StmtIterator iter = stmt.getPredicate().listProperties(RDFS.subPropertyOf);
-			while (iter.hasNext()) {
-				var res = iter.next().getResource();
-				if (res.equals(schemaUtils.getSingleType().getSingleLiteralProperty())) {
-					return true;
-				}
-			}
-			return false;
-			
-//			var ontProp = schemaUtils.getSingleType().getSingleLiteralProperty().getModel().getDataProperty(stmt.getPredicate().getURI());
-//			if (ontProp == null) return false;
-//			return schemaUtils.getSingleType().getSingleLiteralProperty().hasSubProperty(ontProp, false);
-		} else {
-			StmtIterator iter = stmt.getPredicate().listProperties(RDFS.subPropertyOf);
-			while (iter.hasNext()) {
-				if (iter.next().getResource().equals(schemaUtils.getSingleType().getSingleObjectProperty())) {
-					return true;
-				}
-			}
-			return false;
-			
-			
-//			var ontProp = schemaUtils.getSingleType().getSingleLiteralProperty().getModel().getObjectProperty(stmt.getPredicate().getURI());
-//			if (ontProp == null) return false;
-//			return schemaUtils.getSingleType().getSingleObjectProperty().hasSubProperty(ontProp, false);
-		}		
-//		var prop = schemaUtils.getSingleType().getSingleLiteralProperty().getModel().getProperty(stmt.getPredicate().getURI());
-//		if (prop.canAs(OntObjectProperty.class)) {
-//			var ontProp = prop.as(OntObjectProperty.class);
-//			return (stmt.getObject().isLiteral() && schemaUtils.getSingleType().getSingleLiteralProperty().hasSubProperty(ontProp, false)|| 
-//					!stmt.getObject().isLiteral() && schemaUtils.getSingleType().getSingleObjectProperty().hasSubProperty(ontProp, false));
-//		} else { // if not an ont object property, then cannot be a single property
-//			return false;
-//		}
+		return schemaUtils.getSingleType().isSingleProperty(stmt.getPredicate().getURI());
 	}
 	
 	protected void processUntypedSubject(RDFNode inst, List<StatementWrapper> stmts) {
@@ -254,8 +217,6 @@ public class StatementAugmentationSession {
 	protected void wrapInContainmentStatements(List<StatementWrapper> stmts, Resource container, Property containmentProperty) {
 		stmts.stream().forEach(stmt -> stmt.stmt().augmentWithContainment(container, containmentProperty));
 	}
-
-	//public static record StatementWrapper(ContainedStatement stmt, AES.OPTYPE op) {}
 
     public record StatementWrapper(ContainedStatement stmt, AES.OPTYPE op) {
     }
