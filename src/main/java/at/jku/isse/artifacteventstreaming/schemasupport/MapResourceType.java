@@ -1,11 +1,13 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.ontapi.model.*;
 import org.apache.jena.rdf.model.Property;
-import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.sparql.function.library.leviathan.log;
 import org.apache.jena.vocabulary.XSD;
 
 import java.util.ArrayList;
@@ -13,6 +15,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+@Slf4j
 public class MapResourceType  {
 
 	public static final String OBJECT_VALUE = "objectValue";
@@ -39,10 +42,14 @@ public class MapResourceType  {
 	
 	@Getter
 	private final OntClass mapEntryClass;
-	private final Set<OntClass> subclassesCache = new HashSet<>();
-	@Getter
-    private final Set<Property> ownsPropertyCache = new HashSet<>();
 	private final BasePropertyType primaryPropertyType;
+
+	// caching for performance to avoid searching rdf model
+	@Getter(AccessLevel.PACKAGE)
+	private final Set<OntClass> subclassesCache = new HashSet<>();
+	@Getter(AccessLevel.PACKAGE)
+    private final Set<Property> ownsPropertyCache = new HashSet<>();
+
 
 
 
@@ -62,12 +69,7 @@ public class MapResourceType  {
 		mapOwnershipSuperProperty.subProperties(true)
 				.forEach(subProp -> ownsPropertyCache.add(subProp.asProperty()));
 	}
-	
-//	public static boolean isEntryProperty(OntProperty property) {
-//		// better done via super/subproperty check
-//		return property.getLocalName().endsWith(MapResourceType.LITERAL_VALUE) || property.getLocalName().endsWith(MapResourceType.OBJECT_VALUE);
-//	}
-	
+
 	public boolean isMapEntrySubclass(OntObjectProperty mapEntryProperty) {
 		return  mapEntryProperty.ranges(true).anyMatch(rangeClass -> rangeClass.equals(mapEntryClass)
 				|| rangeClass.hasSuperClass(mapEntryClass, true));
@@ -131,16 +133,42 @@ public class MapResourceType  {
 
 	// Remote changes syncing in (deleted/adding of property definitions )
 
-	public void addToOwnershipPropertyCacheIfApplicable(Property prop) {
-		if (prop.canAs(OntObjectProperty.class)) {
-			var ontProp = prop.as(OntObjectProperty.class);
-			// rather expensive, better to find additional hints to evaluate this
-			if (ontProp.superProperties(true).anyMatch(sp -> sp.equals(mapOwnershipSuperProperty))) {
-				ownsPropertyCache.add(prop);
+	public void addToOwnershipPropertyCacheIfApplicable(Property prop, Set<Resource> domains) {
+
+		String baseURI = attemptStripEnding(prop.getURI());
+
+		// if this property matches the subtype for any of the domains, then this is a list resource property
+		var optSubtype = domains.stream()
+				.filter(domain -> domain.getURI().equals(generateMapEntryTypeURI(baseURI)))
+				.findAny();
+		if (optSubtype.isPresent()) {
+			var baseProp = mapEntryClass.getModel().getProperty(baseURI);
+			ownsPropertyCache.add(baseProp);
+			var typeRes = optSubtype.get();
+			var subtypeClass = mapEntryClass.getModel().getOntClass(typeRes.getURI());
+			if (subtypeClass != null) {
+				subclassesCache.add(subtypeClass);
+			} else {
+				log.error("Schema Corruption: resource {} is in domain of list property {} with matching expected uri but not an ontclass", typeRes.getURI(), prop.getURI());
 			}
 		}
+		// too slow:
+		//		if (prop.canAs(OntObjectProperty.class)) {
+//			var ontProp = prop.as(OntObjectProperty.class);
+//			// rather expensive, better to find additional hints to evaluate this
+//			if (ontProp.superProperties(true).anyMatch(sp -> sp.equals(mapOwnershipSuperProperty))) {
+//				ownsPropertyCache.add(prop);
+//			}
+//		}
+	}
 
-		//TODO: subclass cache sync
+	private String attemptStripEnding(String uri) {
+		if (uri.endsWith(OBJECT_VALUE)) {
+			return uri.substring(0, uri.length()-OBJECT_VALUE.length());
+		} else if (uri.endsWith(LITERAL_VALUE)) {
+			return uri.substring(0, uri.length()-LITERAL_VALUE.length());
+		}
+		return uri;
 	}
 
 	/**

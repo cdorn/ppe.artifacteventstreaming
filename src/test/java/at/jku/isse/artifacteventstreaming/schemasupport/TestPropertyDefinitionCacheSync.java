@@ -1,4 +1,4 @@
-package at.jku.isse.artifacteventstreaming.replay;
+package at.jku.isse.artifacteventstreaming.schemasupport;
 
 import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import at.jku.isse.artifacteventstreaming.api.CoreBranch;
@@ -6,13 +6,13 @@ import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
 import at.jku.isse.artifacteventstreaming.branch.incoming.PropertyDefinitionAddedCacheUpdater;
 import at.jku.isse.artifacteventstreaming.branch.incoming.PropertyDefinitionRemovedCacheUpdater;
-import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
+import at.jku.isse.artifacteventstreaming.replay.CommitContainmentAugmenter;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
-import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntIndividual;
 import org.apache.jena.ontapi.model.OntModel;
+import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,8 +36,7 @@ class TestPropertyDefinitionCacheSync {
 
 	OntModel modelB;
 	MetaModelSchemaTypes schemaB;
-	PropertyDefinitionAddedCacheUpdater addedUpdater;
-	PropertyDefinitionRemovedCacheUpdater removedUpdater;
+	MetaModelSchemaCacheSynchronizer updater;
 
 	@BeforeEach
 	void setup() {
@@ -59,8 +58,7 @@ class TestPropertyDefinitionCacheSync {
 		when(mockBranch.getBranchResource()).thenReturn(mockBranchResource);
 		when(mockBranchResource.getModel()).thenReturn(modelB);
 
-		addedUpdater = new PropertyDefinitionAddedCacheUpdater(mockBranch, schemaB);
-		removedUpdater = new PropertyDefinitionRemovedCacheUpdater(mockBranch, schemaB);
+		updater = new MetaModelSchemaCacheSynchronizer(schemaB, mockBranch.getBranchId());
 	}
 
 	private void drainA() {
@@ -83,16 +81,13 @@ class TestPropertyDefinitionCacheSync {
 	private void syncCommitToModelB(StatementCommitImpl commit) {
 		augmenterA.handleCommit(commit);
 
-		removedUpdater.handleCommit(commit);
-
 		for (ContainedStatement stmt : commit.getRemovedStatements()) {
 			modelB.getGraph().delete(stmt.asTriple());
 		}
 		for (ContainedStatement stmt : commit.getAddedStatements()) {
 			modelB.getGraph().add(stmt.asTriple());
 		}
-
-		addedUpdater.handleCommit(commit);
+		updater.handleCommit(commit);
 	}
 
 	private void assertCachesEqual() {
@@ -119,6 +114,18 @@ class TestPropertyDefinitionCacheSync {
 		var mapB = schemaB.getMapType().getOwnsPropertyCache().stream()
 				.map(Property::getURI).collect(Collectors.toSet());
 		assertEquals(mapA, mapB, "Map ownership cache mismatch");
+
+		var listSubA = schemaA.getListType().getSubclassesCache().stream()
+				.map(OntClass::getURI).collect(Collectors.toSet());
+		var listSubB = schemaB.getListType().getSubclassesCache().stream()
+				.map(OntClass::getURI).collect(Collectors.toSet());
+		assertEquals(listSubA, listSubB, "List subclasses cache mismatch");
+
+		var mapSubA = schemaA.getMapType().getSubclassesCache().stream()
+				.map(OntClass::getURI).collect(Collectors.toSet());
+		var mapSubB = schemaB.getMapType().getSubclassesCache().stream()
+				.map(OntClass::getURI).collect(Collectors.toSet());
+		assertEquals(mapSubA, mapSubB, "Map subclasses cache mismatch");
 	}
 
 	// ---- Create OntClass tests ----

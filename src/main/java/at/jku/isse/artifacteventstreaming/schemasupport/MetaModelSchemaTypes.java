@@ -15,6 +15,7 @@ import org.apache.jena.vocabulary.RDFS;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public class MetaModelSchemaTypes {
@@ -122,15 +123,15 @@ public class MetaModelSchemaTypes {
 		this.mapType.cleanupCacheAfterRemotePropertyRemoval(propertyURI);
 	}
 
-	public void syncCachesAfterRemotePropertyAdded(String propertyURI, Model modelAddedTo) {
+	public void syncCachesAfterRemotePropertyAdded(String propertyURI, Model modelAddedTo, Set<Resource> domains) {
 		var prop = modelAddedTo.getProperty(propertyURI);
 		if (prop != null) {
 			primaryPropertyType.addToCache(propertyURI);
 			if (singleType.addIfIsSinglePropertyBasedOnSuperProperty(prop))
 				return;
 
-			listType.addToOwnershipPropertyCacheIfApplicable(prop);
-			mapType.addToOwnershipPropertyCacheIfApplicable(prop);
+			listType.addToOwnershipPropertyCacheIfApplicable(prop, domains);
+			mapType.addToOwnershipPropertyCacheIfApplicable(prop, domains);
 		}
 	}
 	

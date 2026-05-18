@@ -2,16 +2,21 @@ package at.jku.isse.artifacteventstreaming.schemasupport;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
 import at.jku.isse.artifacteventstreaming.replay.StatementAugmentationSession.StatementWrapper;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.ontapi.model.*;
 import org.apache.jena.rdf.model.*;
+import org.apache.jena.sparql.function.library.leviathan.log;
 import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
+@Slf4j
 public class ListResourceType {
     public static final String LIST_NS = "http://at.jku.isse.list#";
     public static final String LIST_COLLECTION_URI_PREFIX = "http://at.jku.isse.list/collection/";
@@ -34,9 +39,11 @@ public class ListResourceType {
     private final BasePropertyType primaryPropertyType;
 
     // Caches, to be kept consistent upon syncing statement changes
+    @Getter(AccessLevel.PACKAGE)
     private final Set<OntClass> subclassesCache = new HashSet<>();
-    @Getter
+    @Getter(AccessLevel.PACKAGE)
     private final Set<Property> ownershipPropertyCache = new HashSet<>();
+
 
     public ListResourceType(@NonNull OntModel model, @NonNull BasePropertyType primaryType, @NonNull SingleResourceType singleType) {
         this.singleType = singleType;
@@ -132,18 +139,44 @@ public class ListResourceType {
     private String generateListTypeURI(String listPropertyURI) {
         return listPropertyURI + LIST_TYPE_NAME;
     }
+    private String attemptStripEnding(String uri) {
+        if (uri.endsWith(OBJECT_LIST_NAME)) {
+            return uri.substring(0, uri.length()-OBJECT_LIST_NAME.length());
+        } else if (uri.endsWith(LITERAL_LIST_NAME)) {
+            return uri.substring(0, uri.length()-LITERAL_LIST_NAME.length());
+        }
+        return uri;
+    }
 
     // Remote changes syncing in (deleted/adding of property definitions )
 
-    public void addToOwnershipPropertyCacheIfApplicable(Property prop) {
-        if (prop.canAs(OntObjectProperty.class)) {
-            var ontProp = prop.as(OntObjectProperty.class);
-            // rather expensive, better to find additional hints to evaluate this
-            if (ontProp.superProperties(true).anyMatch(sp -> sp.equals(ownsListSuperProperty))) {
-                ownershipPropertyCache.add(prop);
+    public void addToOwnershipPropertyCacheIfApplicable(Property prop, Set<Resource> domains) {
+        String baseURI = attemptStripEnding(prop.getURI());
+
+        // if this property matches the subtype for any of the domains, then this is a list resource property
+        var optSubtype = domains.stream()
+                .filter(domain -> domain.getURI().equals(generateListTypeURI(baseURI)))
+                .findAny();
+        if (optSubtype.isPresent()) {
+            var baseProp = listClass.getModel().getProperty(baseURI);
+            ownershipPropertyCache.add(baseProp);
+            var typeRes = optSubtype.get();
+            var subtypeClass = listClass.getModel().getOntClass(typeRes.getURI());
+            if (subtypeClass != null) {
+                subclassesCache.add(subtypeClass);
+            } else {
+                log.error("Schema Corruption: resource {} is in domain of list property {} with matching expected uri but not an ontclass", typeRes.getURI(), prop.getURI());
             }
         }
-        //TODO: subclass cache sync
+
+        // too slow
+//        if (prop.canAs(OntObjectProperty.class)) {
+//            var ontProp = prop.as(OntObjectProperty.class);
+//            // rather expensive, better to find additional hints to evaluate this
+//            if (ontProp.superProperties(true).anyMatch(sp -> sp.equals(ownsListSuperProperty))) {
+//
+//            }
+//        }
     }
 
     /**

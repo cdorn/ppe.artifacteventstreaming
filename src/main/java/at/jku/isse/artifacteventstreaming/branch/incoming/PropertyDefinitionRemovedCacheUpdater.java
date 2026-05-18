@@ -4,7 +4,6 @@ import at.jku.isse.artifacteventstreaming.api.*;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 
 /**
@@ -40,15 +39,12 @@ public class PropertyDefinitionRemovedCacheUpdater extends AbstractHandlerBase {
 	}
 
 	@Override
-	public void handleCommit(Commit commit) {		
+	public void handleCommit(Commit commit) {
 		commit.getRemovedStatements().stream()
-		.filter(stmt ->  stmt.getPredicate().equals(RDF.type)
-						&&	stmt.getObject().isResource() 
-						&& PropertyDefinitionAddedCacheUpdater.isAboutProperty(stmt.getResource().getURI())
-				)
+		.filter(PropertyDefinitionAddedCacheUpdater::isPropertyDefinition)
 		.map(stmt -> stmt.getSubject().getURI())
 		.filter(uri -> metaschema.getPrimaryPropertyType().getKnownPropertyURIs().contains(uri))
-		.forEach(uri -> handleRemovedProperty(uri, commit)); 	
+		.forEach(uri -> handleRemovedProperty(uri, commit));
 	}
 	
 	
