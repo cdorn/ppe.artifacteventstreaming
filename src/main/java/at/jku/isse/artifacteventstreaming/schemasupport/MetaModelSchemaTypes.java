@@ -82,7 +82,7 @@ public class MetaModelSchemaTypes {
 				singleType.removeSingleProperty(prop);
 			} else
 			if (listType.isListContainerReferenceProperty(prop)) {
-				listType.removeListContainerReferenceProperty(ontClass, prop);
+				listType.removeListContainerReferenceProperty(prop);
 			} else 
 			if (mapType.isMapContainerReferenceProperty(prop)) {
 				mapType.removeMapContainerReferenceProperty(prop);

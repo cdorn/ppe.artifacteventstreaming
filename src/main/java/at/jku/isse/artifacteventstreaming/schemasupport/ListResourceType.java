@@ -46,8 +46,8 @@ public class ListResourceType {
 		listClass.subClasses().forEach(subclassesCache::add);	
 	}
 	
-	public OntObjectProperty addObjectListProperty(@NonNull OntClass resource, @NonNull String listPropertyURI, @NonNull OntClass valueType) {
-		OntModel model = resource.getModel();
+	public OntObjectProperty addObjectListProperty(@NonNull OntClass owningResource, @NonNull String listPropertyURI, @NonNull OntClass valueType) {
+		OntModel model = owningResource.getModel();
 		if (singleType.primaryPropertyType.existsPrimaryProperty(listPropertyURI)) {
 			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty		
 		}
@@ -55,13 +55,13 @@ public class ListResourceType {
 		OntClass listType = model.createOntClass(generateListTypeURI(listPropertyURI));
 		listType.addSuperClass(listClass);			
 		// create the property that points to this list type // ensure we only point to one list only
-		var prop = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), listPropertyURI, List.of(resource), listType);
+		var prop = primaryPropertyType.createBaseObjectPropertyType(model, listPropertyURI, List.of(owningResource), listType);
 		//var maxOneProp = singleType.getMaxOneObjectCardinalityRestriction(model, prop, listType);
-		//resource.addProperty(RDFS.subClassOf, maxOneProp);
+		//owningResource.addProperty(RDFS.subClassOf, maxOneProp);
 		//NOTE: we cannot use createSingleObject... to avoid putting this property into the single property cache as this is a list property
 		
 		// now also restrict the list content to be of valueType, and property to be a subproperty of 'li'			
-		var liProp = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), generateSpecificObjectListProperty(listPropertyURI), List.of(listType), valueType);
+		var liProp = primaryPropertyType.createBaseObjectPropertyType(model, generateSpecificObjectListProperty(listPropertyURI), List.of(listType), valueType);
 		liProp.addProperty(RDFS.subPropertyOf, LI);
 		var restr = createAllValuesFromRestriction(model, liProp, valueType);
 		// add the restriction to the list type
@@ -74,8 +74,8 @@ public class ListResourceType {
 
 
 	
-	public OntObjectProperty addLiteralListProperty(@NonNull OntClass resource, @NonNull String listPropertyURI, @NonNull OntDataRange valueType) {
-		OntModel model = resource.getModel();
+	public OntObjectProperty addLiteralListProperty(@NonNull OntClass owningResource, @NonNull String listPropertyURI, @NonNull OntDataRange valueType) {
+		OntModel model = owningResource.getModel();
 		if (primaryPropertyType.existsPrimaryProperty(listPropertyURI)) {
 			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty		
 		}	
@@ -83,10 +83,10 @@ public class ListResourceType {
 		OntClass listType = model.createOntClass(generateListTypeURI(listPropertyURI));
 		listType.addSuperClass(listClass);			
 		// create the property that points to this list type // ensure we only point to one list only
-		var prop = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), listPropertyURI, List.of(resource), listType);
+		var prop = primaryPropertyType.createBaseObjectPropertyType(model, listPropertyURI, List.of(owningResource), listType);
 		//NOTE: we cannot use createSingleData... to avoid putting this property into the single property cache as this is a list property
 		//var maxOneProp = singleType.getMaxOneObjectCardinalityRestriction(model, prop, listType);
-		//resource.addProperty(RDFS.subClassOf, maxOneProp);
+		//owningResource.addProperty(RDFS.subClassOf, maxOneProp);
 		
 		// now also restrict the list content to be of valueType, and property to be a subproperty of 'li'		
 		// use base property to track known property URIs
@@ -141,7 +141,7 @@ public class ListResourceType {
 	
 	public boolean isListCollection(OntIndividual ontInd) {
 		return ontInd.classes(true).anyMatch(subclassesCache::contains);
-		//return ontInd.classes(true).anyMatch(type -> listClass.hasSubClass(type, true)); Too slow
+		// we dont check for type: || type.equals(listClass) as we are interest only which are not just list but also have the backlink to owner
 	}
 
 	public boolean wasListCollection(List<Resource> delTypes) {
@@ -168,7 +168,7 @@ public class ListResourceType {
 			
 			var optRange = listReferenceProperty.ranges().findAny();
 			if (optRange.isPresent()) {
-				seq.addProperty(RDF.type, optRange.get());
+				seq.addProperty(RDF.type, optRange.get()); // why are we adding the range (the type of elements in the list) to the sequence class itself?
 			} 
 		} 
 		return seq.as(Seq.class);
@@ -195,7 +195,7 @@ public class ListResourceType {
 	/**
 	 * @param listReferenceProperty OntProperty to remove from its owning class including the sequence li-subproperty
 	 */
-	public void removeListContainerReferenceProperty(@NonNull OntClass owner, @NonNull OntProperty listReferenceProperty) {
+	public void removeListContainerReferenceProperty(@NonNull OntProperty listReferenceProperty) {
 		var model = listReferenceProperty.getModel();
 		// remove listType:
 		var listType = model.createOntClass(generateListTypeURI(listReferenceProperty.getURI()));
@@ -207,7 +207,7 @@ public class ListResourceType {
 				// remove restriction
 				var anonId = createValueRestrictionAnonId(prop);
 				var restrRes = model.createResource(anonId); // only way to retrieve anon resource again
-				owner.remove(RDFS.subClassOf, restrRes); // remove the restriction from property owning class
+				listType.remove(RDFS.subClassOf, restrRes);
 				restrRes.removeProperties();
 				primaryPropertyType.removeBaseProperty(prop);
 			} else {
@@ -217,7 +217,8 @@ public class ListResourceType {
 		// remove predicates association from listType itself 
 		listType.removeProperties();
 		// remove list reference property
-		singleType.removeSingleProperty(listReferenceProperty);
+		primaryPropertyType.removeBaseProperty(listReferenceProperty);
+
 	}
 	
 	public Optional<Resource> getCurrentListOwner(OntIndividual list) {
