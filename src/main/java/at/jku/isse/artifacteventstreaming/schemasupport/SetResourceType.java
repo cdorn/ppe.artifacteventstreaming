@@ -1,5 +1,6 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
+import at.jku.isse.artifacteventstreaming.api.TransactionAware;
 import lombok.NonNull;
 import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntDataProperty;
@@ -8,7 +9,7 @@ import org.apache.jena.ontapi.model.OntObjectProperty;
 
 import java.util.List;
 
-public class SetResourceType {
+public class SetResourceType implements TransactionAware {
 
 	private final BasePropertyType primaryType;
 	

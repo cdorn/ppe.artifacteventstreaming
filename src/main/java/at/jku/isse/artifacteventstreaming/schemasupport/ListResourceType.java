@@ -1,6 +1,7 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
+import at.jku.isse.artifacteventstreaming.api.TransactionAware;
 import at.jku.isse.artifacteventstreaming.replay.StatementAugmentationSession.StatementWrapper;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -17,7 +18,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class ListResourceType {
+public class ListResourceType implements TransactionAware {
     public static final String LIST_NS = "http://at.jku.isse.list#";
     public static final String LIST_COLLECTION_URI_PREFIX = "http://at.jku.isse.list/collection/";
     public static final String LIST_BASETYPE_URI = LIST_NS + "seq";
@@ -43,6 +44,12 @@ public class ListResourceType {
     private final Set<OntClass> subclassesCache = new HashSet<>();
     @Getter(AccessLevel.PACKAGE)
     private final Set<Property> ownershipPropertyCache = new HashSet<>();
+
+    // transaction rollback tracking
+    private final Set<OntClass> removedSubclassesDuringTx = new HashSet<>();
+    private final Set<OntClass> addedSubclassesDuringTx = new HashSet<>();
+    private final Set<Property> removedOwnershipPropertyDuringTx = new HashSet<>();
+    private final Set<Property> addedOwnershipPropertyDuringTx = new HashSet<>();
 
 
     public ListResourceType(@NonNull OntModel model, @NonNull BasePropertyType primaryType, @NonNull SingleResourceType singleType) {
@@ -159,11 +166,20 @@ public class ListResourceType {
                 .findAny();
         if (optSubtype.isPresent()) {
             var baseProp = listClass.getModel().getProperty(baseURI);
-            ownershipPropertyCache.add(baseProp);
+            if (ownershipPropertyCache.add(baseProp)) {
+                if (!removedOwnershipPropertyDuringTx.remove(baseProp)) {
+                    // only add to temp if this has not been removed, so non-effective changes wont show up in rollback info
+                    addedOwnershipPropertyDuringTx.add(baseProp);
+                }
+            }
             var typeRes = optSubtype.get();
             var subtypeClass = listClass.getModel().getOntClass(typeRes.getURI());
             if (subtypeClass != null) {
-                subclassesCache.add(subtypeClass);
+                if (subclassesCache.add(subtypeClass)) {
+                    if (!removedSubclassesDuringTx.remove(subtypeClass)) {
+                        addedSubclassesDuringTx.add(subtypeClass);
+                    }
+                }
             } else {
                 log.error("Schema Corruption: resource {} is in domain of list property {} with matching expected uri but not an ontclass", typeRes.getURI(), prop.getURI());
             }
@@ -186,8 +202,50 @@ public class ListResourceType {
     public void cleanupCacheAfterRemotePropertyRemoval(String propertyURI) {
         // to keep in sync with method below
         var listTypeURI = generateListTypeURI(propertyURI);
-        subclassesCache.removeIf(ontClazz -> ontClazz.getURI().equals(listTypeURI));
-        ownershipPropertyCache.removeIf(p -> p.getURI().equals(propertyURI));
+        subclassesCache.stream()
+                .filter(ontClazz -> ontClazz.getURI().equals(listTypeURI))
+                .findFirst()
+                .ifPresent(c -> {
+                    subclassesCache.remove(c);
+                    if (!addedSubclassesDuringTx.remove(c)) {
+                        removedSubclassesDuringTx.add(c);
+                    }
+                });
+        ownershipPropertyCache.stream()
+                .filter(p -> p.getURI().equals(propertyURI))
+                .findFirst()
+                .ifPresent(p -> {
+                    ownershipPropertyCache.remove(p);
+                    if (!addedOwnershipPropertyDuringTx.remove(p)) {
+                        removedOwnershipPropertyDuringTx.add(p);
+                    }
+                });
+    }
+
+    @Override
+    public void afterTransactionStarted() {
+        clearRollbackInfo();
+    }
+
+    @Override
+    public void afterTransactionAborted() {
+        subclassesCache.addAll(removedSubclassesDuringTx);
+        subclassesCache.removeAll(addedSubclassesDuringTx);
+        ownershipPropertyCache.addAll(removedOwnershipPropertyDuringTx);
+        ownershipPropertyCache.removeAll(addedOwnershipPropertyDuringTx);
+        clearRollbackInfo();
+    }
+
+    @Override
+    public void afterTransactionCommitted() {
+        clearRollbackInfo();
+    }
+
+    private void clearRollbackInfo() {
+        removedSubclassesDuringTx.clear();
+        addedSubclassesDuringTx.clear();
+        removedOwnershipPropertyDuringTx.clear();
+        addedOwnershipPropertyDuringTx.clear();
     }
 
     /**

@@ -1,5 +1,6 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
+import at.jku.isse.artifacteventstreaming.api.TransactionAware;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
@@ -16,7 +17,7 @@ import java.util.List;
 import java.util.Set;
 
 @Slf4j
-public class MapResourceType  {
+public class MapResourceType implements TransactionAware {
 
 	public static final String OBJECT_VALUE = "objectValue";
 	public static final String LITERAL_VALUE = "literalValue";
@@ -50,8 +51,11 @@ public class MapResourceType  {
 	@Getter(AccessLevel.PACKAGE)
     private final Set<Property> ownsPropertyCache = new HashSet<>();
 
-
-
+	// transaction rollback tracking
+	private final Set<OntClass> removedSubclassesDuringTx = new HashSet<>();
+	private final Set<OntClass> addedSubclassesDuringTx = new HashSet<>();
+	private final Set<Property> removedOwnsPropertyDuringTx = new HashSet<>();
+	private final Set<Property> addedOwnsPropertyDuringTx = new HashSet<>();
 
 	public MapResourceType(@NonNull OntModel model, @NonNull BasePropertyType primaryType) {
         this.primaryPropertyType = primaryType;
@@ -137,19 +141,28 @@ public class MapResourceType  {
 
 		String baseURI = attemptStripEnding(prop.getURI());
 
-		// if this property matches the subtype for any of the domains, then this is a list resource property
+		// if this property matches the subtype for any of the domains, then this is a map resource property
 		var optSubtype = domains.stream()
 				.filter(domain -> domain.getURI().equals(generateMapEntryTypeURI(baseURI)))
 				.findAny();
 		if (optSubtype.isPresent()) {
 			var baseProp = mapEntryClass.getModel().getProperty(baseURI);
-			ownsPropertyCache.add(baseProp);
+			if (ownsPropertyCache.add(baseProp)) {
+				if (!removedOwnsPropertyDuringTx.remove(baseProp)) {
+					// only add to temp if this has not been removed, so non-effective changes wont show up in rollback info
+					addedOwnsPropertyDuringTx.add(baseProp);
+				}
+			}
 			var typeRes = optSubtype.get();
 			var subtypeClass = mapEntryClass.getModel().getOntClass(typeRes.getURI());
 			if (subtypeClass != null) {
-				subclassesCache.add(subtypeClass);
+				if (subclassesCache.add(subtypeClass)) {
+					if (!removedSubclassesDuringTx.remove(subtypeClass)) {
+						addedSubclassesDuringTx.add(subtypeClass);
+					}
+				}
 			} else {
-				log.error("Schema Corruption: resource {} is in domain of list property {} with matching expected uri but not an ontclass", typeRes.getURI(), prop.getURI());
+				log.error("Schema Corruption: resource {} is in domain of map property {} with matching expected uri but not an ontclass", typeRes.getURI(), prop.getURI());
 			}
 		}
 		// too slow:
@@ -177,9 +190,51 @@ public class MapResourceType  {
 	 */
 	public void cleanupCacheAfterRemotePropertyRemoval(String propertyURI) {
 		//keep in sync with method below
-		ownsPropertyCache.removeIf(p -> p.getURI().equals(propertyURI));
+		ownsPropertyCache.stream()
+				.filter(p -> p.getURI().equals(propertyURI))
+				.findFirst()
+				.ifPresent(p -> {
+					ownsPropertyCache.remove(p);
+					if (!addedOwnsPropertyDuringTx.remove(p)) {
+						removedOwnsPropertyDuringTx.add(p);
+					}
+				});
 		var mapTypeURI = generateMapEntryTypeURI(propertyURI);
-		subclassesCache.removeIf(c -> c.getURI().equals(mapTypeURI));
+		subclassesCache.stream()
+				.filter(c -> c.getURI().equals(mapTypeURI))
+				.findFirst()
+				.ifPresent(c -> {
+					subclassesCache.remove(c);
+					if (!addedSubclassesDuringTx.remove(c)) {
+						removedSubclassesDuringTx.add(c);
+					}
+				});
+	}
+
+	@Override
+	public void afterTransactionStarted() {
+		clearRollbackInfo();
+	}
+
+	@Override
+	public void afterTransactionAborted() {
+		subclassesCache.addAll(removedSubclassesDuringTx);
+		subclassesCache.removeAll(addedSubclassesDuringTx);
+		ownsPropertyCache.addAll(removedOwnsPropertyDuringTx);
+		ownsPropertyCache.removeAll(addedOwnsPropertyDuringTx);
+		clearRollbackInfo();
+	}
+
+	@Override
+	public void afterTransactionCommitted() {
+		clearRollbackInfo();
+	}
+
+	private void clearRollbackInfo() {
+		removedSubclassesDuringTx.clear();
+		addedSubclassesDuringTx.clear();
+		removedOwnsPropertyDuringTx.clear();
+		addedOwnsPropertyDuringTx.clear();
 	}
 
 	/**

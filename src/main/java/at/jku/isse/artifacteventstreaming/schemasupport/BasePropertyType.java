@@ -1,5 +1,6 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
+import at.jku.isse.artifacteventstreaming.api.TransactionAware;
 import lombok.Getter;
 import lombok.NonNull;
 import org.apache.jena.ontapi.model.*;
@@ -12,8 +13,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class BasePropertyType {
+public class BasePropertyType implements TransactionAware {
 	public final Set<String> propertyUriCache = new HashSet<>();
+
+	private final Set<String> removedDuringTx = new HashSet<>();
+	private final Set<String> addedDuringTx = new HashSet<>();
 
 	private final MessageDigest messageDigest;
 
@@ -65,11 +69,41 @@ public class BasePropertyType {
 	}
 
 	public void removePropertyURIfromCache(String propertyURI) {
-		propertyUriCache.remove(propertyURI);
+		if (propertyUriCache.remove(propertyURI)) {
+			if (!addedDuringTx.remove(propertyURI)) {
+				removedDuringTx.add(propertyURI);
+			}
+		}
 	}
 
 	public void addToCache(String propertyURI) {
-		propertyUriCache.add(propertyURI);
+		if (propertyUriCache.add(propertyURI)) {
+			if (!removedDuringTx.remove(propertyURI)) {
+				addedDuringTx.add(propertyURI);
+			}
+		}
+	}
+
+	@Override
+	public void afterTransactionStarted() {
+		clearRollbackInfo();
+	}
+
+	@Override
+	public void afterTransactionAborted() {
+		propertyUriCache.addAll(removedDuringTx);
+		propertyUriCache.removeAll(addedDuringTx);
+		clearRollbackInfo();
+	}
+
+	@Override
+	public void afterTransactionCommitted() {
+		clearRollbackInfo();
+	}
+
+	private void clearRollbackInfo() {
+		removedDuringTx.clear();
+		addedDuringTx.clear();
 	}
 
 	public String hashAsIdPart(String... args) {

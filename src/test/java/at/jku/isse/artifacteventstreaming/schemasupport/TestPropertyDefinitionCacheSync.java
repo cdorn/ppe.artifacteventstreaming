@@ -18,6 +18,7 @@ import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -126,6 +127,42 @@ class TestPropertyDefinitionCacheSync {
 		var mapSubB = schemaB.getMapType().getSubclassesCache().stream()
 				.map(OntClass::getURI).collect(Collectors.toSet());
 		assertEquals(mapSubA, mapSubB, "Map subclasses cache mismatch");
+	}
+
+	private record CacheSnapshot(
+			Set<String> primaryPropertyURIs,
+			Set<String> functionalPropertyURIs,
+			Set<String> listOwnershipURIs,
+			Set<String> mapOwnsURIs,
+			Set<String> listSubclassURIs,
+			Set<String> mapSubclassURIs
+	) {}
+
+	private CacheSnapshot captureCache(MetaModelSchemaTypes schema) {
+		var primaryURIs = schema.getPrimaryPropertyType().getKnownPropertyURIs();
+		return new CacheSnapshot(
+				primaryURIs,
+				primaryURIs.stream()
+						.filter(uri -> schema.getSingleType().isSingleProperty(uri))
+						.collect(Collectors.toSet()),
+				schema.getListType().getOwnershipPropertyCache().stream()
+						.map(Property::getURI).collect(Collectors.toSet()),
+				schema.getMapType().getOwnsPropertyCache().stream()
+						.map(Property::getURI).collect(Collectors.toSet()),
+				schema.getListType().getSubclassesCache().stream()
+						.map(OntClass::getURI).collect(Collectors.toSet()),
+				schema.getMapType().getSubclassesCache().stream()
+						.map(OntClass::getURI).collect(Collectors.toSet())
+		);
+	}
+
+	private void assertSnapshotEquals(CacheSnapshot expected, CacheSnapshot actual, String context) {
+		assertEquals(expected.primaryPropertyURIs(), actual.primaryPropertyURIs(), context + ": primary property cache mismatch");
+		assertEquals(expected.functionalPropertyURIs(), actual.functionalPropertyURIs(), context + ": functional property cache mismatch");
+		assertEquals(expected.listOwnershipURIs(), actual.listOwnershipURIs(), context + ": list ownership cache mismatch");
+		assertEquals(expected.mapOwnsURIs(), actual.mapOwnsURIs(), context + ": map ownership cache mismatch");
+		assertEquals(expected.listSubclassURIs(), actual.listSubclassURIs(), context + ": list subclass cache mismatch");
+		assertEquals(expected.mapSubclassURIs(), actual.mapSubclassURIs(), context + ": map subclass cache mismatch");
 	}
 
 	// ---- Create OntClass tests ----
@@ -386,5 +423,157 @@ class TestPropertyDefinitionCacheSync {
 		schemaA.deleteOntClassInclSubclasses(parentA);
 		syncCommitToModelB(drainToCommit("deleteWithSubclasses"));
 		assertCachesEqual();
+	}
+
+	// ---- Transaction abort tests (cache rollback) ----
+
+	@Test
+	void abortRevertsAddedSinglePropertyInRemoteCache() {
+		var clsA = modelA.createOntClass(NS + "Task");
+		modelB.createOntClass(NS + "Task");
+		drainA();
+
+		var snapshotABefore = captureCache(schemaA);
+		var snapshotBBefore = captureCache(schemaB);
+
+		schemaA.getSingleType().createSingleDataPropertyType(NS + "priority", clsA, modelA.getDatatype(XSD.xint));
+		var commit = drainToCommit("addSingle");
+
+		schemaB.afterTransactionStarted();
+		syncCommitToModelB(commit);
+		schemaB.afterTransactionAborted();
+
+		assertSnapshotEquals(snapshotBBefore, captureCache(schemaB), "B cache should revert after abort");
+		assertSnapshotEquals(snapshotABefore, captureCache(schemaB), "B cache should match A's pre-change state");
+	}
+
+	@Test
+	void abortRevertsAddedListPropertyInRemoteCache() {
+		var clsA = modelA.createOntClass(NS + "Task");
+		modelB.createOntClass(NS + "Task");
+		drainA();
+
+		var snapshotABefore = captureCache(schemaA);
+		var snapshotBBefore = captureCache(schemaB);
+
+		schemaA.getListType().addLiteralListProperty(clsA, NS + "tags", modelA.getDatatype(XSD.xstring));
+		var commit = drainToCommit("addList");
+
+		schemaB.afterTransactionStarted();
+		syncCommitToModelB(commit);
+		schemaB.afterTransactionAborted();
+
+		assertSnapshotEquals(snapshotBBefore, captureCache(schemaB), "B cache should revert after abort");
+		assertSnapshotEquals(snapshotABefore, captureCache(schemaB), "B cache should match A's pre-change state");
+	}
+
+	@Test
+	void abortRevertsAddedMapPropertyInRemoteCache() {
+		var clsA = modelA.createOntClass(NS + "Task");
+		modelB.createOntClass(NS + "Task");
+		drainA();
+
+		var snapshotABefore = captureCache(schemaA);
+		var snapshotBBefore = captureCache(schemaB);
+
+		schemaA.getMapType().addLiteralMapProperty(clsA, NS + "attrs", modelA.getDatatype(XSD.xint));
+		var commit = drainToCommit("addMap");
+
+		schemaB.afterTransactionStarted();
+		syncCommitToModelB(commit);
+		schemaB.afterTransactionAborted();
+
+		assertSnapshotEquals(snapshotBBefore, captureCache(schemaB), "B cache should revert after abort");
+		assertSnapshotEquals(snapshotABefore, captureCache(schemaB), "B cache should match A's pre-change state");
+	}
+
+	@Test
+	void abortRevertsRemovedSinglePropertyInRemoteCache() {
+		var clsA = modelA.createOntClass(NS + "Issue");
+		var clsB = modelB.createOntClass(NS + "Issue");
+		var propA = schemaA.getSingleType().createSingleDataPropertyType(NS + "toRemove", clsA, modelA.getDatatype(XSD.xstring));
+		schemaB.getSingleType().createSingleDataPropertyType(NS + "toRemove", clsB, modelB.getDatatype(XSD.xstring));
+		drainA();
+
+		var snapshotABefore = captureCache(schemaA);
+		var snapshotBBefore = captureCache(schemaB);
+
+		schemaA.getSingleType().removeSingleProperty(propA);
+		var commit = drainToCommit("removeSingle");
+
+		schemaB.afterTransactionStarted();
+		syncCommitToModelB(commit);
+		schemaB.afterTransactionAborted();
+
+		assertSnapshotEquals(snapshotBBefore, captureCache(schemaB), "B cache should revert after abort");
+		assertSnapshotEquals(snapshotABefore, captureCache(schemaB), "B cache should match A's pre-change state");
+	}
+
+	@Test
+	void abortRevertsRemovedListPropertyInRemoteCache() {
+		var clsA = modelA.createOntClass(NS + "Issue");
+		var clsB = modelB.createOntClass(NS + "Issue");
+		var propA = schemaA.getListType().addLiteralListProperty(clsA, NS + "toRemoveList", modelA.getDatatype(XSD.xstring));
+		schemaB.getListType().addLiteralListProperty(clsB, NS + "toRemoveList", modelB.getDatatype(XSD.xstring));
+		drainA();
+
+		var snapshotABefore = captureCache(schemaA);
+		var snapshotBBefore = captureCache(schemaB);
+
+		schemaA.getListType().removeListOwnershipPropertyDefinition(propA);
+		var commit = drainToCommit("removeList");
+
+		schemaB.afterTransactionStarted();
+		syncCommitToModelB(commit);
+		schemaB.afterTransactionAborted();
+
+		assertSnapshotEquals(snapshotBBefore, captureCache(schemaB), "B cache should revert after abort");
+		assertSnapshotEquals(snapshotABefore, captureCache(schemaB), "B cache should match A's pre-change state");
+	}
+
+	@Test
+	void abortRevertsRemovedMapPropertyInRemoteCache() {
+		var clsA = modelA.createOntClass(NS + "Issue");
+		var clsB = modelB.createOntClass(NS + "Issue");
+		var propA = schemaA.getMapType().addLiteralMapProperty(clsA, NS + "toRemoveMap", modelA.getDatatype(XSD.xint));
+		schemaB.getMapType().addLiteralMapProperty(clsB, NS + "toRemoveMap", modelB.getDatatype(XSD.xint));
+		drainA();
+
+		var snapshotABefore = captureCache(schemaA);
+		var snapshotBBefore = captureCache(schemaB);
+
+		schemaA.getMapType().removeMapOwnershipPropertyDefinition(propA);
+		var commit = drainToCommit("removeMap");
+
+		schemaB.afterTransactionStarted();
+		syncCommitToModelB(commit);
+		schemaB.afterTransactionAborted();
+
+		assertSnapshotEquals(snapshotBBefore, captureCache(schemaB), "B cache should revert after abort");
+		assertSnapshotEquals(snapshotABefore, captureCache(schemaB), "B cache should match A's pre-change state");
+	}
+
+	@Test
+	void abortRevertsAllPropertyTypesInRemoteCache() {
+		var clsA = modelA.createOntClass(NS + "FullTask");
+		modelB.createOntClass(NS + "FullTask");
+		drainA();
+
+		var snapshotABefore = captureCache(schemaA);
+		var snapshotBBefore = captureCache(schemaB);
+
+		schemaA.getSingleType().createSingleDataPropertyType(NS + "title", clsA, modelA.getDatatype(XSD.xstring));
+		schemaA.getSingleType().createSingleObjectPropertyType(NS + "owner", clsA, clsA);
+		schemaA.getSetType().createObjectPropertyType(NS + "deps", clsA, clsA);
+		schemaA.getListType().addLiteralListProperty(clsA, NS + "tags", modelA.getDatatype(XSD.xstring));
+		schemaA.getMapType().addLiteralMapProperty(clsA, NS + "metadata", modelA.getDatatype(XSD.xstring));
+		var commit = drainToCommit("addAllTypes");
+
+		schemaB.afterTransactionStarted();
+		syncCommitToModelB(commit);
+		schemaB.afterTransactionAborted();
+
+		assertSnapshotEquals(snapshotBBefore, captureCache(schemaB), "B cache should revert after abort");
+		assertSnapshotEquals(snapshotABefore, captureCache(schemaB), "B cache should match A's pre-change state");
 	}
 }

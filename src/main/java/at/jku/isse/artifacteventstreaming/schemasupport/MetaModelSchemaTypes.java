@@ -1,5 +1,6 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
+import at.jku.isse.artifacteventstreaming.api.TransactionAware;
 import lombok.Getter;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
@@ -18,7 +19,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
-public class MetaModelSchemaTypes {
+public class MetaModelSchemaTypes implements TransactionAware {
 
 	private static final String METAONTOLOGY = "metaontology";
 	
@@ -109,6 +110,36 @@ public class MetaModelSchemaTypes {
 		
 		//Stream<OntProperty> properties = Stream.of(model.objectProperties(), model.dataProperties(), model.annotationProperties()).flatMap(it -> it);;
 		//return properties.distinct().filter(prop -> prop.domains().anyMatch(domain -> domain.equals(ontClass)));
+	}
+
+	// we now can make changes to caches that can be rolled back
+	@Override
+	public void afterTransactionStarted() {
+		this.primaryPropertyType.afterTransactionStarted();
+		this.singleType.afterTransactionStarted();
+		this.setType.afterTransactionStarted();
+		this.listType.afterTransactionStarted();
+		this.mapType.afterTransactionStarted();
+	}
+
+	// now roll back changes to caches, as transaction was aborted
+	@Override
+	public void afterTransactionAborted() {
+		this.primaryPropertyType.afterTransactionAborted();
+		this.singleType.afterTransactionAborted();
+		this.setType.afterTransactionAborted();
+		this.listType.afterTransactionAborted();
+		this.mapType.afterTransactionAborted();
+	}
+
+	// cache changes are already commited, just clear roll back info
+	@Override
+	public void afterTransactionCommitted() {
+		this.primaryPropertyType.afterTransactionCommitted();
+		this.singleType.afterTransactionCommitted();
+		this.setType.afterTransactionCommitted();
+		this.listType.afterTransactionCommitted();
+		this.mapType.afterTransactionCommitted();
 	}
 
 	/**

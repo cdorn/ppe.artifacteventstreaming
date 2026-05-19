@@ -1,5 +1,6 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
+import at.jku.isse.artifacteventstreaming.api.TransactionAware;
 import lombok.NonNull;
 import org.apache.jena.ontapi.model.*;
 import org.apache.jena.rdf.model.Property;
@@ -8,10 +9,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class SingleResourceType {
+public class SingleResourceType implements TransactionAware {
 	public static final String SINGLE_NS = "http://at.jku.isse.single#";
 			
 	private final Set<String> functionalPropertyCache = new HashSet<>();
+	private final Set<String> removedDuringTx = new HashSet<>();
+	private final Set<String> addedDuringTx = new HashSet<>();
 	public final BasePropertyType primaryPropertyType;
 
 	public SingleResourceType(OntModel model, BasePropertyType primaryPropertyType) {
@@ -88,18 +91,18 @@ public class SingleResourceType {
 	}
 	
 	public void removePropertyURIfromCache(String propertyURI) {
-		functionalPropertyCache.stream()
-		.filter(prop -> prop.equals(propertyURI))
-		.findAny()
-		.ifPresent(functionalPropertyCache::remove);
-
+		if (functionalPropertyCache.remove(propertyURI)) {
+			if (!addedDuringTx.remove(propertyURI)) {
+				removedDuringTx.add(propertyURI);
+			}
+		}
 	}
 
 	public boolean addIfIsSinglePropertyBasedOnSuperProperty(Property genProp) {
 		if (genProp.canAs(OntDataProperty.class)) {
 			var ontDataProp = genProp.as(OntDataProperty.class);
 			if (ontDataProp.isFunctional()) {
-				functionalPropertyCache.add(ontDataProp.getURI());
+				trackCacheAddition(ontDataProp.getURI());
 				return true;
 			} else
 				return false; // nothing added
@@ -107,7 +110,7 @@ public class SingleResourceType {
 		if (genProp.canAs(OntObjectProperty.class)) {
 			var ontObjProp = genProp.as(OntObjectProperty.class);
 			if (ontObjProp.isFunctional()) {
-				functionalPropertyCache.add(ontObjProp.getURI());
+				trackCacheAddition(ontObjProp.getURI());
 				return true;
 			}
 				return false; // nothing added
@@ -115,5 +118,34 @@ public class SingleResourceType {
 		return false;
 	}
 
+	private void trackCacheAddition(String uri) {
+		if (functionalPropertyCache.add(uri)) {
+			if (!removedDuringTx.remove(uri)) {
+				addedDuringTx.add(uri);
+			}
+		}
+	}
+
+	@Override
+	public void afterTransactionStarted() {
+		clearRollbackInfo();
+	}
+
+	@Override
+	public void afterTransactionAborted() {
+		functionalPropertyCache.addAll(removedDuringTx);
+		functionalPropertyCache.removeAll(addedDuringTx);
+		clearRollbackInfo();
+	}
+
+	@Override
+	public void afterTransactionCommitted() {
+		clearRollbackInfo();
+	}
+
+	private void clearRollbackInfo() {
+		removedDuringTx.clear();
+		addedDuringTx.clear();
+	}
 
 }
