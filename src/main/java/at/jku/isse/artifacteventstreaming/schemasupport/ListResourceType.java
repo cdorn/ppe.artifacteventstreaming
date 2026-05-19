@@ -89,8 +89,8 @@ public class ListResourceType implements TransactionAware {
         listType.addProperty(RDFS.subClassOf, restr);
         ownsListSuperProperty.addSubProperty(prop);
 
-        subclassesCache.add(listType);
-        ownershipPropertyCache.add(prop.asProperty());
+        trackSubclassAddition(listType);
+        trackOwnershipPropertyAddition(prop.asProperty());
         return prop;
     }
 
@@ -118,8 +118,8 @@ public class ListResourceType implements TransactionAware {
         listType.addProperty(RDFS.subClassOf, restr);
         ownsListSuperProperty.addSubProperty(prop);
 
-        subclassesCache.add(listType);
-        ownershipPropertyCache.add(prop.asProperty());
+        trackSubclassAddition(listType);
+        trackOwnershipPropertyAddition(prop.asProperty());
         return prop;
     }
 
@@ -166,33 +166,15 @@ public class ListResourceType implements TransactionAware {
                 .findAny();
         if (optSubtype.isPresent()) {
             var baseProp = listClass.getModel().getProperty(baseURI);
-            if (ownershipPropertyCache.add(baseProp)) {
-                if (!removedOwnershipPropertyDuringTx.remove(baseProp)) {
-                    // only add to temp if this has not been removed, so non-effective changes wont show up in rollback info
-                    addedOwnershipPropertyDuringTx.add(baseProp);
-                }
-            }
+            trackOwnershipPropertyAddition(baseProp);
             var typeRes = optSubtype.get();
             var subtypeClass = listClass.getModel().getOntClass(typeRes.getURI());
             if (subtypeClass != null) {
-                if (subclassesCache.add(subtypeClass)) {
-                    if (!removedSubclassesDuringTx.remove(subtypeClass)) {
-                        addedSubclassesDuringTx.add(subtypeClass);
-                    }
-                }
+                trackSubclassAddition(subtypeClass);
             } else {
                 log.error("Schema Corruption: resource {} is in domain of list property {} with matching expected uri but not an ontclass", typeRes.getURI(), prop.getURI());
             }
         }
-
-        // too slow
-//        if (prop.canAs(OntObjectProperty.class)) {
-//            var ontProp = prop.as(OntObjectProperty.class);
-//            // rather expensive, better to find additional hints to evaluate this
-//            if (ontProp.superProperties(true).anyMatch(sp -> sp.equals(ownsListSuperProperty))) {
-//
-//            }
-//        }
     }
 
     /**
@@ -200,26 +182,47 @@ public class ListResourceType implements TransactionAware {
      * @param propertyURI
      */
     public void cleanupCacheAfterRemotePropertyRemoval(String propertyURI) {
-        // to keep in sync with method below
         var listTypeURI = generateListTypeURI(propertyURI);
         subclassesCache.stream()
                 .filter(ontClazz -> ontClazz.getURI().equals(listTypeURI))
                 .findFirst()
-                .ifPresent(c -> {
-                    subclassesCache.remove(c);
-                    if (!addedSubclassesDuringTx.remove(c)) {
-                        removedSubclassesDuringTx.add(c);
-                    }
-                });
+                .ifPresent(this::trackSubclassRemoval);
         ownershipPropertyCache.stream()
                 .filter(p -> p.getURI().equals(propertyURI))
                 .findFirst()
-                .ifPresent(p -> {
-                    ownershipPropertyCache.remove(p);
-                    if (!addedOwnershipPropertyDuringTx.remove(p)) {
-                        removedOwnershipPropertyDuringTx.add(p);
-                    }
-                });
+                .ifPresent(this::trackOwnershipPropertyRemoval);
+    }
+
+    private void trackSubclassAddition(OntClass cls) {
+        if (subclassesCache.add(cls)) {
+            if (!removedSubclassesDuringTx.remove(cls)) {
+                addedSubclassesDuringTx.add(cls);
+            }
+        }
+    }
+
+    private void trackSubclassRemoval(OntClass cls) {
+        if (subclassesCache.remove(cls)) {
+            if (!addedSubclassesDuringTx.remove(cls)) {
+                removedSubclassesDuringTx.add(cls);
+            }
+        }
+    }
+
+    private void trackOwnershipPropertyAddition(Property prop) {
+        if (ownershipPropertyCache.add(prop)) {
+            if (!removedOwnershipPropertyDuringTx.remove(prop)) {
+                addedOwnershipPropertyDuringTx.add(prop);
+            }
+        }
+    }
+
+    private void trackOwnershipPropertyRemoval(Property prop) {
+        if (ownershipPropertyCache.remove(prop)) {
+            if (!addedOwnershipPropertyDuringTx.remove(prop)) {
+                removedOwnershipPropertyDuringTx.add(prop);
+            }
+        }
     }
 
     @Override
@@ -257,7 +260,7 @@ public class ListResourceType implements TransactionAware {
         var listType = model.getOntClass(generateListTypeURI(listReferenceProperty.getURI()));
         if (listType != null) {
             // remove from cache
-            subclassesCache.remove(listType);
+            trackSubclassRemoval(listType);
             // remove liSubproperty predicates and any predicates from other properties that happen to be defined
             MetaModelSchemaTypes.getExplicitlyDeclaredProperties(listType).forEach(prop -> {
                 if (isLiProperty(prop)) {
@@ -275,7 +278,7 @@ public class ListResourceType implements TransactionAware {
             listType.removeProperties();
         }
         // remove list reference property
-        ownershipPropertyCache.remove(listReferenceProperty.asProperty());
+        trackOwnershipPropertyRemoval(listReferenceProperty.asProperty());
         primaryPropertyType.removeBaseProperty(listReferenceProperty);
     }
 

@@ -95,7 +95,7 @@ public class MapResourceType implements TransactionAware {
 		}
 		mapType = model.createOntClass(uri);
 		mapType.addSuperClass(mapEntryClass);
-		subclassesCache.add(mapType);
+		trackSubclassAddition(mapType);
 
 		//use base property to enable tracking of existing properties
 		OntDataProperty valueProp = primaryPropertyType.createBaseDataPropertyType(model, propertyURI+LITERAL_VALUE, List.of(mapType), valueType);
@@ -104,30 +104,30 @@ public class MapResourceType implements TransactionAware {
 
 		OntObjectProperty hasMap = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), propertyURI, List.of(resource), mapType);
 		mapOwnershipSuperProperty.addSubProperty(hasMap);
-		ownsPropertyCache.add(hasMap.asProperty());
+		trackOwnershipPropertyAddition(hasMap.asProperty());
 		return hasMap;
 	}
 
 	public OntObjectProperty addObjectMapProperty(OntClass resource, String propertyURI, OntClass valueType) {
 		OntModel model = resource.getModel();
 		if (primaryPropertyType.existsPrimaryProperty(propertyURI)) {
-			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty		
+			return null;  //as we cannot guarantee that the property that was identified is an OntObjectProperty
 		}
 		var uri = generateMapEntryTypeURI(propertyURI);
 		var mapType = model.getOntClass(uri);
-		if (mapType != null) { 
+		if (mapType != null) {
 			return null; // such a class already exists, do not need to create properties for it
 		}
 		mapType = model.createOntClass(uri);
 		mapType.addSuperClass(mapEntryClass);
-		subclassesCache.add(mapType);
+		trackSubclassAddition(mapType);
 
 		OntObjectProperty valueProp = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), propertyURI+OBJECT_VALUE, List.of(mapType), valueType);
 		valueProp.addSuperProperty(objectValueProperty);
 
 		OntObjectProperty hasMap = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), propertyURI, List.of(resource), mapType);
 		mapOwnershipSuperProperty.addSubProperty(hasMap);
-		ownsPropertyCache.add(hasMap.asProperty());
+		trackOwnershipPropertyAddition(hasMap.asProperty());
 		return hasMap;
 	}
 
@@ -147,32 +147,15 @@ public class MapResourceType implements TransactionAware {
 				.findAny();
 		if (optSubtype.isPresent()) {
 			var baseProp = mapEntryClass.getModel().getProperty(baseURI);
-			if (ownsPropertyCache.add(baseProp)) {
-				if (!removedOwnsPropertyDuringTx.remove(baseProp)) {
-					// only add to temp if this has not been removed, so non-effective changes wont show up in rollback info
-					addedOwnsPropertyDuringTx.add(baseProp);
-				}
-			}
+			trackOwnershipPropertyAddition(baseProp);
 			var typeRes = optSubtype.get();
 			var subtypeClass = mapEntryClass.getModel().getOntClass(typeRes.getURI());
 			if (subtypeClass != null) {
-				if (subclassesCache.add(subtypeClass)) {
-					if (!removedSubclassesDuringTx.remove(subtypeClass)) {
-						addedSubclassesDuringTx.add(subtypeClass);
-					}
-				}
+				trackSubclassAddition(subtypeClass);
 			} else {
 				log.error("Schema Corruption: resource {} is in domain of map property {} with matching expected uri but not an ontclass", typeRes.getURI(), prop.getURI());
 			}
 		}
-		// too slow:
-		//		if (prop.canAs(OntObjectProperty.class)) {
-//			var ontProp = prop.as(OntObjectProperty.class);
-//			// rather expensive, better to find additional hints to evaluate this
-//			if (ontProp.superProperties(true).anyMatch(sp -> sp.equals(mapOwnershipSuperProperty))) {
-//				ownsPropertyCache.add(prop);
-//			}
-//		}
 	}
 
 	private String attemptStripEnding(String uri) {
@@ -189,26 +172,47 @@ public class MapResourceType implements TransactionAware {
 	 * @param propertyURI
 	 */
 	public void cleanupCacheAfterRemotePropertyRemoval(String propertyURI) {
-		//keep in sync with method below
 		ownsPropertyCache.stream()
 				.filter(p -> p.getURI().equals(propertyURI))
 				.findFirst()
-				.ifPresent(p -> {
-					ownsPropertyCache.remove(p);
-					if (!addedOwnsPropertyDuringTx.remove(p)) {
-						removedOwnsPropertyDuringTx.add(p);
-					}
-				});
+				.ifPresent(this::trackOwnershipPropertyRemoval);
 		var mapTypeURI = generateMapEntryTypeURI(propertyURI);
 		subclassesCache.stream()
 				.filter(c -> c.getURI().equals(mapTypeURI))
 				.findFirst()
-				.ifPresent(c -> {
-					subclassesCache.remove(c);
-					if (!addedSubclassesDuringTx.remove(c)) {
-						removedSubclassesDuringTx.add(c);
-					}
-				});
+				.ifPresent(this::trackSubclassRemoval);
+	}
+
+	private void trackSubclassAddition(OntClass cls) {
+		if (subclassesCache.add(cls)) {
+			if (!removedSubclassesDuringTx.remove(cls)) {
+				addedSubclassesDuringTx.add(cls);
+			}
+		}
+	}
+
+	private void trackSubclassRemoval(OntClass cls) {
+		if (subclassesCache.remove(cls)) {
+			if (!addedSubclassesDuringTx.remove(cls)) {
+				removedSubclassesDuringTx.add(cls);
+			}
+		}
+	}
+
+	private void trackOwnershipPropertyAddition(Property prop) {
+		if (ownsPropertyCache.add(prop)) {
+			if (!removedOwnsPropertyDuringTx.remove(prop)) {
+				addedOwnsPropertyDuringTx.add(prop);
+			}
+		}
+	}
+
+	private void trackOwnershipPropertyRemoval(Property prop) {
+		if (ownsPropertyCache.remove(prop)) {
+			if (!addedOwnsPropertyDuringTx.remove(prop)) {
+				removedOwnsPropertyDuringTx.add(prop);
+			}
+		}
 	}
 
 	@Override
@@ -246,14 +250,14 @@ public class MapResourceType implements TransactionAware {
 		var mapType = model.getOntClass(generateMapEntryTypeURI(mapOwnershipProperty.getURI()));
 		if (mapType != null) {
 			// remove from cache
-			subclassesCache.remove(mapType);
+			trackSubclassRemoval(mapType);
 			// remove any predicates from any properties that happen to be defined
 			MetaModelSchemaTypes.getExplicitlyDeclaredProperties(mapType).forEach(primaryPropertyType::removeBaseProperty);
 			// remove predicates association from mapType itself
 			mapType.removeProperties();
 			// remove map reference property
 		}
-		ownsPropertyCache.remove(mapOwnershipProperty.asProperty());
+		trackOwnershipPropertyRemoval(mapOwnershipProperty.asProperty());
 		primaryPropertyType.removeBaseProperty(mapOwnershipProperty);
 	}
 

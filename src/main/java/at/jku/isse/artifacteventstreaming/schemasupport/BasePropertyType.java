@@ -49,22 +49,22 @@ public class BasePropertyType implements TransactionAware {
 		var prop = model.createObjectProperty(propUri);
 		domains.forEach(prop::addDomain);
 		prop.addRange(range);
-		propertyUriCache.add(propUri);
+		addToCache(propUri);
 		return prop;
 	}
-	
+
 	public OntDataProperty createBaseDataPropertyType(@NonNull OntModel model, @NonNull String propUri, @NonNull List<OntClass> domains, @NonNull OntDataRange range ) {
 		if (existsPrimaryProperty(propUri))
 			return null;
 		var prop = model.createDataProperty(propUri);
-		domains.forEach(prop::addDomain);		
-		prop.addRange(range);			
-		propertyUriCache.add(propUri);
-		return prop;	
+		domains.forEach(prop::addDomain);
+		prop.addRange(range);
+		addToCache(propUri);
+		return prop;
 	}
-	
+
 	public void removeBaseProperty(@NonNull OntProperty ontProperty) {
-		propertyUriCache.remove(ontProperty.getURI());
+		removePropertyURIfromCache(ontProperty.getURI());
 		ontProperty.removeProperties();
 	}
 

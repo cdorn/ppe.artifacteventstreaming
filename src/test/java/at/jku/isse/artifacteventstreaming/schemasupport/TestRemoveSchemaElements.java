@@ -3,15 +3,20 @@ package at.jku.isse.artifacteventstreaming.schemasupport;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
+import org.apache.jena.ontapi.model.OntClass;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Property;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.tdb2.TDB2Factory;
 import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -351,13 +356,226 @@ class TestRemoveSchemaElements {
 	
 	private void printDiff(OntModel modelBegin, OntModel model) {
 		dataset.begin(ReadWrite.READ);
-		var modelDiff = model.size() > modelBegin.size() 
-				? model.difference(modelBegin) 
+		var modelDiff = model.size() > modelBegin.size()
+				? model.difference(modelBegin)
 				: modelBegin.difference(model);
 		RDFDataMgr.write(System.out, modelDiff, Lang.TURTLE) ;
 		dataset.end();
 	}
-	
+
+	// ---- Cache snapshot infrastructure for tx abort tests ----
+
+	private record CacheSnapshot(
+			Set<String> primaryPropertyURIs,
+			Set<String> functionalPropertyURIs,
+			Set<String> listOwnershipURIs,
+			Set<String> mapOwnsURIs,
+			Set<String> listSubclassURIs,
+			Set<String> mapSubclassURIs
+	) {}
+
+	private CacheSnapshot captureCache(MetaModelSchemaTypes schema) {
+		var primaryURIs = schema.getPrimaryPropertyType().getKnownPropertyURIs();
+		return new CacheSnapshot(
+				primaryURIs,
+				primaryURIs.stream()
+						.filter(uri -> schema.getSingleType().isSingleProperty(uri))
+						.collect(Collectors.toSet()),
+				schema.getListType().getOwnershipPropertyCache().stream()
+						.map(Property::getURI).collect(Collectors.toSet()),
+				schema.getMapType().getOwnsPropertyCache().stream()
+						.map(Property::getURI).collect(Collectors.toSet()),
+				schema.getListType().getSubclassesCache().stream()
+						.map(OntClass::getURI).collect(Collectors.toSet()),
+				schema.getMapType().getSubclassesCache().stream()
+						.map(OntClass::getURI).collect(Collectors.toSet())
+		);
+	}
+
+	private void assertSnapshotEquals(CacheSnapshot expected, CacheSnapshot actual, String context) {
+		assertEquals(expected.primaryPropertyURIs(), actual.primaryPropertyURIs(), context + ": primary property cache mismatch");
+		assertEquals(expected.functionalPropertyURIs(), actual.functionalPropertyURIs(), context + ": functional property cache mismatch");
+		assertEquals(expected.listOwnershipURIs(), actual.listOwnershipURIs(), context + ": list ownership cache mismatch");
+		assertEquals(expected.mapOwnsURIs(), actual.mapOwnsURIs(), context + ": map ownership cache mismatch");
+		assertEquals(expected.listSubclassURIs(), actual.listSubclassURIs(), context + ": list subclass cache mismatch");
+		assertEquals(expected.mapSubclassURIs(), actual.mapSubclassURIs(), context + ": map subclass cache mismatch");
+	}
+
+	// ---- Transaction abort tests (direct property creation/removal cache rollback) ----
+
+	@Test
+	void abortRevertsDirectSinglePropertyCreation() {
+		dataset.begin(ReadWrite.WRITE);
+		metaModel.getMetaontology().begin(ReadWrite.READ);
+		var ontClass = model.createOntClass(NS + "Base");
+		dataset.commit();
+		dataset.end();
+		metaModel.getMetaontology().end();
+
+		var snapshotBefore = captureCache(metaTypes);
+
+		metaTypes.afterTransactionStarted();
+		dataset.begin(ReadWrite.WRITE);
+		metaModel.getMetaontology().begin(ReadWrite.READ);
+		metaTypes.getSingleType().createSingleDataPropertyType(NS + "txProp", ontClass, model.getDatatype(XSD.xstring));
+		dataset.abort();
+		dataset.end();
+		metaModel.getMetaontology().end();
+		metaTypes.afterTransactionAborted();
+
+		assertSnapshotEquals(snapshotBefore, captureCache(metaTypes), "Single property creation abort");
+	}
+
+	@Test
+	void abortRevertsDirectSetPropertyCreation() {
+		dataset.begin(ReadWrite.WRITE);
+		metaModel.getMetaontology().begin(ReadWrite.READ);
+		var ontClass = model.createOntClass(NS + "Base");
+		dataset.commit();
+		dataset.end();
+		metaModel.getMetaontology().end();
+
+		var snapshotBefore = captureCache(metaTypes);
+
+		metaTypes.afterTransactionStarted();
+		dataset.begin(ReadWrite.WRITE);
+		metaModel.getMetaontology().begin(ReadWrite.READ);
+		metaTypes.getSetType().createObjectPropertyType(NS + "txSetProp", ontClass, ontClass);
+		dataset.abort();
+		dataset.end();
+		metaModel.getMetaontology().end();
+		metaTypes.afterTransactionAborted();
+
+		assertSnapshotEquals(snapshotBefore, captureCache(metaTypes), "Set property creation abort");
+	}
+
+	@Test
+	void abortRevertsDirectListPropertyCreation() {
+		dataset.begin(ReadWrite.WRITE);
+		metaModel.getMetaontology().begin(ReadWrite.READ);
+		var ontClass = model.createOntClass(NS + "Base");
+		dataset.commit();
+		dataset.end();
+		metaModel.getMetaontology().end();
+
+		var snapshotBefore = captureCache(metaTypes);
+
+		metaTypes.afterTransactionStarted();
+		dataset.begin(ReadWrite.WRITE);
+		metaModel.getMetaontology().begin(ReadWrite.READ);
+		metaTypes.getListType().addLiteralListProperty(ontClass, NS + "txListProp", model.getDatatype(XSD.xstring));
+		dataset.abort();
+		dataset.end();
+		metaModel.getMetaontology().end();
+		metaTypes.afterTransactionAborted();
+
+		assertSnapshotEquals(snapshotBefore, captureCache(metaTypes), "List property creation abort");
+	}
+
+	@Test
+	void abortRevertsDirectMapPropertyCreation() {
+		dataset.begin(ReadWrite.WRITE);
+		metaModel.getMetaontology().begin(ReadWrite.READ);
+		var ontClass = model.createOntClass(NS + "Base");
+		dataset.commit();
+		dataset.end();
+		metaModel.getMetaontology().end();
+
+		var snapshotBefore = captureCache(metaTypes);
+
+		metaTypes.afterTransactionStarted();
+		dataset.begin(ReadWrite.WRITE);
+		metaModel.getMetaontology().begin(ReadWrite.READ);
+		metaTypes.getMapType().addLiteralMapProperty(ontClass, NS + "txMapProp", model.getDatatype(XSD.xstring));
+		dataset.abort();
+		dataset.end();
+		metaModel.getMetaontology().end();
+		metaTypes.afterTransactionAborted();
+
+		assertSnapshotEquals(snapshotBefore, captureCache(metaTypes), "Map property creation abort");
+	}
+
+	@Test
+	void abortRevertsDirectAllPropertyTypeCreation() {
+		dataset.begin(ReadWrite.WRITE);
+		metaModel.getMetaontology().begin(ReadWrite.READ);
+		var ontClass = model.createOntClass(NS + "Base");
+		dataset.commit();
+		dataset.end();
+		metaModel.getMetaontology().end();
+
+		var snapshotBefore = captureCache(metaTypes);
+
+		metaTypes.afterTransactionStarted();
+		dataset.begin(ReadWrite.WRITE);
+		metaModel.getMetaontology().begin(ReadWrite.READ);
+		metaTypes.getSingleType().createSingleDataPropertyType(NS + "txSingle", ontClass, model.getDatatype(XSD.xstring));
+		metaTypes.getSingleType().createSingleObjectPropertyType(NS + "txSingleObj", ontClass, ontClass);
+		metaTypes.getSetType().createObjectPropertyType(NS + "txSet", ontClass, ontClass);
+		metaTypes.getListType().addLiteralListProperty(ontClass, NS + "txList", model.getDatatype(XSD.xstring));
+		metaTypes.getMapType().addLiteralMapProperty(ontClass, NS + "txMap", model.getDatatype(XSD.xstring));
+		dataset.abort();
+		dataset.end();
+		metaModel.getMetaontology().end();
+		metaTypes.afterTransactionAborted();
+
+		assertSnapshotEquals(snapshotBefore, captureCache(metaTypes), "All property types creation abort");
+	}
+
+	@Test
+	void abortRevertsDirectPropertyRemoval() {
+		dataset.begin(ReadWrite.WRITE);
+		metaModel.getMetaontology().begin(ReadWrite.READ);
+		var ontClass = model.createOntClass(NS + "Base");
+		var singleProp = metaTypes.getSingleType().createSingleDataPropertyType(NS + "toRemoveSingle", ontClass, model.getDatatype(XSD.xstring));
+		var listProp = metaTypes.getListType().addLiteralListProperty(ontClass, NS + "toRemoveList", model.getDatatype(XSD.xstring));
+		var mapProp = metaTypes.getMapType().addLiteralMapProperty(ontClass, NS + "toRemoveMap", model.getDatatype(XSD.xstring));
+		dataset.commit();
+		dataset.end();
+		metaModel.getMetaontology().end();
+
+		var snapshotBefore = captureCache(metaTypes);
+
+		metaTypes.afterTransactionStarted();
+		dataset.begin(ReadWrite.WRITE);
+		metaModel.getMetaontology().begin(ReadWrite.READ);
+		metaTypes.getSingleType().removeSingleProperty(singleProp);
+		metaTypes.getListType().removeListOwnershipPropertyDefinition(listProp);
+		metaTypes.getMapType().removeMapOwnershipPropertyDefinition(mapProp);
+		dataset.abort();
+		dataset.end();
+		metaModel.getMetaontology().end();
+		metaTypes.afterTransactionAborted();
+
+		assertSnapshotEquals(snapshotBefore, captureCache(metaTypes), "Property removal abort");
+	}
+
+	@Test
+	void abortRevertsDirectClassDeletionWithProperties() {
+		dataset.begin(ReadWrite.WRITE);
+		metaModel.getMetaontology().begin(ReadWrite.READ);
+		var ontClass = model.createOntClass(NS + "ToDelete");
+		metaTypes.getSingleType().createSingleDataPropertyType(NS + "delSingle", ontClass, model.getDatatype(XSD.xstring));
+		metaTypes.getListType().addLiteralListProperty(ontClass, NS + "delList", model.getDatatype(XSD.xstring));
+		metaTypes.getMapType().addLiteralMapProperty(ontClass, NS + "delMap", model.getDatatype(XSD.xstring));
+		dataset.commit();
+		dataset.end();
+		metaModel.getMetaontology().end();
+
+		var snapshotBefore = captureCache(metaTypes);
+
+		metaTypes.afterTransactionStarted();
+		dataset.begin(ReadWrite.WRITE);
+		metaModel.getMetaontology().begin(ReadWrite.READ);
+		metaTypes.deleteOntClassInclOwnedProperties(ontClass);
+		dataset.abort();
+		dataset.end();
+		metaModel.getMetaontology().end();
+		metaTypes.afterTransactionAborted();
+
+		assertSnapshotEquals(snapshotBefore, captureCache(metaTypes), "Class deletion with properties abort");
+	}
+
 	@Test
 	void testSuperClassRemoval() {
 		// create a class hierarchy, remove super class,

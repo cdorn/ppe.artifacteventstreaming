@@ -47,9 +47,7 @@ public class SingleResourceType implements TransactionAware {
 		var prop = createBaseDataPropertyType(propURI, domain, range);
 		if (prop != null) {
 			prop.setFunctional(true);
-			prop.isFunctional();
-			
-			functionalPropertyCache.add(prop.getURI());
+			trackCacheAddition(prop.getURI());
 		}
 		return prop;
 	}
@@ -59,7 +57,7 @@ public class SingleResourceType implements TransactionAware {
 		var prop = primaryPropertyType.createBaseDataPropertyType(localModel, propURI, domains, range);
 		if (prop != null) {
 			prop.setFunctional(true);
-			functionalPropertyCache.add(prop.getURI());
+			trackCacheAddition(prop.getURI());
 		}
 		return prop;
 	}
@@ -68,7 +66,7 @@ public class SingleResourceType implements TransactionAware {
 		var prop = primaryPropertyType.createBaseObjectPropertyType(domain.getModel(), propURI, List.of(domain), range);
 		if (prop != null) {
 			prop.setFunctional(true);
-			functionalPropertyCache.add(prop.getURI());
+			trackCacheAddition(prop.getURI());
 		}
 		return prop;
 	}
@@ -78,14 +76,14 @@ public class SingleResourceType implements TransactionAware {
 		var prop = primaryPropertyType.createBaseObjectPropertyType(localModel, propURI, domains, range);
 		if (prop != null) {
 			prop.setFunctional(true);
-			functionalPropertyCache.add(prop.getURI());
+			trackCacheAddition(prop.getURI());
 		}
 		return prop;
 	}
 
 	
 	public void removeSingleProperty(@NonNull OntProperty ontProperty) {
-		functionalPropertyCache.remove(ontProperty.getURI());
+		removePropertyURIfromCache(ontProperty.getURI());
 		// then remove other property predicates
 		primaryPropertyType.removeBaseProperty(ontProperty); // removes also then the ontProperty's properties
 	}
