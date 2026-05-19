@@ -24,7 +24,7 @@ public class MetaModelSchemaCacheSynchronizer {
 
     public void handleCommit(Commit commit) {
         commit.getRemovedStatements().stream()
-                .filter(PropertyDefinitionAddedCacheUpdater::isPropertyDefinition)
+                .filter(MetaModelSchemaCacheSynchronizer::isPropertyDefinition)
                 .map(stmt -> stmt.getSubject().getURI())
                 .filter(uri -> metaschema.getPrimaryPropertyType().getKnownPropertyURIs().contains(uri))
                 .forEach(uri -> handleRemovedProperty(uri, commit));
