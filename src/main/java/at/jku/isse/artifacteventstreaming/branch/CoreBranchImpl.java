@@ -164,12 +164,16 @@ public class CoreBranchImpl implements CoreBranch {
                         writeLock.enterCriticalSection(false);
                         var isPromoted = dataset.promote();
                         if (isPromoted) {
+                            getRegisteredLocalCommitHandlers().forEach(CommitHandler::afterTransactionStarted);
+                            if (schemaUtils != null) schemaUtils.afterTransactionStarted();
                             return writeLock;
                         } else {
                             // still in read mode
                             dataset.end();
                             // start a new write transaction
                             dataset.begin(ReadWrite.WRITE);
+                            getRegisteredLocalCommitHandlers().forEach(CommitHandler::afterTransactionStarted);
+                            if (schemaUtils != null) schemaUtils.afterTransactionStarted();
                             return writeLock;
                         }
                     });
@@ -197,10 +201,12 @@ public class CoreBranchImpl implements CoreBranch {
                     stmtAggregator.drainAddedStatements();
                     stmtAggregator.drainRemovedStatements();
                     getRegisteredLocalCommitHandlers().forEach(CommitHandler::beforeTransactionStarted);
+                    if (schemaUtils != null) schemaUtils.beforeTransactionStarted();
                     var writeLock = dataset.getLock();
                     writeLock.enterCriticalSection(false);
                     dataset.begin(ReadWrite.WRITE);
                     getRegisteredLocalCommitHandlers().forEach(CommitHandler::afterTransactionStarted);
+                    if (schemaUtils != null) schemaUtils.afterTransactionStarted();
                     return writeLock;
                 });
     }
@@ -208,6 +214,7 @@ public class CoreBranchImpl implements CoreBranch {
     @Override
     public void abortWriteTransaction() {
         getRegisteredLocalCommitHandlers().forEach(CommitHandler::beforeTransactionAborted);
+        if (schemaUtils != null) schemaUtils.beforeTransactionAborted();
         // clear stmt queue
         stmtAggregator.drainAddedStatements();
         stmtAggregator.drainRemovedStatements();
@@ -215,6 +222,7 @@ public class CoreBranchImpl implements CoreBranch {
             dataset.abort();
         }
         getRegisteredLocalCommitHandlers().forEach(CommitHandler::afterTransactionStarted);
+        if (schemaUtils != null) schemaUtils.afterTransactionAborted();
     }
 
     @Override
@@ -258,6 +266,7 @@ public class CoreBranchImpl implements CoreBranch {
     protected void handleCommitInternally(Commit commit) throws PersistenceException {
         log.debug("Handling commit {} in branch {}", commit.getCommitId(), branchResourceURI);
         getRegisteredLocalCommitHandlers().forEach(CommitHandler::beforeTransactionCommitted);
+        if (schemaUtils != null) schemaUtils.beforeTransactionCommitted();
         // clear the changes
         if (!services.isEmpty() && !commit.isEmpty()) {
             executeServiceLoop(commit);
@@ -270,6 +279,7 @@ public class CoreBranchImpl implements CoreBranch {
                     dataset.commit(); // together with commit persistence
                     lastCommitId = commit.getCommitId();
                     getRegisteredLocalCommitHandlers().forEach(CommitHandler::afterTransactionCommitted);
+                    if (schemaUtils != null) schemaUtils.afterTransactionCommitted();
                 });
 
     }
