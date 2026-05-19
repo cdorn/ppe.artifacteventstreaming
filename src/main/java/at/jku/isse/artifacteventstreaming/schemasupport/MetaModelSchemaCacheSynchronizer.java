@@ -67,9 +67,9 @@ public class MetaModelSchemaCacheSynchronizer {
     }
 
     public static boolean isPropertyDefinition(ContainedStatement stmt) {
-        String uri = stmt.getResource().getURI();
+        String uri = stmt.getObject().isResource() ? stmt.getResource().getURI() : null;
         return stmt.getPredicate().equals(RDF.type)
-                &&	stmt.getObject().isResource()
+                && uri != null
                 && ( uri.equals(RDF.Nodes.Property.getURI())
                 || uri.equals(OWL2.ObjectProperty.getURI())
                 || uri.equals(OWL2.DatatypeProperty.getURI()));
