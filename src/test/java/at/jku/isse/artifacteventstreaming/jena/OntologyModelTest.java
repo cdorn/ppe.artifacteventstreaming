@@ -38,7 +38,7 @@ class OntologyModelTest {
 		
 		var metaModel = MetaModelOntology.buildInMemoryOntology(); 			
 		var metaUtil = new MetaModelSchemaTypes(m, metaModel);	
-		MapResourceType mapType = new MapResourceType(m, metaUtil.getPrimaryPropertyType());
+		MapResourceType mapType = new MapResourceType(m, metaUtil.getPrimaryPropertyType(), metaUtil.getSingleType() );
 		
 		OntClass artifactType = m.createOntClass(NS+"artifact");		
 		OntClass otherType = m.createOntClass(NS+"other");

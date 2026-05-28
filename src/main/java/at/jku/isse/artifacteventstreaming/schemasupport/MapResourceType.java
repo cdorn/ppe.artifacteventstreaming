@@ -1,5 +1,6 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
+import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import at.jku.isse.artifacteventstreaming.api.TransactionAware;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -8,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.ontapi.model.*;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.sparql.function.library.leviathan.log;
+import org.apache.jena.vocabulary.RDFS;
 import org.apache.jena.vocabulary.XSD;
 
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ public class MapResourceType implements TransactionAware {
 	@Getter
 	private final OntClass mapEntryClass;
 	private final BasePropertyType primaryPropertyType;
+	private final SingleResourceType singleType;
 
 	// caching for performance to avoid searching rdf model
 	@Getter(AccessLevel.PACKAGE)
@@ -51,14 +53,17 @@ public class MapResourceType implements TransactionAware {
 	@Getter(AccessLevel.PACKAGE)
     private final Set<Property> ownsPropertyCache = new HashSet<>();
 
+
+
 	// transaction rollback tracking
 	private final Set<OntClass> removedSubclassesDuringTx = new HashSet<>();
 	private final Set<OntClass> addedSubclassesDuringTx = new HashSet<>();
 	private final Set<Property> removedOwnsPropertyDuringTx = new HashSet<>();
 	private final Set<Property> addedOwnsPropertyDuringTx = new HashSet<>();
 
-	public MapResourceType(@NonNull OntModel model, @NonNull BasePropertyType primaryType) {
+	public MapResourceType(@NonNull OntModel model, @NonNull BasePropertyType primaryType, @NonNull SingleResourceType singleType) {
         this.primaryPropertyType = primaryType;
+		this.singleType = singleType;
 		mapEntryClass = model.getOntClass(ENTRY_TYPE_URI);
 		keyProperty = model.getDataProperty(KEY_PROPERTY_URI);
 		literalValueProperty = model.getDataProperty(LITERAL_VALUE_PROPERTY_URI);
@@ -98,7 +103,7 @@ public class MapResourceType implements TransactionAware {
 		trackSubclassAddition(mapType);
 
 		//use base property to enable tracking of existing properties
-		OntDataProperty valueProp = primaryPropertyType.createBaseDataPropertyType(model, propertyURI+LITERAL_VALUE, List.of(mapType), valueType);
+		OntDataProperty valueProp = singleType.createSingleDataPropertyType(propertyURI+LITERAL_VALUE, List.of(mapType), valueType);
 		valueProp.addSuperProperty(literalValueProperty);
 
 
@@ -122,7 +127,7 @@ public class MapResourceType implements TransactionAware {
 		mapType.addSuperClass(mapEntryClass);
 		trackSubclassAddition(mapType);
 
-		OntObjectProperty valueProp = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), propertyURI+OBJECT_VALUE, List.of(mapType), valueType);
+		OntObjectProperty valueProp = singleType.createSingleObjectPropertyType(propertyURI+OBJECT_VALUE, List.of(mapType), valueType);
 		valueProp.addSuperProperty(objectValueProperty);
 
 		OntObjectProperty hasMap = primaryPropertyType.createBaseObjectPropertyType(resource.getModel(), propertyURI, List.of(resource), mapType);
@@ -137,50 +142,44 @@ public class MapResourceType implements TransactionAware {
 
 	// Remote changes syncing in (deleted/adding of property definitions )
 
-	public void addToOwnershipPropertyCacheIfApplicable(Property prop, Set<Resource> domains) {
+	public void addToOwnershipPropertyCacheIfApplicable(Property prop, Set<ContainedStatement> definitionChanges) {
 
-		String baseURI = attemptStripEnding(prop.getURI());
-
-		// if this property matches the subtype for any of the domains, then this is a map resource property
-		var optSubtype = domains.stream()
-				.filter(domain -> domain.getURI().equals(generateMapEntryTypeURI(baseURI)))
-				.findAny();
-		if (optSubtype.isPresent()) {
-			var baseProp = mapEntryClass.getModel().getProperty(baseURI);
-			trackOwnershipPropertyAddition(baseProp);
-			var typeRes = optSubtype.get();
-			var subtypeClass = mapEntryClass.getModel().getOntClass(typeRes.getURI());
-			if (subtypeClass != null) {
-				trackSubclassAddition(subtypeClass);
-			} else {
-				log.error("Schema Corruption: resource {} is in domain of map property {} with matching expected uri but not an ontclass", typeRes.getURI(), prop.getURI());
-			}
-		}
-	}
-
-	private String attemptStripEnding(String uri) {
-		if (uri.endsWith(OBJECT_VALUE)) {
-			return uri.substring(0, uri.length()-OBJECT_VALUE.length());
-		} else if (uri.endsWith(LITERAL_VALUE)) {
-			return uri.substring(0, uri.length()-LITERAL_VALUE.length());
-		}
-		return uri;
+		definitionChanges.stream().filter(stmt -> stmt.getPredicate().equals(RDFS.subPropertyOf)
+						&& stmt.getObject().isResource()
+						&& stmt.getResource().getURI().equals(MAP_OWNERSHIP_SUPERPROPERTY_URI))
+				.forEach(stmt -> {
+					trackOwnershipPropertyAddition(prop);
+					var typeURI = generateMapEntryTypeURI(prop.getURI());
+					var subtypeClass = mapEntryClass.getModel().getOntClass(typeURI);
+					if (subtypeClass != null) {
+						trackSubclassAddition(subtypeClass);
+					} else {
+						log.error("Schema Corruption: resource {} is in domain of map property {} with matching expected uri but not an ontclass", typeURI, prop.getURI());
+					}
+				});
 	}
 
 	/**
 	 * used when notified about external (i.e., synced) removal of property, hence underlying model contains no triples anymore, just cleanup cache
 	 * @param propertyURI
 	 */
-	public void cleanupCacheAfterRemotePropertyRemoval(String propertyURI) {
-		ownsPropertyCache.stream()
-				.filter(p -> p.getURI().equals(propertyURI))
-				.findFirst()
-				.ifPresent(this::trackOwnershipPropertyRemoval);
-		var mapTypeURI = generateMapEntryTypeURI(propertyURI);
-		subclassesCache.stream()
-				.filter(c -> c.getURI().equals(mapTypeURI))
-				.findFirst()
-				.ifPresent(this::trackSubclassRemoval);
+	public void cleanupCacheAfterRemotePropertyRemoval(String propertyURI, Set<ContainedStatement> definitionChanges) {
+
+		definitionChanges.stream().filter(stmt -> stmt.getPredicate().equals(RDFS.subPropertyOf)
+						&& stmt.getObject().isResource()
+						&& stmt.getResource().getURI().equals(MAP_OWNERSHIP_SUPERPROPERTY_URI))
+				// first having checked that this is indeed a map property
+				.forEach(stmt -> {
+					ownsPropertyCache.stream()
+							.filter(p -> p.getURI().equals(propertyURI))
+							.findFirst()
+							.ifPresent(this::trackOwnershipPropertyRemoval);
+					var mapTypeURI = generateMapEntryTypeURI(propertyURI);
+					subclassesCache.stream()
+							.filter(c -> c.getURI().equals(mapTypeURI))
+							.findFirst()
+							.ifPresent(this::trackSubclassRemoval);
+				});
 	}
 
 	private void trackSubclassAddition(OntClass cls) {
@@ -208,11 +207,10 @@ public class MapResourceType implements TransactionAware {
 	}
 
 	private void trackOwnershipPropertyRemoval(Property prop) {
-		if (ownsPropertyCache.remove(prop)) {
-			if (!addedOwnsPropertyDuringTx.remove(prop)) {
+		if (ownsPropertyCache.remove(prop) && !addedOwnsPropertyDuringTx.remove(prop)) {
 				removedOwnsPropertyDuringTx.add(prop);
 			}
-		}
+
 	}
 
 	@Override

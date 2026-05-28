@@ -54,7 +54,7 @@ class ModelDuplicationTest {
 		OntObjectProperty.Named hasMapPropCopy = copy.getObjectProperty(NS+"hasMapEntry");
 		OntIndividual art1copy = copy.getIndividual(NS+"art1");		
 		OntIndividual art3copy = artifactTypeCopy.createIndividual(NS+"art3");
-		MapResourceType mapTypeDef2 = new MapResourceType(copy, metaUtil.getPrimaryPropertyType());
+		MapResourceType mapTypeDef2 = new MapResourceType(copy, metaUtil.getPrimaryPropertyType(), metaUtil.getSingleType());
 		Map<String, RDFNode> mapCopy = UntypedMapResource.asUnsafeMapResource(art1copy, hasMapPropCopy, mapTypeDef2);			
 		assertEquals(map.size(), mapCopy.size());
 		

@@ -1,5 +1,6 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
+import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import at.jku.isse.artifacteventstreaming.api.TransactionAware;
 import lombok.Getter;
 import org.apache.jena.ontapi.OntModelFactory;
@@ -42,7 +43,7 @@ public class MetaModelSchemaTypes implements TransactionAware {
 		primaryPropertyType = new BasePropertyType(model);	
 		setType =  new SetResourceType(primaryPropertyType);
 		singleType = new SingleResourceType(model, primaryPropertyType);
-		mapType = new MapResourceType(model, primaryPropertyType); 
+		mapType = new MapResourceType(model, primaryPropertyType, singleType);
 		listType = new ListResourceType(model, primaryPropertyType, singleType); 		
 	}
 	
@@ -54,7 +55,7 @@ public class MetaModelSchemaTypes implements TransactionAware {
 		primaryPropertyType = new BasePropertyType(model);	
 		setType =  new SetResourceType(primaryPropertyType);
 		singleType = new SingleResourceType(model, primaryPropertyType);
-		mapType = new MapResourceType(model, primaryPropertyType); 
+		mapType = new MapResourceType(model, primaryPropertyType, singleType);
 		listType = new ListResourceType(model, primaryPropertyType, singleType); 
 	}
 	
@@ -143,23 +144,23 @@ public class MetaModelSchemaTypes implements TransactionAware {
 	 * used when notified about external (i.e., synced) removal of property, hence underlying model contains no triples anymore, just cleanup cache
 	 * @param propertyURI to be checked across single, set, list, map types to be removed from caches
 	 */
-	public void cleanupCachesAfterRemotePropertyRemoval(String propertyURI) {
+	public void cleanupCachesAfterRemotePropertyRemoval(String propertyURI, Set<ContainedStatement> definitionChanges) {
 		this.primaryPropertyType.removePropertyURIfromCache(propertyURI);
 		this.singleType.removePropertyURIfromCache(propertyURI);
 		this.setType.removePropertyURIfromCache(propertyURI);
-		this.listType.cleanupCacheAfterRemotePropertyRemoval(propertyURI);
-		this.mapType.cleanupCacheAfterRemotePropertyRemoval(propertyURI);
+		this.listType.cleanupCacheAfterRemotePropertyRemoval(propertyURI, definitionChanges);
+		this.mapType.cleanupCacheAfterRemotePropertyRemoval(propertyURI, definitionChanges);
 	}
 
-	public void syncCachesAfterRemotePropertyAdded(String propertyURI, Model modelAddedTo, Set<Resource> domains) {
+	public void syncCachesAfterRemotePropertyAdded(String propertyURI, Model modelAddedTo, Set<ContainedStatement> definitionChanges) {
 		var prop = modelAddedTo.getProperty(propertyURI);
 		if (prop != null) {
 			primaryPropertyType.addToCache(propertyURI);
 			if (singleType.addIfIsSinglePropertyBasedOnSuperProperty(prop))
 				return;
 
-			listType.addToOwnershipPropertyCacheIfApplicable(prop, domains);
-			mapType.addToOwnershipPropertyCacheIfApplicable(prop, domains);
+			listType.addToOwnershipPropertyCacheIfApplicable(prop, definitionChanges);
+			mapType.addToOwnershipPropertyCacheIfApplicable(prop, definitionChanges);
 		}
 	}
 	

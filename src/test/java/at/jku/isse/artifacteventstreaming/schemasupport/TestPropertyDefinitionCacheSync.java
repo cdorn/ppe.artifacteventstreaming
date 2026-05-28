@@ -4,8 +4,6 @@ import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import at.jku.isse.artifacteventstreaming.api.CoreBranch;
 import at.jku.isse.artifacteventstreaming.branch.StatementAggregator;
 import at.jku.isse.artifacteventstreaming.branch.StatementCommitImpl;
-import at.jku.isse.artifacteventstreaming.branch.incoming.PropertyDefinitionAddedCacheUpdater;
-import at.jku.isse.artifacteventstreaming.branch.incoming.PropertyDefinitionRemovedCacheUpdater;
 import at.jku.isse.artifacteventstreaming.replay.CommitContainmentAugmenter;
 import at.jku.isse.artifacteventstreaming.schemasupport.MetaModelSchemaTypes.MetaModelOntology;
 import org.apache.jena.ontapi.OntModelFactory;

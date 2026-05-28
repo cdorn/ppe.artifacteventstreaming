@@ -1,6 +1,7 @@
 package at.jku.isse.artifacteventstreaming.schemasupport;
 
 import at.jku.isse.artifacteventstreaming.api.AES;
+import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import at.jku.isse.artifacteventstreaming.api.TransactionAware;
 import at.jku.isse.artifacteventstreaming.replay.StatementAugmentationSession.StatementWrapper;
 import lombok.AccessLevel;
@@ -146,83 +147,74 @@ public class ListResourceType implements TransactionAware {
     private String generateListTypeURI(String listPropertyURI) {
         return listPropertyURI + LIST_TYPE_NAME;
     }
-    private String attemptStripEnding(String uri) {
-        if (uri.endsWith(OBJECT_LIST_NAME)) {
-            return uri.substring(0, uri.length()-OBJECT_LIST_NAME.length());
-        } else if (uri.endsWith(LITERAL_LIST_NAME)) {
-            return uri.substring(0, uri.length()-LITERAL_LIST_NAME.length());
-        }
-        return uri;
-    }
 
     // Remote changes syncing in (deleted/adding of property definitions )
 
-    public void addToOwnershipPropertyCacheIfApplicable(Property prop, Set<Resource> domains) {
-        String baseURI = attemptStripEnding(prop.getURI());
+    public void addToOwnershipPropertyCacheIfApplicable(Property prop, Set<ContainedStatement> definitionChanges) {
 
-        // if this property matches the subtype for any of the domains, then this is a list resource property
-        var optSubtype = domains.stream()
-                .filter(domain -> domain.getURI().equals(generateListTypeURI(baseURI)))
-                .findAny();
-        if (optSubtype.isPresent()) {
-            var baseProp = listClass.getModel().getProperty(baseURI);
-            trackOwnershipPropertyAddition(baseProp);
-            var typeRes = optSubtype.get();
-            var subtypeClass = listClass.getModel().getOntClass(typeRes.getURI());
-            if (subtypeClass != null) {
-                trackSubclassAddition(subtypeClass);
-            } else {
-                log.error("Schema Corruption: resource {} is in domain of list property {} with matching expected uri but not an ontclass", typeRes.getURI(), prop.getURI());
-            }
-        }
+        definitionChanges.stream().filter(stmt -> stmt.getPredicate().equals(RDFS.subPropertyOf)
+                && stmt.getObject().isResource()
+                && stmt.getResource().getURI().equals(OWNS_SUPERPROPERTY_URI))
+                .forEach(stmt -> {
+                    trackOwnershipPropertyAddition(prop);
+                    var typeURI = generateListTypeURI(prop.getURI());
+                    var subtypeClass = listClass.getModel().getOntClass(typeURI);
+                    if (subtypeClass != null) {
+                        trackSubclassAddition(subtypeClass);
+                    } else {
+                        log.error("Schema Corruption: resource {} is in domain of list property {} with matching expected uri but not an ontclass", typeURI, prop.getURI());
+                    }
+                });
     }
 
     /**
      * used when notified about external (i.e., synced) removal of property, hence underlying model contains no triples anymore, just cleanup cache
      * @param propertyURI
      */
-    public void cleanupCacheAfterRemotePropertyRemoval(String propertyURI) {
-        var listTypeURI = generateListTypeURI(propertyURI);
-        subclassesCache.stream()
-                .filter(ontClazz -> ontClazz.getURI().equals(listTypeURI))
-                .findFirst()
-                .ifPresent(this::trackSubclassRemoval);
-        ownershipPropertyCache.stream()
-                .filter(p -> p.getURI().equals(propertyURI))
-                .findFirst()
-                .ifPresent(this::trackOwnershipPropertyRemoval);
+    public void cleanupCacheAfterRemotePropertyRemoval(String propertyURI, Set<ContainedStatement> definitionChanges) {
+
+        definitionChanges.stream().filter(stmt -> stmt.getPredicate().equals(RDFS.subPropertyOf)
+                        && stmt.getObject().isResource()
+                        && stmt.getResource().getURI().equals(OWNS_SUPERPROPERTY_URI))
+                .forEach(stmt -> {
+                    var listTypeURI = generateListTypeURI(propertyURI);
+                    subclassesCache.stream()
+                            .filter(ontClazz -> ontClazz.getURI().equals(listTypeURI))
+                            .findFirst()
+                            .ifPresent(this::trackSubclassRemoval);
+                    ownershipPropertyCache.stream()
+                            .filter(p -> p.getURI().equals(propertyURI))
+                            .findFirst()
+                            .ifPresent(this::trackOwnershipPropertyRemoval);
+                });
     }
 
     private void trackSubclassAddition(OntClass cls) {
-        if (subclassesCache.add(cls)) {
-            if (!removedSubclassesDuringTx.remove(cls)) {
+        if (subclassesCache.add(cls) && !removedSubclassesDuringTx.remove(cls)) {
                 addedSubclassesDuringTx.add(cls);
             }
-        }
+
     }
 
     private void trackSubclassRemoval(OntClass cls) {
-        if (subclassesCache.remove(cls)) {
-            if (!addedSubclassesDuringTx.remove(cls)) {
+        if (subclassesCache.remove(cls) && !addedSubclassesDuringTx.remove(cls)) {
                 removedSubclassesDuringTx.add(cls);
             }
-        }
+
     }
 
     private void trackOwnershipPropertyAddition(Property prop) {
-        if (ownershipPropertyCache.add(prop)) {
-            if (!removedOwnershipPropertyDuringTx.remove(prop)) {
+        if (ownershipPropertyCache.add(prop) && !removedOwnershipPropertyDuringTx.remove(prop)) {
                 addedOwnershipPropertyDuringTx.add(prop);
             }
-        }
+
     }
 
     private void trackOwnershipPropertyRemoval(Property prop) {
-        if (ownershipPropertyCache.remove(prop)) {
-            if (!addedOwnershipPropertyDuringTx.remove(prop)) {
+        if (ownershipPropertyCache.remove(prop) && !addedOwnershipPropertyDuringTx.remove(prop)) {
                 removedOwnershipPropertyDuringTx.add(prop);
             }
-        }
+
     }
 
     @Override
