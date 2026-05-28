@@ -390,6 +390,7 @@ public class ListResourceType implements TransactionAware {
             if (containerProperty == null) {
                 containerProperty = model.createObjectProperty(OWNED_BY_PROPERTY_URI);
                 containerProperty.addDomain(listClass);
+                containerProperty.setFunctional(true);
             }
 
             var listReferenceSuperProperty = model.getObjectProperty(OWNS_SUPERPROPERTY_URI);

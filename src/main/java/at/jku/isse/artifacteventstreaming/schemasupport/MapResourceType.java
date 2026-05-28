@@ -334,6 +334,7 @@ public class MapResourceType implements TransactionAware {
 			if (keyProp == null) {
 				keyProp = model.createDataProperty(KEY_PROPERTY_URI);
 				keyProp.addDomain(mapEntryClass);
+				keyProp.setFunctional(true);
 				keyProp.addRange(model.getDatatype(XSD.xstring));
 			}
 			
@@ -341,11 +342,13 @@ public class MapResourceType implements TransactionAware {
 			if (literalValueProp == null) {
 				literalValueProp = model.createDataProperty(LITERAL_VALUE_PROPERTY_URI);			
 				literalValueProp.addDomain(mapEntryClass);
+				literalValueProp.setFunctional(true);
 			}
 			
 			var objectValueProp = model.getObjectProperty(OBJECT_VALUE_PROPERTY_URI);
 			if (objectValueProp == null) {
 				objectValueProp = model.createObjectProperty(OBJECT_VALUE_PROPERTY_URI);
+				objectValueProp.setFunctional(true);
 				objectValueProp.addDomain(mapEntryClass);
 			}
 			
@@ -353,6 +356,7 @@ public class MapResourceType implements TransactionAware {
 			if (containerProperty == null) {
 				containerProperty = model.createObjectProperty(CONTAINEROWNER_PROPERTY_URI);
 				containerProperty.addDomain(mapEntryClass);
+				containerProperty.setFunctional(true);
 			}
 			
 			var mapReferenceSuperProperty = model.getObjectProperty(MAP_OWNERSHIP_SUPERPROPERTY_URI);

@@ -107,9 +107,6 @@ public class MetaModelSchemaTypes implements TransactionAware {
 			predicates.add(iter.next());
 		}
 		return predicates.stream().map(res -> res.as(OntProperty.class));
-		
-		//Stream<OntProperty> properties = Stream.of(model.objectProperties(), model.dataProperties(), model.annotationProperties()).flatMap(it -> it);;
-		//return properties.distinct().filter(prop -> prop.domains().anyMatch(domain -> domain.equals(ontClass)));
 	}
 
 	// we now can make changes to caches that can be rolled back
@@ -173,12 +170,15 @@ public class MetaModelSchemaTypes implements TransactionAware {
 		
 		public MetaModelOntology(boolean isInMemory) {
 			metaontology = loadMetaSchemaFromDB(isInMemory);
-			metaontology.begin(ReadWrite.WRITE);
-			this.metamodel = OntModelFactory.createModel(metaontology.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
-			new MapResourceType.MapSchemaFactory(metamodel);
-			new ListResourceType.ListSchemaFactory(metamodel);
-			metaontology.commit();
-			metaontology.end();
+			try {
+				metaontology.begin(ReadWrite.WRITE);
+				this.metamodel = OntModelFactory.createModel(metaontology.getDefaultModel().getGraph(), OntSpecification.OWL2_DL_MEM);
+				new MapResourceType.MapSchemaFactory(metamodel);
+				new ListResourceType.ListSchemaFactory(metamodel);
+				metaontology.commit();
+			} finally {
+				metaontology.end();
+			}
 		}
 		
 		private Dataset loadMetaSchemaFromDB(boolean isInMemory) {

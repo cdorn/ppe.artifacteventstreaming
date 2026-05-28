@@ -35,7 +35,6 @@ public class BasePropertyType implements TransactionAware {
 	}
 	
 	public boolean existsPrimaryProperty(String uri) {
-		//return model.getGraph().contains(ResourceFactory.createResource(uri).asNode(), RDF.Nodes.type, Node.ANY);
 		return propertyUriCache.contains(uri);
 	}
 	
@@ -69,19 +68,15 @@ public class BasePropertyType implements TransactionAware {
 	}
 
 	public void removePropertyURIfromCache(String propertyURI) {
-		if (propertyUriCache.remove(propertyURI)) {
-			if (!addedDuringTx.remove(propertyURI)) {
+		if (propertyUriCache.remove(propertyURI) && !addedDuringTx.remove(propertyURI)) {
 				removedDuringTx.add(propertyURI);
 			}
-		}
 	}
 
 	public void addToCache(String propertyURI) {
-		if (propertyUriCache.add(propertyURI)) {
-			if (!removedDuringTx.remove(propertyURI)) {
+		if (propertyUriCache.add(propertyURI) && !removedDuringTx.remove(propertyURI)) {
 				addedDuringTx.add(propertyURI);
 			}
-		}
 	}
 
 	@Override
