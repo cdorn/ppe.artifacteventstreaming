@@ -197,14 +197,13 @@ public class CoreBranchImpl implements CoreBranch {
         return Observation.createNotStarted("rdfbackend.transaction.writestart", observationRegistry)
                 .highCardinalityKeyValue(BRANCH_ID, getBranchId())
                 .observe(() -> {
-                    // clear stmt queue
-                    stmtAggregator.drainAddedStatements();
-                    stmtAggregator.drainRemovedStatements();
-                    getRegisteredLocalCommitHandlers().forEach(CommitHandler::beforeTransactionStarted);
-                    if (schemaUtils != null) schemaUtils.beforeTransactionStarted();
                     var writeLock = dataset.getLock();
                     writeLock.enterCriticalSection(false);
                     dataset.begin(ReadWrite.WRITE);
+                    // clear stmt queue; safe only once we exclusively hold the write lock,
+                    // so we never drain another, still-open transaction's buffered statements
+                    stmtAggregator.drainAddedStatements();
+                    stmtAggregator.drainRemovedStatements();
                     getRegisteredLocalCommitHandlers().forEach(CommitHandler::afterTransactionStarted);
                     if (schemaUtils != null) schemaUtils.afterTransactionStarted();
                     return writeLock;
@@ -221,7 +220,7 @@ public class CoreBranchImpl implements CoreBranch {
         if (dataset.isInTransaction()) {
             dataset.abort();
         }
-        getRegisteredLocalCommitHandlers().forEach(CommitHandler::afterTransactionStarted);
+        getRegisteredLocalCommitHandlers().forEach(CommitHandler::afterTransactionAborted);
         if (schemaUtils != null) schemaUtils.afterTransactionAborted();
     }
 

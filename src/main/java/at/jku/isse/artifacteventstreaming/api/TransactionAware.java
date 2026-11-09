@@ -2,13 +2,6 @@ package at.jku.isse.artifacteventstreaming.api;
 
 public interface TransactionAware {
     /**
-     * called before a new write transaction is started, and no write lock obtained yet
-     * dataset is not in a transaction yet, so any reads/writes will lead to an exception.
-     * Note: will also be called before a promote (but not if tx is already a write transaction)
-     */
-    default void beforeTransactionStarted() {}
-
-    /**
      * called just after a new write transaction is started, (and a lock is obtained)
      * the client starting the transaction has not obtained the lock yet at this stage
      * Note: will also be called after a successful promote (but not if tx is already a write transaction)
