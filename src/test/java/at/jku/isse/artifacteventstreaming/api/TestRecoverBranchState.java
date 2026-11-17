@@ -15,6 +15,7 @@ import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
@@ -77,7 +78,7 @@ class TestRecoverBranchState {
 			Resource testResource = ResourceFactory.createResource(repoURI+"#art1");
 			Statement stmt = model.createStatement(testResource, RDFS.label, model.createTypedLiteral(1));
 			Commit commit = new StatementCommitImpl(repoURI.toString()+"#someBranch", "Commit to Merge", null, 0, Set.of(new ContainedStatementImpl(stmt)), Collections.emptySet());
-			//branch.getDataset().begin();
+			//branch.getDataset().begin(ReadWrite.WRITE);
 			try {
 				 branch.enqueueIncomingCommit(commit);
 			} catch (Exception e) {
@@ -142,7 +143,7 @@ class TestRecoverBranchState {
 		branch2.startCommitHandlers();
 		
 		OntModel model = branch.getModel();
-		branch.getDataset().begin();
+		branch.getDataset().begin(ReadWrite.WRITE);
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("Commit to Forward");
@@ -188,14 +189,14 @@ class TestRecoverBranchState {
 		branch2.startCommitHandlers();
 
 		OntModel model = branch.getModel();
-		branch.getDataset().begin();
+		branch.getDataset().begin(ReadWrite.WRITE);
 		//first commit to go through
 		Resource testResource = model.createResource(repoURI+"#art1");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 		Commit commit = branch.commitChanges("First Commit to Forward");		
 		
 		//second commit to abort
-		branch.getDataset().begin();
+		branch.getDataset().begin(ReadWrite.WRITE);
 		model.add(testResource, RDFS.label, model.createTypedLiteral(2));
 		Commit commit2 = branch.commitChanges("Second Commit to Forward");
 		Thread.sleep(1500); // to "persist" in memory the first but not second 
@@ -242,14 +243,14 @@ class TestRecoverBranchState {
 				branch2.startCommitHandlers();
 
 				OntModel model = branch.getModel();
-				branch.getDataset().begin();
+				branch.getDataset().begin(ReadWrite.WRITE);
 				//first commit to go through
 				Resource testResource = model.createResource(repoURI+"#art1");
 				model.add(testResource, RDFS.label, model.createTypedLiteral(1));
 				Commit commit = branch.commitChanges("First Commit to Forward");		
 				
 				//second commit to go through as well
-				branch.getDataset().begin();
+				branch.getDataset().begin(ReadWrite.WRITE);
 				model.add(testResource, RDFS.label, model.createTypedLiteral(2));
 				Commit commit2 = branch.commitChanges("Second Commit to Forward");
 				Thread.sleep(1000); // to "persist" all in memory  

@@ -11,6 +11,7 @@ import org.apache.jena.ontapi.OntModelFactory;
 import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.OntModel;
 import org.apache.jena.query.Dataset;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
@@ -71,7 +72,7 @@ class TestNonPersistedCrossBranchStreaming {
 		
 		Commit lastCommit = null;
 		for (int j = 0; j < commitRounds; j++) {
-			branch.getDataset().begin();
+			branch.getDataset().begin(ReadWrite.WRITE);
 			Resource testResource = model.createResource(repoURI1+"#art"+j);
 			for (int i = 0; i<changeCount ; i++) {
 				model.add(testResource, RDFS.label, model.createTypedLiteral(i));	
@@ -82,12 +83,13 @@ class TestNonPersistedCrossBranchStreaming {
 		boolean success = latch.await(2, TimeUnit.SECONDS);
 		assert(success);
 		
+		Thread.sleep(500); // latch fires before the receiving branches finish committing
 		branch.getDataset().end();
-		branch.getDataset().begin();
+		branch.getDataset().begin(ReadWrite.READ);
+		branch2.getDataset().begin(ReadWrite.READ);
+		branch3.getDataset().begin(ReadWrite.READ);
 		OntModel model2 = branch2.getModel();
-		branch2.getDataset().end();
 		OntModel model3 = branch3.getModel();
-		branch3.getDataset().end();
 
 		//why are models 2 and 3 sizes not updated, some content, while logging says statements have been added
 		//hmm, apparently we need to have dataset.end()
@@ -105,6 +107,9 @@ class TestNonPersistedCrossBranchStreaming {
 		//cannot compare full model anymore as the branch info is different
 		assertEquals(model.size(), model2.size());
 		assertEquals(model3.size(), model2.size());
+		branch.getDataset().end();
+		branch2.getDataset().end();
+		branch3.getDataset().end();
 		
 		// now lets test unregistering an inservice:
 		branch2.removeIncomingCommitMerger(branch2signaller); // should have no effect
@@ -112,6 +117,7 @@ class TestNonPersistedCrossBranchStreaming {
 		latch = new CountDownLatch(1);
 		branch3.appendIncomingCommitMerger(new SyncForTestingService("Branch3InSignaller", latch, repoModel));
 				
+		branch.getDataset().begin(ReadWrite.WRITE);
 		Resource testResource = model.createResource(repoURI1+"#artFinaly");
 		model.add(testResource, RDFS.label, model.createTypedLiteral(-1));
 		Commit ultimateCommit = branch.commitChanges("FinalTestCommit");

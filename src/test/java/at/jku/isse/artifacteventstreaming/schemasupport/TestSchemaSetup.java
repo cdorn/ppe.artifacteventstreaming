@@ -9,6 +9,8 @@ import org.apache.jena.ontapi.OntSpecification;
 import org.apache.jena.ontapi.model.*;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
+import org.apache.jena.query.ReadWrite;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
 import java.net.URI;
@@ -38,6 +40,15 @@ public class TestSchemaSetup {
 	OntDataRange intRange;
 	OntDataRange booleanRange;
 	MetaModelSchemaTypes metaSchema;
+	Dataset dataset;
+
+	@AfterEach
+	void teardown() {
+		if (dataset != null && dataset.isInTransaction()) {
+			dataset.abort();
+			dataset.end();
+		}
+	}
 	
 	@BeforeEach
 	void setup() throws Exception {		
@@ -47,7 +58,9 @@ public class TestSchemaSetup {
 				.setModelReasoner(OntSpecification.OWL2_DL_MEM_BUILTIN_RDFS_INF)
 				.setBranchLocalName("branch1")
 				.build();		
-		m = branch.getModel();	
+		branch.getDataset().begin(ReadWrite.WRITE);
+		dataset = branch.getDataset();
+		m = branch.getModel();
 		m.setNsPrefix("test", NS);
 		var metaModel = MetaModelOntology.buildInMemoryOntology(); 
 		metaSchema = new MetaModelSchemaTypes(m, metaModel);

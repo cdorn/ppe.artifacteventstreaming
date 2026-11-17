@@ -64,20 +64,14 @@ public class StatementJsonDeserializer extends StdDeserializer<ContainedStatemen
 			return model.createResource(AnonId.create(id));
 		}
 	}
-	
+
+	/** We assume that the URL is valid if it contains a scheme:// part */
 	boolean isValidURL(String url)  {
 		if (url == null) { // should never happen
 			log.error("Data persistence error: statement deserialization returned null url");
 			return false;
 		}
-		return url.startsWith("http"); //FIXME: better but performant way to check this.
-//	    try {
-//	    	 var uri = new URI(url);	    
-//		     uri.toURL();
-//		     return true;	   
-//	    } catch (URISyntaxException | MalformedURLException e) {
-//	        return false;
-//	    }
+		return url.contains("://"); //TECHDEBT: does not cover all cases, but way more performant than creating a URI object and catching exceptions.
 	}
 	
 	public static void registerDeserializationModule(ObjectMapper mapper) {

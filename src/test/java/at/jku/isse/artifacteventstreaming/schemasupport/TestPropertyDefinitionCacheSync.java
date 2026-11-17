@@ -57,7 +57,7 @@ class TestPropertyDefinitionCacheSync {
 		when(mockBranch.getBranchResource()).thenReturn(mockBranchResource);
 		when(mockBranchResource.getModel()).thenReturn(modelB);
 
-		updater = new MetaModelSchemaCacheSynchronizer(schemaB, mockBranch.getBranchId());
+		updater = new MetaModelSchemaCacheSynchronizer(schemaB, modelB);
 	}
 
 	private void drainA() {

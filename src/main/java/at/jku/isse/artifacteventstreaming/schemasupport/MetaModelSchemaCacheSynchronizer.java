@@ -5,6 +5,7 @@ import at.jku.isse.artifacteventstreaming.api.ContainedStatement;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
@@ -17,7 +18,7 @@ import java.util.stream.Collectors;
 public class MetaModelSchemaCacheSynchronizer {
 
     private final MetaModelSchemaTypes metaschema;
-    private final String branchId;
+    private final Model targetModel; // model of the branch the commit was applied to, accessed within its transaction
 
     public void handleCommit(Commit commit) {
         // collect all statements that have to do with property spec removal
@@ -26,10 +27,8 @@ public class MetaModelSchemaCacheSynchronizer {
         propDefRemovedStatements.entrySet().forEach(entry -> metaschema.cleanupCachesAfterRemotePropertyRemoval(entry.getKey(), entry.getValue()));
 
         Map<String, Set<ContainedStatement>> propDefAddedStatements = collectPropertySpecStatements(commit.getAddedStatements());
-        propDefAddedStatements.entrySet().forEach(entry -> {
-            var model = entry.getValue().iterator().next().getSubject().getModel();
-            metaschema.syncCachesAfterRemotePropertyAdded(entry.getKey() , model, entry.getValue());
-        });
+        propDefAddedStatements.forEach((propertyURI, definitionChanges) ->
+                metaschema.syncCachesAfterRemotePropertyAdded(propertyURI, targetModel, definitionChanges));
     }
 
     private @org.jspecify.annotations.NonNull Map<String, Set<ContainedStatement>> collectPropertySpecStatements(Collection<ContainedStatement> stmts) {

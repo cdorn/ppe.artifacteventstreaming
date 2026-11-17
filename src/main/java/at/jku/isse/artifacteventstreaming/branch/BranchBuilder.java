@@ -17,6 +17,7 @@ import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.tdb2.TDB2Factory;
 import org.jspecify.annotations.Nullable;
 
 import java.net.URI;
@@ -72,7 +73,7 @@ public class BranchBuilder extends CoreBranchBuilder {
     @Override
     public Branch build() {
         if (branchDataset == null) {
-            setDataset(DatasetFactory.createTxnMem());
+            setDataset(TDB2Factory.createDataset());
         }
         OntIndividual branchResource = prepareBranch(branchURI, owner);
         BlockingQueue<Commit> inQueue = new LinkedBlockingQueue<>();
