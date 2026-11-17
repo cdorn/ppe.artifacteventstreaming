@@ -57,21 +57,12 @@ public class StatementJsonDeserializer extends StdDeserializer<ContainedStatemen
 		else return createResourceFromId(possiblyNull.asText());
 	}
 
+	/** Only ids explicitly marked with the blank node prefix are blank nodes, everything else is a URI. */
 	private Resource createResourceFromId(String id) {
-		if (isValidURL(id)) {
-			return model.createResource(id);
-		} else {
-			return model.createResource(AnonId.create(id));
+		if (id.startsWith(StatementJsonSerializer.BLANK_NODE_PREFIX)) {
+			return model.createResource(AnonId.create(id.substring(StatementJsonSerializer.BLANK_NODE_PREFIX.length())));
 		}
-	}
-
-	/** We assume that the URL is valid if it contains a scheme:// part */
-	boolean isValidURL(String url)  {
-		if (url == null) { // should never happen
-			log.error("Data persistence error: statement deserialization returned null url");
-			return false;
-		}
-		return url.contains("://"); //TECHDEBT: does not cover all cases, but way more performant than creating a URI object and catching exceptions.
+		return model.createResource(id);
 	}
 	
 	public static void registerDeserializationModule(ObjectMapper mapper) {

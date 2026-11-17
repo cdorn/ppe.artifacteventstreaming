@@ -9,6 +9,8 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
 
+import org.apache.jena.rdf.model.Resource;
+
 import java.io.IOException;
 
 public class StatementJsonSerializer extends StdSerializer<ContainedStatement> {
@@ -19,8 +21,10 @@ public class StatementJsonSerializer extends StdSerializer<ContainedStatement> {
 	public static final String SUBJECT = "subject";
 	public static final String CONTAINING_SUBJECT = "containingsubject";
 	public static final String CONTAINMENT_PREDICATE = "containmentpredicate";
+	/** Prefix marking an id as blank node label (cannot start a valid URI, as a scheme must begin with a letter). */
+	public static final String BLANK_NODE_PREFIX = "_:";
 	/**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 
@@ -32,9 +36,9 @@ public class StatementJsonSerializer extends StdSerializer<ContainedStatement> {
 	@Override
 	public void serialize(ContainedStatement value, JsonGenerator gen, SerializerProvider provider) throws IOException {
 		
-		var containmentId = AES.resourceToId(value.getContainerOrSubject());
+		var containmentId = markedId(value.getContainerOrSubject());
 		var containingProp = value.getContainmentPropertyOrPredicate().getURI();
-		var id = AES.resourceToId(value.getSubject());
+		var id = markedId(value.getSubject());
 		var prop = value.getPredicate().getURI();
 		gen.writeStartObject();
 		if (!id.equals(containmentId)) {			
@@ -50,9 +54,13 @@ public class StatementJsonSerializer extends StdSerializer<ContainedStatement> {
         	 gen.writeStringField(DATATYPE, datatypeURI);
         	 gen.writeStringField(OBJECT, value.getObject().asLiteral().getLexicalForm());
         } else {
-        	gen.writeStringField(OBJECT, AES.resourceToId(value.getObject().asResource()));
-        }                		
+        	gen.writeStringField(OBJECT, markedId(value.getObject().asResource()));
+        }
         gen.writeEndObject();
+	}
+
+	static String markedId(Resource res) {
+		return res.isAnon() ? BLANK_NODE_PREFIX + res.getId().toString() : AES.resourceToId(res);
 	}
 
 	public static void registerSerializationModule(ObjectMapper mapper) {

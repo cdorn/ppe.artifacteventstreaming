@@ -126,6 +126,24 @@ class TestStatementJsonRoundTrip {
 	}
 
 	@Test
+	void blankNodeWithUriLikeLabelIsStillBlank() throws Exception {
+		var uriLabelled = src.createResource(org.apache.jena.rdf.model.AnonId.create("anon::flow://x::valueRestriction"));
+		var plainBlank = src.createResource();
+		var uri = src.createResource("flow://x");
+		var stmt = new ContainedStatementImpl(src.createStatement(uriLabelled, src.createProperty(P + "has"), plainBlank),
+				uri, src.createProperty(P + "contains"));
+		var result = roundTrip(stmt);
+
+		assertTrue(result.getSubject().isAnon());
+		assertSameNode(uriLabelled, result.getSubject());
+		assertTrue(result.getResource().isAnon());
+		assertSameNode(plainBlank, result.getResource());
+		assertTrue(result.getContainerOrSubject().isURIResource());
+		assertEquals("flow://x", result.getContainerOrSubject().getURI());
+		assertEquals(stmt.asTriple(), result.asTriple());
+	}
+
+	@Test
 	void literalObjectWithNonHttpSubject() throws Exception {
 		var stmt = new ContainedStatementImpl(src.createStatement(
 				src.createResource("flow://x"), src.createProperty(P + "count"), src.createTypedLiteral(42)));
