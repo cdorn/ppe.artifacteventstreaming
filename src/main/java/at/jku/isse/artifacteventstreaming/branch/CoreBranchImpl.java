@@ -156,26 +156,26 @@ public class CoreBranchImpl implements CoreBranch {
             return Observation.createNotStarted("rdfbackend.transaction.writepromote", observationRegistry)
                     .highCardinalityKeyValue(BRANCH_ID, getBranchId())
                     .observe(() -> {
-                        // clear stmt queue
-                        stmtAggregator.drainAddedStatements();
-                        stmtAggregator.drainRemovedStatements();
                         // promote
                         var writeLock = dataset.getLock();
                         writeLock.enterCriticalSection(false);
-                        var isPromoted = dataset.promote();
-                        if (isPromoted) {
-                            getRegisteredLocalCommitHandlers().forEach(CommitHandler::afterTransactionStarted);
-                            if (schemaUtils != null) schemaUtils.afterTransactionStarted();
-                            return writeLock;
-                        } else {
-                            // still in read mode
-                            dataset.end();
-                            // start a new write transaction
-                            dataset.begin(ReadWrite.WRITE);
-                            getRegisteredLocalCommitHandlers().forEach(CommitHandler::afterTransactionStarted);
-                            if (schemaUtils != null) schemaUtils.afterTransactionStarted();
-                            return writeLock;
+                        try {
+                            if (!dataset.promote()) {
+                                // intervening writes since our read began: start a new write transaction on the latest state
+                                dataset.end();
+                                dataset.begin(ReadWrite.WRITE);
+                            }
+                        } catch (RuntimeException e) {
+                            writeLock.leaveCriticalSection();
+                            throw e;
                         }
+                        // clear stmt queue; safe only once we exclusively hold the write lock,
+                        // so we never drain another, still-open transaction's buffered statements
+                        stmtAggregator.drainAddedStatements();
+                        stmtAggregator.drainRemovedStatements();
+                        getRegisteredLocalCommitHandlers().forEach(CommitHandler::afterTransactionStarted);
+                        if (schemaUtils != null) schemaUtils.afterTransactionStarted();
+                        return writeLock;
                     });
         }
     }
